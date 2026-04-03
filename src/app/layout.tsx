@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { MobileNav } from '@/components/layout/mobile-nav'
 import { NavSidebar } from '@/components/layout/nav-sidebar'
+import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -23,6 +24,7 @@ export default function RootLayout({
           </div>
         </main>
         <MobileNav />
+        <Toaster />
       </body>
     </html>
   )

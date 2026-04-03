@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StepStateBadge } from '@/components/step-state-badge'
 import { STEP_STATES } from '@/lib/step-states'
+import { ToastDemo } from '@/components/toast-demo'
 
 export default function ThemeShowcase() {
   return (
@@ -94,6 +95,12 @@ export default function ThemeShowcase() {
           <Button variant="ghost">Ghost</Button>
           <Button variant="destructive">Destructive</Button>
         </div>
+      </section>
+
+      {/* Toast Demo */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold">Toast Feedback</h2>
+        <ToastDemo />
       </section>
     </main>
   )
