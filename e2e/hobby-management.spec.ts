@@ -6,29 +6,8 @@ test.describe.configure({ mode: 'serial' })
 test.describe('Hobby Management', () => {
   let testPrefix: string
 
-  test.beforeAll(async ({ browser, browserName }) => {
-    test.setTimeout(120000) // Allow 2 min for stale data cleanup
+  test.beforeAll(async ({ browserName }) => {
     testPrefix = `HM-${browserName}-${Date.now()}`
-
-    // Clean up stale test hobbies from previous runs (prefixed with HM-, ST-, E2E)
-    const page = await browser.newPage({ storageState: 'e2e/.auth/state.json' })
-    await page.goto('/settings')
-    await page.waitForLoadState('networkidle')
-    for (let i = 0; i < 30; i++) {
-      const staleAction = page
-        .locator('div.relative')
-        .filter({ has: page.getByRole('link', { name: /^HM-/ }) })
-        .getByRole('button', { name: 'Hobby actions' })
-        .first()
-      if (!(await staleAction.isVisible({ timeout: 1000 }).catch(() => false))) break
-      await staleAction.click()
-      await page.getByRole('menuitem', { name: 'Delete' }).click()
-      await page.getByRole('button', { name: 'Delete' }).click()
-      await page.waitForTimeout(500)
-      // Wait for the page to update after delete
-      await page.waitForLoadState('networkidle')
-    }
-    await page.close()
   })
 
   /** Find the "Hobby actions" button for a specific hobby by name pattern */
@@ -44,23 +23,11 @@ test.describe('Hobby Management', () => {
     return page.locator('main').getByRole('button', { name: 'Add Hobby' }).first()
   }
 
-  test.beforeEach(async ({ page }) => {
-    // Only clean up hobbies created by this test run (matching our prefix)
-    for (let i = 0; i < 10; i++) {
-      await page.goto('/hobbies')
-      await page.waitForLoadState('networkidle')
-      const btn = hobbyActionsButton(page, new RegExp(testPrefix))
-      if (!(await btn.isVisible({ timeout: 1000 }).catch(() => false))) break
-      await btn.click()
-      await page.getByRole('menuitem', { name: 'Delete' }).click()
-      await page.getByRole('button', { name: 'Delete' }).click()
-      await page.waitForTimeout(500)
-    }
-  })
-
-  test('shows empty state or hobby list on hobbies page', async ({ page }) => {
+  test('hobbies page loads with add hobby button', async ({ page }) => {
     await page.goto('/hobbies')
     await page.waitForLoadState('networkidle')
+    // With parallel browsers sharing DB, empty state may not be visible
+    // but the Add Hobby button must always be present
     await expect(addHobbyButton(page)).toBeVisible()
   })
 
@@ -72,7 +39,8 @@ test.describe('Hobby Management', () => {
     await page.getByTitle('Terracotta').click()
     await page.getByRole('button', { name: 'Save' }).click()
 
-    await expect(page.getByText(hobbyName)).toBeVisible()
+    // Check the hobby card (with project count to distinguish from top-bar)
+    await expect(page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) })).toBeVisible()
   })
 
   test('save button is disabled when name is empty', async ({ page }) => {
@@ -99,7 +67,7 @@ test.describe('Hobby Management', () => {
     await page.getByPlaceholder('e.g., Woodworking').fill(oldName)
     await page.getByTitle('Terracotta').click()
     await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByText(oldName)).toBeVisible()
+    await expect(page.getByRole('link', { name: new RegExp(`${oldName}.*projects`) })).toBeVisible()
 
     await hobbyActionsButton(page, new RegExp(oldName)).click()
     await page.getByRole('menuitem', { name: 'Edit' }).click()
@@ -109,7 +77,7 @@ test.describe('Hobby Management', () => {
     await nameInput.fill(newName)
     await page.getByRole('button', { name: 'Save' }).click()
 
-    await expect(page.getByText(newName)).toBeVisible()
+    await expect(page.getByRole('link', { name: new RegExp(`${newName}.*projects`) })).toBeVisible()
   })
 
   test('can delete a hobby via context menu', async ({ page }) => {
@@ -119,7 +87,7 @@ test.describe('Hobby Management', () => {
     await page.getByPlaceholder('e.g., Woodworking').fill(hobbyName)
     await page.getByTitle('Sage').click()
     await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByText(hobbyName)).toBeVisible()
+    await expect(page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) })).toBeVisible()
 
     await hobbyActionsButton(page, new RegExp(hobbyName)).click()
     await page.getByRole('menuitem', { name: 'Delete' }).click()
@@ -128,7 +96,7 @@ test.describe('Hobby Management', () => {
     await page.getByRole('button', { name: 'Delete' }).click()
     await page.waitForTimeout(1000)
 
-    await expect(page.getByText(hobbyName)).not.toBeVisible()
+    await expect(page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) })).not.toBeVisible()
   })
 
   test('cancel on delete dialog does not delete', async ({ page }) => {
@@ -138,7 +106,7 @@ test.describe('Hobby Management', () => {
     await page.getByPlaceholder('e.g., Woodworking').fill(hobbyName)
     await page.getByTitle('Denim').click()
     await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByText(hobbyName)).toBeVisible()
+    await expect(page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) })).toBeVisible()
 
     await hobbyActionsButton(page, new RegExp(hobbyName)).click()
     await page.getByRole('menuitem', { name: 'Delete' }).click()
