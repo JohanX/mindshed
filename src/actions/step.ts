@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { z } from 'zod/v4'
-import { createStepSchema, updateStepSchema, updateStepStateSchema, type CreateStepInput, type UpdateStepInput, type UpdateStepStateInput } from '@/lib/schemas/step'
+import { createStepSchema, updateStepSchema, updateStepStateSchema, reorderStepsSchema, type CreateStepInput, type UpdateStepInput, type UpdateStepStateInput, type ReorderStepsInput } from '@/lib/schemas/step'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -125,5 +125,58 @@ export async function updateStepState(input: UpdateStepStateInput): Promise<Acti
       return { success: false, error: 'Step not found.' }
     }
     return { success: false, error: 'Failed to update step state.' }
+  }
+}
+
+export async function reorderSteps(input: ReorderStepsInput): Promise<ActionResult<null>> {
+  const parsed = reorderStepsSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const project = await tx.project.findUnique({
+        where: { id: parsed.data.projectId },
+        select: { isCompleted: true },
+      })
+      if (!project) throw new Error('PROJECT_NOT_FOUND')
+      if (project.isCompleted) throw new Error('PROJECT_COMPLETED')
+
+      // Verify all step IDs belong to this project
+      const steps = await tx.step.findMany({
+        where: { projectId: parsed.data.projectId },
+        select: { id: true },
+      })
+      const projectStepIds = new Set(steps.map(s => s.id))
+      for (const id of parsed.data.orderedStepIds) {
+        if (!projectStepIds.has(id)) throw new Error('STEP_NOT_IN_PROJECT')
+      }
+
+      // Update sort orders
+      for (let i = 0; i < parsed.data.orderedStepIds.length; i++) {
+        await tx.step.update({
+          where: { id: parsed.data.orderedStepIds[i] },
+          data: { sortOrder: i },
+        })
+      }
+
+      // Update lastActivityAt
+      await tx.project.update({
+        where: { id: parsed.data.projectId },
+        data: { lastActivityAt: new Date() },
+      })
+    })
+
+    await updateProjectActivity(parsed.data.projectId)
+    return { success: true, data: null }
+  } catch (error) {
+    console.error('reorderSteps failed:', error)
+    if (error instanceof Error) {
+      if (error.message === 'PROJECT_NOT_FOUND') return { success: false, error: 'Project not found.' }
+      if (error.message === 'PROJECT_COMPLETED') return { success: false, error: 'Cannot reorder steps in a completed project.' }
+      if (error.message === 'STEP_NOT_IN_PROJECT') return { success: false, error: 'One or more steps do not belong to this project.' }
+    }
+    return { success: false, error: 'Failed to reorder steps. Please try again.' }
   }
 }

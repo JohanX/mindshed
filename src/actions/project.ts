@@ -7,6 +7,8 @@ import { STEP_STATE_CONFIG, type StepState } from '@/lib/step-states'
 import type { ProjectCardData } from '@/components/project/project-card'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
+import { IDLE_THRESHOLD_DAYS } from '@/lib/constants'
+import { getCurrentStep } from '@/lib/project-utils'
 
 export async function createProject(input: CreateProjectInput): Promise<ActionResult<{ id: string; hobbyId: string }>> {
   const parsed = createProjectSchema.safeParse(input)
@@ -263,5 +265,52 @@ export async function completeProject(id: string): Promise<ActionResult<null>> {
       if (error.message === 'STEPS_NOT_COMPLETED') return { success: false, error: 'All steps must be completed first.' }
     }
     return { success: false, error: 'Failed to complete project.' }
+  }
+}
+
+export interface IdleProjectData extends ProjectCardData {
+  hobby: { name: string; color: string; icon: string | null }
+  lastActivityAt: Date
+}
+
+export async function getIdleProjects(): Promise<ActionResult<IdleProjectData[]>> {
+  try {
+    const threshold = new Date()
+    threshold.setDate(threshold.getDate() - IDLE_THRESHOLD_DAYS)
+
+    const projects = await prisma.project.findMany({
+      where: {
+        isArchived: false,
+        isCompleted: false,
+        lastActivityAt: { lt: threshold },
+      },
+      orderBy: { lastActivityAt: 'asc' },
+      include: {
+        hobby: { select: { name: true, color: true, icon: true } },
+        steps: { orderBy: { sortOrder: 'asc' } },
+      },
+    })
+
+    return {
+      success: true,
+      data: projects.map((p) => {
+        const currentStep = getCurrentStep(p.steps)
+        return {
+          id: p.id,
+          name: p.name,
+          hobbyId: p.hobbyId,
+          totalSteps: p.steps.length,
+          completedSteps: p.steps.filter(s => s.state === 'COMPLETED').length,
+          currentStepName: currentStep?.name ?? null,
+          currentStepState: currentStep?.state ?? null,
+          hasBlockedSteps: p.steps.some(s => s.state === 'BLOCKED'),
+          hobby: p.hobby,
+          lastActivityAt: p.lastActivityAt,
+        }
+      }),
+    }
+  } catch (error) {
+    console.error('getIdleProjects failed:', error)
+    return { success: false, error: 'Failed to load idle projects.' }
   }
 }

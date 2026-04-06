@@ -15,6 +15,13 @@ export const updateStepStateSchema = z.object({
   state: z.enum(['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'BLOCKED']),
 })
 
+export const reorderStepsSchema = z.object({
+  projectId: z.uuid(),
+  orderedStepIds: z.array(z.uuid()).min(1, 'At least one step required')
+    .refine(ids => new Set(ids).size === ids.length, 'Duplicate step IDs'),
+})
+
 export type CreateStepInput = z.infer<typeof createStepSchema>
 export type UpdateStepInput = z.infer<typeof updateStepSchema>
 export type UpdateStepStateInput = z.infer<typeof updateStepStateSchema>
+export type ReorderStepsInput = z.infer<typeof reorderStepsSchema>

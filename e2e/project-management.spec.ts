@@ -265,4 +265,44 @@ test.describe('Project Management', () => {
       await expect(page.getByRole('button', { name: 'Add Step' })).toBeVisible()
     }
   })
+
+  test('fresh projects are not idle', async ({ page }) => {
+    await page.goto('/projects')
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText('Renamed Table').first()).toBeVisible()
+  })
+
+  test('can reorder steps with up/down buttons', async ({ page }) => {
+    await page.goto(`/hobbies/${hobbyId}`)
+    await page.getByRole('button', { name: 'Create Project' }).first().click()
+    await page.getByPlaceholder('e.g., Walnut Side Table').fill('Reorder Test Project')
+    await page.getByPlaceholder('Step 1 name').fill('Step Alpha')
+    await page.getByRole('button', { name: 'Add Step' }).click()
+    await page.getByPlaceholder('Step 2 name').fill('Step Beta')
+    await page.getByRole('button', { name: 'Add Step' }).click()
+    await page.getByPlaceholder('Step 3 name').fill('Step Gamma')
+    await page.getByRole('button', { name: 'Save' }).click()
+    await page.waitForTimeout(2000)
+
+    await expect(page.getByRole('heading', { name: 'Reorder Test Project' })).toBeVisible()
+
+    // Set mobile viewport for up/down buttons
+    await page.setViewportSize({ width: 375, height: 812 })
+
+    // Move "Step Beta" up
+    const moveUpButtons = page.getByRole('button', { name: 'Move step up' })
+    await moveUpButtons.nth(1).click()
+    await page.waitForTimeout(1000)
+
+    // Reload and verify order persists
+    await page.goto(page.url())
+    await page.waitForLoadState('networkidle')
+    await page.setViewportSize({ width: 375, height: 812 })
+
+    const stepNames = await page.locator('.font-medium.truncate').allTextContents()
+    expect(stepNames[0]).toBe('Step Beta')
+    expect(stepNames[1]).toBe('Step Alpha')
+    expect(stepNames[2]).toBe('Step Gamma')
+  })
+
 })
