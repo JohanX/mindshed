@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createHobbySchema, HOBBY_COLORS } from '../schemas/hobby'
+import { createHobbySchema, updateHobbySchema, HOBBY_COLORS } from '../schemas/hobby'
 
 describe('createHobbySchema', () => {
   it('rejects empty name', () => {
@@ -46,5 +46,43 @@ describe('createHobbySchema', () => {
       color: HOBBY_COLORS[0].value,
     })
     expect(result.success).toBe(false)
+  })
+})
+
+describe('updateHobbySchema', () => {
+  it('rejects missing id', () => {
+    const result = updateHobbySchema.safeParse({
+      name: 'Test',
+      color: HOBBY_COLORS[0].value,
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects invalid UUID', () => {
+    const result = updateHobbySchema.safeParse({
+      id: 'not-a-uuid',
+      name: 'Test',
+      color: HOBBY_COLORS[0].value,
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects empty name', () => {
+    const result = updateHobbySchema.safeParse({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      name: '',
+      color: HOBBY_COLORS[0].value,
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts valid input', () => {
+    const result = updateHobbySchema.safeParse({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      name: 'Updated Hobby',
+      color: HOBBY_COLORS[2].value,
+      icon: 'palette',
+    })
+    expect(result.success).toBe(true)
   })
 })

@@ -1,7 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/db'
-import { createHobbySchema, type CreateHobbyInput, type HobbyWithCounts } from '@/lib/schemas/hobby'
+import { createHobbySchema, updateHobbySchema, type CreateHobbyInput, type UpdateHobbyInput, type HobbyWithCounts } from '@/lib/schemas/hobby'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -53,5 +53,29 @@ export async function getHobbies(): Promise<ActionResult<HobbyWithCounts[]>> {
   } catch (error) {
     console.error('getHobbies failed:', error)
     return { success: false, error: 'Failed to load hobbies.' }
+  }
+}
+
+export async function updateHobby(input: UpdateHobbyInput): Promise<ActionResult<{ id: string }>> {
+  const parsed = updateHobbySchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
+  }
+
+  try {
+    const hobby = await prisma.hobby.update({
+      where: { id: parsed.data.id },
+      data: {
+        name: parsed.data.name,
+        color: parsed.data.color,
+        icon: parsed.data.icon ?? null,
+      },
+    })
+
+    revalidatePath('/hobbies')
+    return { success: true, data: { id: hobby.id } }
+  } catch (error) {
+    console.error('updateHobby failed:', error)
+    return { success: false, error: 'Failed to update hobby. Please try again.' }
   }
 }

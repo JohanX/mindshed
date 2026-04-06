@@ -26,6 +26,15 @@ export const createHobbySchema = z.object({
 
 export type CreateHobbyInput = z.infer<typeof createHobbySchema>
 
+export const updateHobbySchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().trim().min(1, 'Name is required').max(100, 'Name must be under 100 characters'),
+  color: z.enum(hobbyColorValues, { error: 'Please select a valid color' }),
+  icon: z.enum(HOBBY_ICON_OPTIONS as unknown as [string, ...string[]]).nullable().optional(),
+})
+
+export type UpdateHobbyInput = z.infer<typeof updateHobbySchema>
+
 export type HobbyWithCounts = {
   id: string
   name: string
