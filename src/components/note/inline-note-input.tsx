@@ -92,9 +92,10 @@ export function InlineNoteInput({ stepId }: InlineNoteInputProps) {
         maxLength={2000}
         disabled={isPending}
         aria-invalid={error ? true : undefined}
+        aria-describedby={error ? 'note-input-error' : undefined}
       />
       {error && (
-        <p className="text-sm text-destructive" data-testid="note-input-error">
+        <p id="note-input-error" className="text-sm text-destructive" data-testid="note-input-error">
           {error}
         </p>
       )}

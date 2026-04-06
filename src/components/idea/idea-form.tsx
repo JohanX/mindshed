@@ -73,7 +73,7 @@ export function IdeaFormDialog({ hobbyId, hobbies }: IdeaFormDialogProps) {
     }
 
     startTransition(async () => {
-      const result = await createIdea(input)
+      const result = await createIdea(parsed.data)
       if (result.success) {
         showSuccessToast('Idea saved')
         handleOpenChange(false)

@@ -1,9 +1,11 @@
 'use server'
 
 import { prisma } from '@/lib/db'
+import { z } from 'zod/v4'
 import { createIdeaSchema, type CreateIdeaInput } from '@/lib/schemas/idea'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
+import type { Idea } from '@/generated/prisma/client'
 
 export async function createIdea(input: CreateIdeaInput): Promise<ActionResult<{ id: string }>> {
   const parsed = createIdeaSchema.safeParse(input)
@@ -39,26 +41,33 @@ export async function createIdea(input: CreateIdeaInput): Promise<ActionResult<{
   }
 }
 
-export async function getIdeasByHobby(hobbyId: string) {
+export async function getIdeasByHobby(hobbyId: string): Promise<ActionResult<Idea[]>> {
+  const parsed = z.uuid().safeParse(hobbyId)
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid hobby ID' }
+  }
+
   try {
     const ideas = await prisma.idea.findMany({
-      where: { hobbyId },
+      where: { hobbyId: parsed.data },
       orderBy: { createdAt: 'desc' },
     })
-    return { success: true as const, data: ideas }
+    return { success: true, data: ideas }
   } catch (error) {
     console.error('getIdeasByHobby failed:', error)
-    return { success: false as const, error: 'Failed to load ideas.' }
+    return { success: false, error: 'Failed to load ideas.' }
   }
 }
 
-export async function getAllIdeas() {
+export type IdeaWithHobby = Idea & { hobby: { id: string; name: string; color: string } }
+
+export async function getAllIdeas(): Promise<ActionResult<IdeaWithHobby[]>> {
   try {
     const ideas = await prisma.idea.findMany({
       orderBy: { createdAt: 'desc' },
       include: { hobby: { select: { id: true, name: true, color: true } } },
     })
-    return { success: true as const, data: ideas }
+    return { success: true, data: ideas }
   } catch (error) {
     console.error('getAllIdeas failed:', error)
     return { success: false as const, error: 'Failed to load ideas.' }

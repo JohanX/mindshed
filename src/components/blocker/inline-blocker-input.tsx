@@ -77,12 +77,12 @@ export function InlineBlockerInput({ stepId }: InlineBlockerInputProps) {
         }}
         maxLength={500}
         aria-invalid={!!validationError}
-        aria-describedby={validationError ? 'blocker-error' : undefined}
+        aria-describedby={validationError ? `blocker-error-${stepId}` : undefined}
         disabled={isPending}
         style={{ borderColor: validationError ? undefined : 'hsl(220, 15%, 55%)' }}
       />
       {validationError && (
-        <p id="blocker-error" className="text-sm text-destructive">
+        <p id={`blocker-error-${stepId}`} className="text-sm text-destructive">
           {validationError}
         </p>
       )}

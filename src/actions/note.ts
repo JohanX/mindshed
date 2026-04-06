@@ -12,35 +12,36 @@ export async function addStepNote(input: CreateNoteInput): Promise<ActionResult<
   }
 
   try {
-    const step = await prisma.step.findUnique({
-      where: { id: parsed.data.stepId },
-      select: { projectId: true, project: { select: { hobbyId: true } } },
+    const { note, hobbyId, projectId } = await prisma.$transaction(async (tx) => {
+      const step = await tx.step.findUnique({
+        where: { id: parsed.data.stepId },
+        select: { projectId: true, project: { select: { id: true, hobbyId: true } } },
+      })
+      if (!step) throw new Error('STEP_NOT_FOUND')
+
+      const created = await tx.stepNote.create({
+        data: { stepId: parsed.data.stepId, text: parsed.data.text },
+      })
+
+      await tx.project.update({
+        where: { id: step.projectId },
+        data: { lastActivityAt: new Date() },
+      })
+
+      return { note: created, hobbyId: step.project.hobbyId, projectId: step.projectId }
     })
 
-    if (!step) {
-      return { success: false, error: 'Step not found.' }
-    }
-
-    const note = await prisma.stepNote.create({
-      data: {
-        stepId: parsed.data.stepId,
-        text: parsed.data.text,
-      },
-    })
-
-    await prisma.project.update({
-      where: { id: step.projectId },
-      data: { lastActivityAt: new Date() },
-    })
-
-    revalidatePath(`/hobbies/${step.project.hobbyId}/projects/${step.projectId}`)
-    revalidatePath(`/hobbies/${step.project.hobbyId}`)
+    revalidatePath(`/hobbies/${hobbyId}/projects/${projectId}`)
+    revalidatePath(`/hobbies/${hobbyId}`)
     revalidatePath('/projects')
     revalidatePath('/')
 
     return { success: true, data: { id: note.id } }
   } catch (error) {
     console.error('addStepNote failed:', error)
+    if (error instanceof Error && error.message === 'STEP_NOT_FOUND') {
+      return { success: false, error: 'Step not found.' }
+    }
     return { success: false, error: 'Failed to add note. Please try again.' }
   }
 }
