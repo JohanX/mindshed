@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAuthEnabled, hasValidCookie, isValidToken, createAuthCookie } from '@/lib/auth'
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   // Skip auth if APP_SECRET is not configured (local dev)
   if (!isAuthEnabled()) {
     return NextResponse.next()
