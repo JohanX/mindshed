@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   DropdownMenu,
@@ -12,7 +12,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { HobbyIdentity } from './hobby-identity'
 import { HobbyFormDialog } from './hobby-form'
-import { MoreHorizontal, Pencil } from 'lucide-react'
+import { ConfirmDialog } from '@/components/confirm-dialog'
+import { deleteHobby } from '@/actions/hobby'
+import { showSuccessToast, showErrorToast } from '@/lib/toast'
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import type { HobbyWithCounts } from '@/lib/schemas/hobby'
 
 interface HobbyCardProps {
@@ -21,6 +24,21 @@ interface HobbyCardProps {
 
 export function HobbyCard({ hobby }: HobbyCardProps) {
   const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [isDeleting, startDeleteTransition] = useTransition()
+
+  function handleDelete() {
+    startDeleteTransition(async () => {
+      const result = await deleteHobby(hobby.id)
+      if (result.success) {
+        showSuccessToast('Hobby deleted')
+        setDeleteOpen(false)
+      } else {
+        showErrorToast(result.error)
+        setDeleteOpen(false)
+      }
+    })
+  }
 
   return (
     <>
@@ -55,6 +73,13 @@ export function HobbyCard({ hobby }: HobbyCardProps) {
                 <Pencil className="h-4 w-4 mr-2" />
                 Edit
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setDeleteOpen(true)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -63,6 +88,14 @@ export function HobbyCard({ hobby }: HobbyCardProps) {
         hobby={hobby}
         open={editOpen}
         onOpenChange={setEditOpen}
+      />
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={`Delete ${hobby.name}?`}
+        description="All projects and ideas in this hobby will be removed."
+        onConfirm={handleDelete}
+        loading={isDeleting}
       />
     </>
   )

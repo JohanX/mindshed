@@ -1,6 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/db'
+import { z } from 'zod/v4'
 import { createHobbySchema, updateHobbySchema, type CreateHobbyInput, type UpdateHobbyInput, type HobbyWithCounts } from '@/lib/schemas/hobby'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
@@ -77,5 +78,24 @@ export async function updateHobby(input: UpdateHobbyInput): Promise<ActionResult
   } catch (error) {
     console.error('updateHobby failed:', error)
     return { success: false, error: 'Failed to update hobby. Please try again.' }
+  }
+}
+
+export async function deleteHobby(id: string): Promise<ActionResult<null>> {
+  const parsed = z.uuid().safeParse(id)
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid hobby ID' }
+  }
+
+  try {
+    await prisma.hobby.delete({
+      where: { id: parsed.data },
+    })
+
+    revalidatePath('/hobbies')
+    return { success: true, data: null }
+  } catch (error) {
+    console.error('deleteHobby failed:', { id }, error)
+    return { success: false, error: 'Failed to delete hobby. Please try again.' }
   }
 }
