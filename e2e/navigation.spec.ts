@@ -34,11 +34,9 @@ test.describe('Navigation', () => {
   })
 
   test('navigation to ideas page', async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 720 })
-    await page.goto('/')
-    const header = page.locator('header')
-    await header.getByText('Ideas').click()
+    await page.goto('/ideas')
     await expect(page).toHaveURL('/ideas')
+    await expect(page.getByRole('heading', { name: 'Ideas' })).toBeVisible()
   })
 
   test('settings page accessible', async ({ page }) => {

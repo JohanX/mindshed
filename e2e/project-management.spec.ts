@@ -4,16 +4,17 @@ test.describe.configure({ mode: 'serial' })
 
 test.describe('Project Management', () => {
   let hobbyId: string
+  let hobbyName: string
 
-  test.beforeAll(async ({ browser }) => {
-    // Create a hobby for project tests
+  test.beforeAll(async ({ browser, browserName }) => {
+    hobbyName = `PM-${browserName}-${Date.now()}`
     const page = await browser.newPage({ storageState: 'e2e/.auth/state.json' })
     await page.goto('/settings')
     await page.waitForLoadState('networkidle')
 
-    // Create a test hobby
-    await page.getByRole('button', { name: 'Add Hobby' }).first().click()
-    await page.getByPlaceholder('e.g., Woodworking').fill('E2E Project Hobby')
+    // Create a test hobby (scoped to main to avoid top bar button)
+    await page.locator('main').getByRole('button', { name: 'Add Hobby' }).first().click()
+    await page.getByPlaceholder('e.g., Woodworking').fill(hobbyName)
     await page.getByTitle('Walnut').click()
     await page.getByRole('button', { name: 'Save' }).click()
     await page.waitForTimeout(1000)
@@ -21,18 +22,24 @@ test.describe('Project Management', () => {
     // Get hobby ID from the created hobby link
     await page.goto('/settings')
     await page.waitForLoadState('networkidle')
-    const hobbyLink = page.getByRole('link', { name: /E2E Project Hobby/ }).first()
+    const hobbyLink = page.getByRole('link', { name: new RegExp(hobbyName) }).first()
     const href = await hobbyLink.getAttribute('href')
     hobbyId = href?.replace('/hobbies/', '') ?? ''
     await page.close()
   })
 
   test.afterAll(async ({ browser }) => {
-    // Clean up: delete the hobby
+    // Clean up: delete the specific hobby we created
     const page = await browser.newPage({ storageState: 'e2e/.auth/state.json' })
     await page.goto('/settings')
     await page.waitForLoadState('networkidle')
-    const actionButton = page.getByRole('button', { name: 'Hobby actions' }).first()
+
+    // Find our specific hobby's action button using robust selector
+    const actionButton = page
+      .locator('div.relative')
+      .filter({ has: page.getByRole('link', { name: new RegExp(hobbyName) }) })
+      .getByRole('button', { name: 'Hobby actions' })
+
     if (await actionButton.isVisible({ timeout: 2000 }).catch(() => false)) {
       await actionButton.click()
       await page.getByRole('menuitem', { name: 'Delete' }).click()
@@ -44,6 +51,7 @@ test.describe('Project Management', () => {
 
   test('hobby detail page shows empty state with create button', async ({ page }) => {
     await page.goto(`/hobbies/${hobbyId}`)
+    await page.waitForLoadState('networkidle')
     await expect(page.getByText('No projects yet')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Create Project' }).first()).toBeVisible()
   })
@@ -77,13 +85,34 @@ test.describe('Project Management', () => {
   test('project view shows steps in order', async ({ page }) => {
     // Navigate to the project we just created
     await page.goto(`/hobbies/${hobbyId}`)
-    await page.getByText('Test Table').click()
+    await page.waitForLoadState('networkidle')
+    await page.getByText('Test Table').first().click()
     await page.waitForLoadState('networkidle')
 
     // Steps should be visible
     await expect(page.getByText('Design')).toBeVisible()
     await expect(page.getByText('Cut')).toBeVisible()
     await expect(page.getByText('Assembly')).toBeVisible()
+  })
+
+  test('project card shows step progress summary', async ({ page }) => {
+    await page.goto(`/hobbies/${hobbyId}`)
+    await page.waitForLoadState('networkidle')
+
+    // The project created in the previous test should show step progress
+    await expect(page.getByText('Test Table').first()).toBeVisible()
+
+    // Should show step count like "0/3 steps"
+    await expect(page.getByText(/\d+\/3 steps/)).toBeVisible()
+  })
+
+  test('tapping project card navigates to project detail', async ({ page }) => {
+    await page.goto(`/hobbies/${hobbyId}`)
+    await page.waitForLoadState('networkidle')
+
+    await page.getByText('Test Table').first().click()
+    await expect(page).toHaveURL(/\/hobbies\/.*\/projects\//)
+    await expect(page.getByRole('heading', { name: 'Test Table' })).toBeVisible()
   })
 
   test('save button disabled when project name is empty', async ({ page }) => {
@@ -101,14 +130,15 @@ test.describe('Project Management', () => {
     await page.waitForLoadState('networkidle')
 
     // The project created earlier should appear with hobby name
-    await expect(page.getByText('Test Table')).toBeVisible()
-    await expect(page.getByText('E2E Project Hobby')).toBeVisible()
+    await expect(page.getByText('Test Table').first()).toBeVisible()
+    await expect(page.getByText(hobbyName).first()).toBeVisible()
   })
 
   test('can edit a project name via context menu', async ({ page }) => {
     // Navigate to the project
     await page.goto(`/hobbies/${hobbyId}`)
-    await page.getByText('Test Table').click()
+    await page.waitForLoadState('networkidle')
+    await page.getByText('Test Table').first().click()
     await page.waitForLoadState('networkidle')
 
     // Open context menu and click Edit
@@ -146,5 +176,38 @@ test.describe('Project Management', () => {
 
     // Should redirect to hobby page
     await expect(page).toHaveURL(new RegExp(`/hobbies/${hobbyId}`))
+  })
+
+  test('can add a step and change state', async ({ page }) => {
+    // Create a fresh project for step management
+    await page.goto(`/hobbies/${hobbyId}`)
+    await page.getByRole('button', { name: 'Create Project' }).first().click()
+    await page.getByPlaceholder('e.g., Walnut Side Table').fill('Step Test Project')
+    await page.getByPlaceholder('Step 1 name').fill('Initial Step')
+    await page.getByRole('button', { name: 'Save' }).click()
+    await page.waitForTimeout(2000)
+
+    // Should be on project view
+    await expect(page.getByRole('heading', { name: 'Step Test Project' })).toBeVisible()
+    await expect(page.getByText('Initial Step')).toBeVisible()
+
+    // Add a step
+    await page.getByRole('button', { name: 'Add Step' }).click()
+    await page.getByPlaceholder('Step name').fill('New Step')
+    await page.getByRole('button', { name: 'Add', exact: true }).click()
+    await page.waitForTimeout(1000)
+
+    // Reload and verify
+    await page.goto(page.url())
+    await expect(page.getByText('New Step')).toBeVisible()
+
+    // Start a step
+    const startButton = page.getByTitle('Start step').first()
+    if (await startButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await startButton.click()
+      await page.waitForTimeout(1000)
+      await page.goto(page.url())
+      await expect(page.getByText('In Progress')).toBeVisible()
+    }
   })
 })

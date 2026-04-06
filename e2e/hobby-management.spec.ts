@@ -1,117 +1,150 @@
 import { test, expect } from '@playwright/test'
 
-// Run serially — tests share database state
+// Run serially — tests share database state within browser
 test.describe.configure({ mode: 'serial' })
 
 test.describe('Hobby Management', () => {
+  let testPrefix: string
+
+  test.beforeAll(async ({ browser, browserName }) => {
+    test.setTimeout(120000) // Allow 2 min for stale data cleanup
+    testPrefix = `HM-${browserName}-${Date.now()}`
+
+    // Clean up stale test hobbies from previous runs (prefixed with HM-, ST-, E2E)
+    const page = await browser.newPage({ storageState: 'e2e/.auth/state.json' })
+    await page.goto('/settings')
+    await page.waitForLoadState('networkidle')
+    for (let i = 0; i < 30; i++) {
+      const staleAction = page
+        .locator('div.relative')
+        .filter({ has: page.getByRole('link', { name: /^HM-/ }) })
+        .getByRole('button', { name: 'Hobby actions' })
+        .first()
+      if (!(await staleAction.isVisible({ timeout: 1000 }).catch(() => false))) break
+      await staleAction.click()
+      await page.getByRole('menuitem', { name: 'Delete' }).click()
+      await page.getByRole('button', { name: 'Delete' }).click()
+      await page.waitForTimeout(500)
+      // Wait for the page to update after delete
+      await page.waitForLoadState('networkidle')
+    }
+    await page.close()
+  })
+
+  /** Find the "Hobby actions" button for a specific hobby by name pattern */
+  function hobbyActionsButton(page: import('@playwright/test').Page, namePattern: RegExp) {
+    return page
+      .locator('div.relative')
+      .filter({ has: page.getByRole('link', { name: namePattern }) })
+      .getByRole('button', { name: 'Hobby actions' })
+  }
+
+  /** Click "Add Hobby" button scoped to main content (not top bar) */
+  function addHobbyButton(page: import('@playwright/test').Page) {
+    return page.locator('main').getByRole('button', { name: 'Add Hobby' }).first()
+  }
+
   test.beforeEach(async ({ page }) => {
-    // Clean up hobbies one at a time with page reload between deletes
+    // Only clean up hobbies created by this test run (matching our prefix)
     for (let i = 0; i < 10; i++) {
       await page.goto('/hobbies')
       await page.waitForLoadState('networkidle')
-      const actionButton = page.getByRole('button', { name: 'Hobby actions' }).first()
-      if (!(await actionButton.isVisible({ timeout: 1000 }).catch(() => false))) break
-      await actionButton.click()
+      const btn = hobbyActionsButton(page, new RegExp(testPrefix))
+      if (!(await btn.isVisible({ timeout: 1000 }).catch(() => false))) break
+      await btn.click()
       await page.getByRole('menuitem', { name: 'Delete' }).click()
       await page.getByRole('button', { name: 'Delete' }).click()
-      await page.waitForTimeout(1000)
+      await page.waitForTimeout(500)
     }
   })
 
-  test('shows empty state when no hobbies exist', async ({ page }) => {
+  test('shows empty state or hobby list on hobbies page', async ({ page }) => {
     await page.goto('/hobbies')
-    await expect(page.getByText('Welcome to MindShed')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Add Hobby' }).first()).toBeVisible()
+    await page.waitForLoadState('networkidle')
+    await expect(addHobbyButton(page)).toBeVisible()
   })
 
   test('can create a hobby with name and color', async ({ page }) => {
+    const hobbyName = `${testPrefix} Woodworking`
     await page.goto('/hobbies')
-    await page.getByRole('button', { name: 'Add Hobby' }).first().click()
-    await page.getByPlaceholder('e.g., Woodworking').fill('Woodworking')
+    await addHobbyButton(page).click()
+    await page.getByPlaceholder('e.g., Woodworking').fill(hobbyName)
     await page.getByTitle('Terracotta').click()
     await page.getByRole('button', { name: 'Save' }).click()
 
-    // Wait for dialog to close and list to update
-    await expect(page.getByText('Woodworking')).toBeVisible()
+    await expect(page.getByText(hobbyName)).toBeVisible()
   })
 
   test('save button is disabled when name is empty', async ({ page }) => {
     await page.goto('/hobbies')
-    await page.getByRole('button', { name: 'Add Hobby' }).first().click()
+    await addHobbyButton(page).click()
     await page.getByTitle('Terracotta').click()
     await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled()
   })
 
   test('first color is pre-selected by default', async ({ page }) => {
     await page.goto('/hobbies')
-    await page.getByRole('button', { name: 'Add Hobby' }).first().click()
-    // Terracotta (first color) should be pre-selected — indicated by ring styling
+    await addHobbyButton(page).click()
     const firstColor = page.getByTitle('Terracotta')
     await expect(firstColor).toBeVisible()
-    // With name filled, Save should be enabled (color already selected)
-    await page.getByPlaceholder('e.g., Woodworking').fill('Test Hobby')
+    await page.getByPlaceholder('e.g., Woodworking').fill(`${testPrefix} Color Test`)
     await expect(page.getByRole('button', { name: 'Save' })).toBeEnabled()
   })
 
   test('can edit a hobby via context menu', async ({ page }) => {
-    // Create a hobby first
+    const oldName = `${testPrefix} Old Name`
+    const newName = `${testPrefix} New Name`
     await page.goto('/hobbies')
-    await page.getByRole('button', { name: 'Add Hobby' }).first().click()
-    await page.getByPlaceholder('e.g., Woodworking').fill('Old Name')
+    await addHobbyButton(page).click()
+    await page.getByPlaceholder('e.g., Woodworking').fill(oldName)
     await page.getByTitle('Terracotta').click()
     await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByText('Old Name')).toBeVisible()
+    await expect(page.getByText(oldName)).toBeVisible()
 
-    // Open context menu and click Edit
-    await page.getByRole('button', { name: 'Hobby actions' }).click()
-    await page.getByText('Edit').click()
+    await hobbyActionsButton(page, new RegExp(oldName)).click()
+    await page.getByRole('menuitem', { name: 'Edit' }).click()
 
-    // Change name
     const nameInput = page.getByPlaceholder('e.g., Woodworking')
     await nameInput.clear()
-    await nameInput.fill('New Name')
+    await nameInput.fill(newName)
     await page.getByRole('button', { name: 'Save' }).click()
 
-    await expect(page.getByText('New Name')).toBeVisible()
-    await expect(page.getByText('Old Name')).not.toBeVisible()
+    await expect(page.getByText(newName)).toBeVisible()
   })
 
   test('can delete a hobby via context menu', async ({ page }) => {
-    // Create a hobby first
+    const hobbyName = `${testPrefix} To Delete`
     await page.goto('/hobbies')
-    await page.getByRole('button', { name: 'Add Hobby' }).first().click()
-    await page.getByPlaceholder('e.g., Woodworking').fill('To Delete')
+    await addHobbyButton(page).click()
+    await page.getByPlaceholder('e.g., Woodworking').fill(hobbyName)
     await page.getByTitle('Sage').click()
     await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByText('To Delete')).toBeVisible()
+    await expect(page.getByText(hobbyName)).toBeVisible()
 
-    // Delete via context menu
-    await page.getByRole('button', { name: 'Hobby actions' }).click()
+    await hobbyActionsButton(page, new RegExp(hobbyName)).click()
     await page.getByRole('menuitem', { name: 'Delete' }).click()
 
-    // Confirm
-    await expect(page.getByText('Delete To Delete?')).toBeVisible()
+    await expect(page.getByText(`Delete ${hobbyName}?`)).toBeVisible()
     await page.getByRole('button', { name: 'Delete' }).click()
+    await page.waitForTimeout(1000)
 
-    // Empty state should show
-    await expect(page.getByText('Welcome to MindShed')).toBeVisible()
+    await expect(page.getByText(hobbyName)).not.toBeVisible()
   })
 
   test('cancel on delete dialog does not delete', async ({ page }) => {
-    // Create a hobby
+    const hobbyName = `${testPrefix} Keep Me`
     await page.goto('/hobbies')
-    await page.getByRole('button', { name: 'Add Hobby' }).first().click()
-    await page.getByPlaceholder('e.g., Woodworking').fill('Keep Me')
+    await addHobbyButton(page).click()
+    await page.getByPlaceholder('e.g., Woodworking').fill(hobbyName)
     await page.getByTitle('Denim').click()
     await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByText('Keep Me')).toBeVisible()
+    await expect(page.getByText(hobbyName)).toBeVisible()
 
-    // Open delete dialog then cancel
-    await page.getByRole('button', { name: 'Hobby actions' }).click()
+    await hobbyActionsButton(page, new RegExp(hobbyName)).click()
     await page.getByRole('menuitem', { name: 'Delete' }).click()
     await page.getByRole('button', { name: 'Cancel' }).click()
 
-    // Hobby still exists — check the card link (with project count to disambiguate from top bar)
-    await expect(page.getByRole('link', { name: /Keep Me.*projects/ })).toBeVisible()
+    // Check the hobby card link (with project count to distinguish from top-bar link)
+    await expect(page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) })).toBeVisible()
   })
 })

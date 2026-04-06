@@ -97,6 +97,55 @@ export async function getAllProjects(): Promise<ActionResult<ProjectWithHobby[]>
   }
 }
 
+export interface ProjectWithProgress extends ProjectCardData {
+  isArchived: boolean
+  isCompleted: boolean
+}
+
+export async function getProjectsByHobby(hobbyId: string): Promise<ActionResult<ProjectWithProgress[]>> {
+  const parsed = z.uuid().safeParse(hobbyId)
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid hobby ID' }
+  }
+
+  try {
+    const projects = await prisma.project.findMany({
+      where: { hobbyId: parsed.data },
+      orderBy: { lastActivityAt: 'desc' },
+      include: {
+        steps: {
+          select: { id: true, name: true, state: true, sortOrder: true },
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
+    })
+
+    return {
+      success: true,
+      data: projects.map((p) => {
+        const currentStep = p.steps.find(s => s.state === 'IN_PROGRESS') ??
+          p.steps.find(s => s.state === 'NOT_STARTED')
+        return {
+          id: p.id,
+          name: p.name,
+          hobbyId: p.hobbyId,
+          totalSteps: p.steps.length,
+          completedSteps: p.steps.filter(s => s.state === 'COMPLETED').length,
+          currentStepName: currentStep?.name ?? null,
+          currentStepState: currentStep?.state && currentStep.state in STEP_STATE_CONFIG
+            ? (currentStep.state as StepState) : null,
+          hasBlockedSteps: p.steps.some(s => s.state === 'BLOCKED'),
+          isArchived: p.isArchived,
+          isCompleted: p.isCompleted,
+        }
+      }),
+    }
+  } catch (error) {
+    console.error('getProjectsByHobby failed:', error)
+    return { success: false, error: 'Failed to load projects.' }
+  }
+}
+
 export async function updateProject(input: UpdateProjectInput): Promise<ActionResult<{ id: string }>> {
   const parsed = updateProjectSchema.safeParse(input)
   if (!parsed.success) {
