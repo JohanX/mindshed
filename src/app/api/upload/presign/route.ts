@@ -1,3 +1,5 @@
+import { cookies } from 'next/headers'
+import { isAuthEnabled } from '@/lib/auth'
 import { getR2Client, getR2Bucket } from '@/lib/r2'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
@@ -19,6 +21,15 @@ const presignRequestSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    // Auth check — reject unauthenticated requests
+    if (isAuthEnabled()) {
+      const cookieStore = await cookies()
+      const authCookie = cookieStore.get('mindshed_auth')
+      if (authCookie?.value !== 'authenticated') {
+        return Response.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+    }
+
     const body = await request.json()
     const parsed = presignRequestSchema.safeParse(body)
 

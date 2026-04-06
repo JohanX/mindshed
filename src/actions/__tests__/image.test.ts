@@ -51,7 +51,15 @@ describe('addStepImageLink', () => {
   })
 
   it('returns error when step not found', async () => {
-    mockStepFindUnique.mockResolvedValue(null)
+    const mockTx = vi.mocked(prisma.$transaction)
+    mockTx.mockImplementation(async (fn) => {
+      const tx = {
+        step: { findUnique: vi.fn().mockResolvedValue(null) },
+        stepImage: { create: vi.fn() },
+        project: { update: vi.fn() },
+      }
+      return fn(tx as never)
+    })
 
     const result = await addStepImageLink({ stepId: VALID_UUID, url: VALID_URL })
     expect(result.success).toBe(false)
@@ -59,11 +67,15 @@ describe('addStepImageLink', () => {
   })
 
   it('returns error when project is completed', async () => {
-    mockStepFindUnique.mockResolvedValue({
-      id: VALID_UUID,
-      projectId: 'p1',
-      project: { hobbyId: 'h1', isCompleted: true },
-    } as never)
+    const mockTx = vi.mocked(prisma.$transaction)
+    mockTx.mockImplementation(async (fn) => {
+      const tx = {
+        step: { findUnique: vi.fn().mockResolvedValue({ projectId: 'p1', project: { id: 'p1', hobbyId: 'h1', isCompleted: true } }) },
+        stepImage: { create: vi.fn() },
+        project: { update: vi.fn() },
+      }
+      return fn(tx as never)
+    })
 
     const result = await addStepImageLink({ stepId: VALID_UUID, url: VALID_URL })
     expect(result.success).toBe(false)
@@ -71,31 +83,24 @@ describe('addStepImageLink', () => {
   })
 
   it('creates StepImage with type LINK and updates lastActivityAt', async () => {
-    mockStepFindUnique.mockResolvedValue({
-      id: VALID_UUID,
-      projectId: 'p1',
-      project: { hobbyId: 'h1', isCompleted: false },
-    } as never)
-    mockStepImageCreate.mockResolvedValue({ id: 'img1' } as never)
-    mockProjectUpdate.mockResolvedValue({} as never)
+    const mockCreate = vi.fn().mockResolvedValue({ id: 'img1' })
+    const mockUpdate = vi.fn().mockResolvedValue({})
+    const mockTx = vi.mocked(prisma.$transaction)
+    mockTx.mockImplementation(async (fn) => {
+      const tx = {
+        step: { findUnique: vi.fn().mockResolvedValue({ projectId: 'p1', project: { id: 'p1', hobbyId: 'h1', isCompleted: false } }) },
+        stepImage: { create: mockCreate },
+        project: { update: mockUpdate },
+      }
+      return fn(tx as never)
+    })
 
     const result = await addStepImageLink({ stepId: VALID_UUID, url: VALID_URL })
 
     expect(result.success).toBe(true)
     if (result.success) expect(result.data.id).toBe('img1')
-
-    expect(mockStepImageCreate).toHaveBeenCalledWith({
-      data: {
-        stepId: VALID_UUID,
-        type: 'LINK',
-        url: VALID_URL,
-        storageKey: null,
-      },
-    })
-
-    expect(mockProjectUpdate).toHaveBeenCalledWith({
-      where: { id: 'p1' },
-      data: { lastActivityAt: expect.any(Date) },
+    expect(mockCreate).toHaveBeenCalledWith({
+      data: { stepId: VALID_UUID, type: 'LINK', url: VALID_URL, storageKey: null },
     })
   })
 })

@@ -68,7 +68,7 @@ export function ImageUploadButton({ stepId }: ImageUploadButtonProps) {
           stepId,
           storageKey: key,
           originalFilename: file.name,
-          contentType: file.type,
+          contentType: file.type as 'image/jpeg' | 'image/png' | 'image/webp',
           sizeBytes: file.size,
         })
 

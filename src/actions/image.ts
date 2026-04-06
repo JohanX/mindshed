@@ -19,45 +19,38 @@ export async function addStepImageLink(
   }
 
   try {
-    const step = await prisma.step.findUnique({
-      where: { id: parsed.data.stepId },
-      select: {
-        id: true,
-        projectId: true,
-        project: { select: { hobbyId: true, isCompleted: true } },
-      },
+    const { image, hobbyId, projectId } = await prisma.$transaction(async (tx) => {
+      const step = await tx.step.findUnique({
+        where: { id: parsed.data.stepId },
+        select: { projectId: true, project: { select: { id: true, hobbyId: true, isCompleted: true } } },
+      })
+      if (!step) throw new Error('STEP_NOT_FOUND')
+      if (step.project.isCompleted) throw new Error('PROJECT_COMPLETED')
+
+      const created = await tx.stepImage.create({
+        data: { stepId: parsed.data.stepId, type: 'LINK', url: parsed.data.url, storageKey: null },
+      })
+
+      await tx.project.update({
+        where: { id: step.projectId },
+        data: { lastActivityAt: new Date() },
+      })
+
+      return { image: created, hobbyId: step.project.hobbyId, projectId: step.projectId }
     })
 
-    if (!step) {
-      return { success: false, error: 'Step not found.' }
-    }
-
-    if (step.project.isCompleted) {
-      return { success: false, error: 'Cannot add images to a completed project.' }
-    }
-
-    const image = await prisma.stepImage.create({
-      data: {
-        stepId: parsed.data.stepId,
-        type: 'LINK',
-        url: parsed.data.url,
-        storageKey: null,
-      },
-    })
-
-    await prisma.project.update({
-      where: { id: step.projectId },
-      data: { lastActivityAt: new Date() },
-    })
-
-    revalidatePath(`/hobbies/${step.project.hobbyId}/projects/${step.projectId}`)
-    revalidatePath(`/hobbies/${step.project.hobbyId}`)
+    revalidatePath(`/hobbies/${hobbyId}/projects/${projectId}`)
+    revalidatePath(`/hobbies/${hobbyId}`)
     revalidatePath('/projects')
     revalidatePath('/')
 
     return { success: true, data: { id: image.id } }
   } catch (error) {
     console.error('addStepImageLink failed:', error)
+    if (error instanceof Error) {
+      if (error.message === 'STEP_NOT_FOUND') return { success: false, error: 'Step not found.' }
+      if (error.message === 'PROJECT_COMPLETED') return { success: false, error: 'Cannot add images to a completed project.' }
+    }
     return { success: false, error: 'Failed to add image link.' }
   }
 }
@@ -74,9 +67,10 @@ export async function addStepImage(
     const { image, hobbyId, projectId } = await prisma.$transaction(async (tx) => {
       const step = await tx.step.findUnique({
         where: { id: parsed.data.stepId },
-        select: { projectId: true, project: { select: { id: true, hobbyId: true } } },
+        select: { projectId: true, project: { select: { id: true, hobbyId: true, isCompleted: true } } },
       })
       if (!step) throw new Error('STEP_NOT_FOUND')
+      if (step.project.isCompleted) throw new Error('PROJECT_COMPLETED')
 
       const created = await tx.stepImage.create({
         data: {
@@ -105,8 +99,9 @@ export async function addStepImage(
     return { success: true, data: { id: image.id } }
   } catch (error) {
     console.error('addStepImage failed:', error)
-    if (error instanceof Error && error.message === 'STEP_NOT_FOUND') {
-      return { success: false, error: 'Step not found.' }
+    if (error instanceof Error) {
+      if (error.message === 'STEP_NOT_FOUND') return { success: false, error: 'Step not found.' }
+      if (error.message === 'PROJECT_COMPLETED') return { success: false, error: 'Cannot add images to a completed project.' }
     }
     return { success: false, error: 'Failed to add image. Please try again.' }
   }
