@@ -21,5 +21,46 @@ model Hobby {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  projects Project[]
+
   @@map("hobby")
+}
+
+model Project {
+  id             String   @id @default(uuid())
+  name           String
+  description    String?
+  hobbyId        String   @map("hobby_id")
+  isArchived     Boolean  @default(false) @map("is_archived")
+  isCompleted    Boolean  @default(false) @map("is_completed")
+  lastActivityAt DateTime @default(now()) @map("last_activity_at")
+  sortOrder      Int      @default(0) @map("sort_order")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  hobby Hobby  @relation(fields: [hobbyId], references: [id], onDelete: Cascade)
+  steps Step[]
+
+  @@map("project")
+}
+
+enum StepState {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  BLOCKED
+}
+
+model Step {
+  id        String    @id @default(uuid())
+  name      String
+  projectId String    @map("project_id")
+  state     StepState @default(NOT_STARTED)
+  sortOrder Int       @default(0) @map("sort_order")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("step")
 }
