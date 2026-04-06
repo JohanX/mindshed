@@ -13,7 +13,7 @@ export const STEP_STATE_CONFIG: Record<
 > = {
   NOT_STARTED: {
     label: 'Not Started',
-    colorClass: 'bg-step-not-started text-white',
+    colorClass: 'bg-step-not-started text-foreground',
   },
   IN_PROGRESS: {
     label: 'In Progress',
@@ -25,6 +25,6 @@ export const STEP_STATE_CONFIG: Record<
   },
   BLOCKED: {
     label: 'Blocked',
-    colorClass: 'bg-step-blocked text-white',
+    colorClass: 'bg-step-blocked text-foreground',
   },
 }

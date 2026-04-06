@@ -5,17 +5,12 @@ import { usePathname } from 'next/navigation'
 import { LayoutDashboard, Lightbulb, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
+import { getHobbyContext } from '@/lib/hobby-utils'
 import { HobbyFormDialog } from '@/components/hobby/hobby-form'
 import type { HobbyWithCounts } from '@/lib/schemas/hobby'
 
 interface TopBarProps {
   hobbies: HobbyWithCounts[]
-}
-
-function getHobbyContext(pathname: string, hobbies: HobbyWithCounts[]) {
-  const match = pathname.match(/^\/hobbies\/([^/]+)/)
-  if (!match) return null
-  return hobbies.find(h => h.id === match[1]) ?? null
 }
 
 export function TopBar({ hobbies }: TopBarProps) {
@@ -43,7 +38,7 @@ export function TopBar({ hobbies }: TopBarProps) {
           <Link
             href="/"
             className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px]',
               pathname === '/'
                 ? 'bg-accent text-foreground'
                 : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
@@ -93,7 +88,7 @@ export function TopBar({ hobbies }: TopBarProps) {
           <Link
             href="/ideas"
             className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px]',
               pathname.startsWith('/ideas')
                 ? 'bg-accent text-foreground'
                 : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'

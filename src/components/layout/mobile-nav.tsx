@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, Palette, Lightbulb, Settings, ArrowLeft, FolderOpen, MoreHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getHobbyContext } from '@/lib/hobby-utils'
 import type { HobbyWithCounts } from '@/lib/schemas/hobby'
 
 const DEFAULT_NAV_ITEMS = [
@@ -17,12 +18,6 @@ interface MobileNavProps {
   hobbies: HobbyWithCounts[]
 }
 
-function getHobbyContext(pathname: string, hobbies: HobbyWithCounts[]) {
-  const match = pathname.match(/^\/hobbies\/([^/]+)/)
-  if (!match) return null
-  return hobbies.find(h => h.id === match[1]) ?? null
-}
-
 export function MobileNav({ hobbies }: MobileNavProps) {
   const pathname = usePathname()
   const activeHobby = getHobbyContext(pathname, hobbies)
@@ -30,7 +25,7 @@ export function MobileNav({ hobbies }: MobileNavProps) {
   if (activeHobby) {
     // Contextual hobby navigation
     const contextItems = [
-      { href: '/settings', label: '← Hobbies', icon: ArrowLeft },
+      { href: '/hobbies', label: '← Hobbies', icon: ArrowLeft },
       { href: `/hobbies/${activeHobby.id}`, label: 'Projects', icon: FolderOpen },
       { href: `/hobbies/${activeHobby.id}/ideas`, label: 'Ideas', icon: Lightbulb },
       { href: `/settings`, label: 'More', icon: MoreHorizontal },

@@ -20,6 +20,6 @@ describe('showSuccessToast', () => {
 describe('showErrorToast', () => {
   it('calls toast.error with message and 5s duration', () => {
     showErrorToast('Upload failed — try again')
-    expect(toast.error).toHaveBeenCalledWith('Upload failed — try again', { duration: 5000 })
+    expect(toast.error).toHaveBeenCalledWith('Upload failed — try again', { duration: 5000, closeButton: true })
   })
 })

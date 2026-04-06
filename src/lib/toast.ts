@@ -15,5 +15,5 @@ export function showSuccessToast(message: string) {
  * Examples: "Upload failed — try again", "Could not save — check connection"
  */
 export function showErrorToast(message: string) {
-  toast.error(message, { duration: 5000 })
+  toast.error(message, { duration: 5000, closeButton: true })
 }

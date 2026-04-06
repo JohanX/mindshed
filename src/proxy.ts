@@ -16,7 +16,7 @@ export function proxy(request: NextRequest) {
   if (isValidToken(request)) {
     const url = request.nextUrl.clone()
     url.searchParams.delete('token')
-    url.pathname = '/'
+    // Preserve original path — don't force redirect to /
     const response = NextResponse.redirect(url)
     return createAuthCookie(response)
   }
@@ -27,6 +27,6 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

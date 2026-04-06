@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { timingSafeEqual } from 'crypto'
 
 const COOKIE_NAME = 'mindshed_auth'
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365 // 1 year
@@ -32,5 +33,6 @@ export function isValidToken(request: NextRequest): boolean {
   const secret = getAppSecret()
   if (!secret) return false
   const token = request.nextUrl.searchParams.get('token')
-  return token === secret
+  if (!token || token.length !== secret.length) return false
+  return timingSafeEqual(Buffer.from(token), Buffer.from(secret))
 }
