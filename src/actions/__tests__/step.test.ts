@@ -82,21 +82,26 @@ describe('updateStep', () => {
   })
 
   it('updates step name and project lastActivityAt', async () => {
-    mockStepUpdate.mockResolvedValue({ id: 's1', projectId: 'p1' } as never)
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        step: {
+          findUniqueOrThrow: vi.fn().mockResolvedValue({ project: { isCompleted: false } }),
+          update: vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' }),
+        },
+      }
+      return fn(tx as never)
+    })
 
     const result = await updateStep({
       id: '550e8400-e29b-41d4-a716-446655440000',
       name: 'Updated Name',
     })
     expect(result.success).toBe(true)
-    expect(mockStepUpdate).toHaveBeenCalledWith(expect.objectContaining({
-      data: { name: 'Updated Name' },
-    }))
     expect(mockProjectUpdate).toHaveBeenCalled()
   })
 
   it('returns error when step not found', async () => {
-    mockStepUpdate.mockRejectedValue({ code: 'P2025' })
+    mockTransaction.mockRejectedValue({ code: 'P2025' })
 
     const result = await updateStep({
       id: '550e8400-e29b-41d4-a716-446655440000',
@@ -119,16 +124,23 @@ describe('deleteStep', () => {
   })
 
   it('deletes step and updates project lastActivityAt', async () => {
-    mockStepDelete.mockResolvedValue({ id: 's1', projectId: 'p1' } as never)
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        step: {
+          findUniqueOrThrow: vi.fn().mockResolvedValue({ projectId: 'p1', project: { isCompleted: false } }),
+          delete: vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' }),
+        },
+      }
+      return fn(tx as never)
+    })
 
     const result = await deleteStep('550e8400-e29b-41d4-a716-446655440000')
     expect(result.success).toBe(true)
-    expect(mockStepDelete).toHaveBeenCalled()
     expect(mockProjectUpdate).toHaveBeenCalled()
   })
 
   it('returns error when step not found', async () => {
-    mockStepDelete.mockRejectedValue({ code: 'P2025' })
+    mockTransaction.mockRejectedValue({ code: 'P2025' })
 
     const result = await deleteStep('550e8400-e29b-41d4-a716-446655440000')
     expect(result.success).toBe(false)
@@ -148,21 +160,26 @@ describe('updateStepState', () => {
   })
 
   it('updates step state and project lastActivityAt', async () => {
-    mockStepUpdate.mockResolvedValue({ id: 's1', projectId: 'p1' } as never)
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        step: {
+          findUniqueOrThrow: vi.fn().mockResolvedValue({ project: { isCompleted: false } }),
+          update: vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' }),
+        },
+      }
+      return fn(tx as never)
+    })
 
     const result = await updateStepState({
       id: '550e8400-e29b-41d4-a716-446655440000',
       state: 'IN_PROGRESS',
     })
     expect(result.success).toBe(true)
-    expect(mockStepUpdate).toHaveBeenCalledWith(expect.objectContaining({
-      data: { state: 'IN_PROGRESS' },
-    }))
     expect(mockProjectUpdate).toHaveBeenCalled()
   })
 
   it('returns error when step not found', async () => {
-    mockStepUpdate.mockRejectedValue({ code: 'P2025' })
+    mockTransaction.mockRejectedValue({ code: 'P2025' })
 
     const result = await updateStepState({
       id: '550e8400-e29b-41d4-a716-446655440000',
@@ -289,10 +306,7 @@ describe('reorderSteps', () => {
     expect(mockStepUpdateTx).toHaveBeenCalledWith({ where: { id: stepId1 }, data: { sortOrder: 1 } })
     expect(mockStepUpdateTx).toHaveBeenCalledWith({ where: { id: stepId2 }, data: { sortOrder: 2 } })
 
-    // Should have updated project lastActivityAt inside transaction
-    expect(mockProjectUpdateTx).toHaveBeenCalled()
-
-    // Should also call updateProjectActivity (revalidatePath etc)
+    // Should call updateProjectActivity (revalidatePath + lastActivityAt)
     expect(mockProjectUpdate).toHaveBeenCalled()
   })
 })

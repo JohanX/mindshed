@@ -67,15 +67,22 @@ export async function updateStep(input: UpdateStepInput): Promise<ActionResult<{
   }
 
   try {
-    const step = await prisma.step.update({
-      where: { id: parsed.data.id },
-      data: { name: parsed.data.name },
+    const step = await prisma.$transaction(async (tx) => {
+      const existing = await tx.step.findUniqueOrThrow({
+        where: { id: parsed.data.id },
+        select: { project: { select: { isCompleted: true } } },
+      })
+      if (existing.project.isCompleted) throw new Error('PROJECT_COMPLETED')
+      return tx.step.update({ where: { id: parsed.data.id }, data: { name: parsed.data.name } })
     })
 
     await updateProjectActivity(step.projectId)
     return { success: true, data: { id: step.id } }
   } catch (error: unknown) {
     console.error('updateStep failed:', error)
+    if (error instanceof Error && error.message === 'PROJECT_COMPLETED') {
+      return { success: false, error: 'Cannot modify steps on a completed project.' }
+    }
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
       return { success: false, error: 'Step not found.' }
     }
@@ -90,14 +97,22 @@ export async function deleteStep(id: string): Promise<ActionResult<null>> {
   }
 
   try {
-    const step = await prisma.step.delete({
-      where: { id: parsed.data },
+    const step = await prisma.$transaction(async (tx) => {
+      const existing = await tx.step.findUniqueOrThrow({
+        where: { id: parsed.data },
+        select: { projectId: true, project: { select: { isCompleted: true } } },
+      })
+      if (existing.project.isCompleted) throw new Error('PROJECT_COMPLETED')
+      return tx.step.delete({ where: { id: parsed.data } })
     })
 
     await updateProjectActivity(step.projectId)
     return { success: true, data: null }
   } catch (error: unknown) {
     console.error('deleteStep failed:', error)
+    if (error instanceof Error && error.message === 'PROJECT_COMPLETED') {
+      return { success: false, error: 'Cannot modify steps on a completed project.' }
+    }
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
       return { success: false, error: 'Step not found.' }
     }
@@ -112,15 +127,22 @@ export async function updateStepState(input: UpdateStepStateInput): Promise<Acti
   }
 
   try {
-    const step = await prisma.step.update({
-      where: { id: parsed.data.id },
-      data: { state: parsed.data.state },
+    const step = await prisma.$transaction(async (tx) => {
+      const existing = await tx.step.findUniqueOrThrow({
+        where: { id: parsed.data.id },
+        select: { project: { select: { isCompleted: true } } },
+      })
+      if (existing.project.isCompleted) throw new Error('PROJECT_COMPLETED')
+      return tx.step.update({ where: { id: parsed.data.id }, data: { state: parsed.data.state } })
     })
 
     await updateProjectActivity(step.projectId)
     return { success: true, data: null }
   } catch (error: unknown) {
     console.error('updateStepState failed:', error)
+    if (error instanceof Error && error.message === 'PROJECT_COMPLETED') {
+      return { success: false, error: 'Cannot modify steps on a completed project.' }
+    }
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
       return { success: false, error: 'Step not found.' }
     }
@@ -149,6 +171,9 @@ export async function reorderSteps(input: ReorderStepsInput): Promise<ActionResu
         select: { id: true },
       })
       const projectStepIds = new Set(steps.map(s => s.id))
+      if (parsed.data.orderedStepIds.length !== projectStepIds.size) {
+        throw new Error('STEP_COUNT_MISMATCH')
+      }
       for (const id of parsed.data.orderedStepIds) {
         if (!projectStepIds.has(id)) throw new Error('STEP_NOT_IN_PROJECT')
       }
@@ -161,11 +186,6 @@ export async function reorderSteps(input: ReorderStepsInput): Promise<ActionResu
         })
       }
 
-      // Update lastActivityAt
-      await tx.project.update({
-        where: { id: parsed.data.projectId },
-        data: { lastActivityAt: new Date() },
-      })
     })
 
     await updateProjectActivity(parsed.data.projectId)
@@ -175,6 +195,7 @@ export async function reorderSteps(input: ReorderStepsInput): Promise<ActionResu
     if (error instanceof Error) {
       if (error.message === 'PROJECT_NOT_FOUND') return { success: false, error: 'Project not found.' }
       if (error.message === 'PROJECT_COMPLETED') return { success: false, error: 'Cannot reorder steps in a completed project.' }
+      if (error.message === 'STEP_COUNT_MISMATCH') return { success: false, error: 'Step count does not match project.' }
       if (error.message === 'STEP_NOT_IN_PROJECT') return { success: false, error: 'One or more steps do not belong to this project.' }
     }
     return { success: false, error: 'Failed to reorder steps. Please try again.' }
