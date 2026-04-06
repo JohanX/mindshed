@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test'
+import 'dotenv/config'
 
 export default defineConfig({
   testDir: './e2e',
@@ -10,11 +11,29 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
+    storageState: 'e2e/.auth/state.json',
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    {
+      name: 'setup',
+      testMatch: /auth\.setup\.ts/,
+      use: { storageState: undefined },
+    },
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+      dependencies: ['setup'],
+    },
   ],
   webServer: {
     command: 'pnpm dev',

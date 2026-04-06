@@ -111,7 +111,7 @@ test.describe('Hobby Management', () => {
     await page.getByRole('menuitem', { name: 'Delete' }).click()
     await page.getByRole('button', { name: 'Cancel' }).click()
 
-    // Hobby still exists — check the card link specifically
-    await expect(page.getByRole('link', { name: /Keep Me/ })).toBeVisible()
+    // Hobby still exists — check the card link (with project count to disambiguate from top bar)
+    await expect(page.getByRole('link', { name: /Keep Me.*projects/ })).toBeVisible()
   })
 })

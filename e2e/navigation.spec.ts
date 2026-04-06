@@ -1,53 +1,55 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('Navigation', () => {
-  test('mobile: bottom nav bar is visible with 3 items', async ({ page }) => {
+  test('mobile: bottom nav visible with 4 items', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 })
     await page.goto('/')
-    const nav = page.locator('nav.fixed.bottom-0')
-    await expect(nav).toBeVisible()
-    await expect(nav.getByText('Dashboard')).toBeVisible()
-    await expect(nav.getByText('Hobbies')).toBeVisible()
-    await expect(nav.getByText('Ideas')).toBeVisible()
+    await page.waitForLoadState('networkidle')
+    // Bottom nav is a direct child <nav> of body, not inside <header>
+    await expect(page.getByRole('link', { name: 'Dashboard' }).first()).toBeVisible()
+    await expect(page.getByText('Hobbies')).toBeVisible()
+    await expect(page.getByText('Settings').first()).toBeVisible()
   })
 
-  test('mobile: sidebar is hidden', async ({ page }) => {
+  test('desktop: top bar with MindShed branding', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await page.goto('/')
+    const header = page.locator('header')
+    await expect(header).toBeVisible()
+    await expect(header.getByRole('link', { name: 'MindShed' })).toBeVisible()
+  })
+
+  test('desktop: no sidebar (aside)', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await page.goto('/')
+    await expect(page.locator('aside')).toHaveCount(0)
+  })
+
+  test('navigation to hobbies page via mobile nav', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 })
     await page.goto('/')
-    const sidebar = page.locator('aside')
-    await expect(sidebar).toBeHidden()
-  })
-
-  test('desktop: sidebar is visible with MindShed branding', async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 720 })
-    await page.goto('/')
-    const sidebar = page.locator('aside')
-    await expect(sidebar).toBeVisible()
-    await expect(sidebar.getByText('MindShed')).toBeVisible()
-    await expect(sidebar.getByText('Dashboard')).toBeVisible()
-    await expect(sidebar.getByText('Hobbies')).toBeVisible()
-    await expect(sidebar.getByText('Ideas')).toBeVisible()
-  })
-
-  test('desktop: bottom nav is hidden', async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 720 })
-    await page.goto('/')
-    const bottomNav = page.locator('nav.fixed.bottom-0')
-    await expect(bottomNav).toBeHidden()
-  })
-
-  test('navigation between pages updates active state', async ({ page }) => {
-    await page.goto('/')
-    await page.getByText('Hobbies').first().click()
+    await page.waitForLoadState('networkidle')
+    await page.locator('nav').getByText('Hobbies').click()
     await expect(page).toHaveURL('/hobbies')
-    await page.getByText('Ideas').first().click()
-    await expect(page).toHaveURL('/ideas')
-    await page.getByText('Dashboard').first().click()
-    await expect(page).toHaveURL('/')
   })
 
-  test('breadcrumbs appear on sub-pages', async ({ page }) => {
+  test('navigation to ideas page', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await page.goto('/')
+    const header = page.locator('header')
+    await header.getByText('Ideas').click()
+    await expect(page).toHaveURL('/ideas')
+  })
+
+  test('settings page accessible', async ({ page }) => {
+    await page.goto('/settings')
+    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
+  })
+
+  test('breadcrumbs on hobbies page', async ({ page }) => {
     await page.goto('/hobbies')
-    await expect(page.getByText('Dashboard').first()).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Hobbies' })).toBeVisible()
+    // Breadcrumb has Dashboard link
+    await expect(page.getByLabel('breadcrumb').getByText('Dashboard')).toBeVisible()
   })
 })

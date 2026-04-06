@@ -1,0 +1,121 @@
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { LayoutDashboard, Lightbulb, Settings } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { renderHobbyIcon } from '@/lib/hobby-icons'
+import { HobbyFormDialog } from '@/components/hobby/hobby-form'
+import type { HobbyWithCounts } from '@/lib/schemas/hobby'
+
+interface TopBarProps {
+  hobbies: HobbyWithCounts[]
+}
+
+function getHobbyContext(pathname: string, hobbies: HobbyWithCounts[]) {
+  const match = pathname.match(/^\/hobbies\/([^/]+)/)
+  if (!match) return null
+  return hobbies.find(h => h.id === match[1]) ?? null
+}
+
+export function TopBar({ hobbies }: TopBarProps) {
+  const pathname = usePathname()
+  const activeHobby = getHobbyContext(pathname, hobbies)
+
+  return (
+    <header className="hidden lg:flex fixed top-0 left-0 right-0 z-50 h-16 items-center border-b border-border bg-card">
+      {/* Hobby color tint overlay */}
+      {activeHobby && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ backgroundColor: activeHobby.color, opacity: 0.1 }}
+        />
+      )}
+
+      <div className="relative flex items-center justify-between w-full px-6">
+        {/* Left: Logo */}
+        <Link href="/" className="text-lg font-semibold text-foreground shrink-0">
+          MindShed
+        </Link>
+
+        {/* Center: Dashboard + Hobby icons */}
+        <nav className="flex items-center gap-1">
+          <Link
+            href="/"
+            className={cn(
+              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+              pathname === '/'
+                ? 'bg-accent text-foreground'
+                : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+            )}
+          >
+            <LayoutDashboard className="h-4 w-4" />
+            <span>Dashboard</span>
+          </Link>
+
+          {/* Hobby icons */}
+          {hobbies.map((hobby) => {
+            const isActive = pathname.startsWith(`/hobbies/${hobby.id}`)
+            const iconElement = renderHobbyIcon(hobby.icon, {
+              className: 'h-4 w-4',
+              style: { color: hobby.color },
+            })
+
+            return (
+              <Link
+                key={hobby.id}
+                href={`/hobbies/${hobby.id}`}
+                title={hobby.name}
+                className={cn(
+                  'flex items-center gap-1.5 px-2 py-2 rounded-lg transition-colors min-h-[44px] min-w-[44px] justify-center',
+                  isActive
+                    ? 'bg-accent text-foreground ring-1 ring-foreground/10'
+                    : 'text-muted-foreground hover:bg-accent/50'
+                )}
+              >
+                {iconElement || (
+                  <span
+                    className="inline-block w-3 h-3 rounded-full"
+                    style={{ backgroundColor: hobby.color }}
+                  />
+                )}
+                {!iconElement && null}
+              </Link>
+            )
+          })}
+
+          {/* Add Hobby */}
+          <HobbyFormDialog />
+        </nav>
+
+        {/* Right: Ideas + Settings */}
+        <div className="flex items-center gap-1 shrink-0">
+          <Link
+            href="/ideas"
+            className={cn(
+              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+              pathname.startsWith('/ideas')
+                ? 'bg-accent text-foreground'
+                : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+            )}
+          >
+            <Lightbulb className="h-4 w-4" />
+            <span>Ideas</span>
+          </Link>
+          <Link
+            href="/settings"
+            className={cn(
+              'flex items-center px-2 py-2 rounded-lg transition-colors min-h-[44px] min-w-[44px] justify-center',
+              pathname.startsWith('/settings')
+                ? 'bg-accent text-foreground'
+                : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+            )}
+            title="Settings"
+          >
+            <Settings className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
+    </header>
+  )
+}
