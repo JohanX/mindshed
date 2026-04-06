@@ -5,20 +5,16 @@ test.describe.configure({ mode: 'serial' })
 
 test.describe('Hobby Management', () => {
   test.beforeEach(async ({ page }) => {
-    // Clean up all hobbies before each test via direct DB call
-    // Navigate to hobbies page, delete all existing hobbies
-    await page.goto('/hobbies')
-    // Wait for page to load
-    await page.waitForLoadState('networkidle')
-
-    // Delete any existing hobbies
-    while (true) {
+    // Clean up hobbies one at a time with page reload between deletes
+    for (let i = 0; i < 10; i++) {
+      await page.goto('/hobbies')
+      await page.waitForLoadState('networkidle')
       const actionButton = page.getByRole('button', { name: 'Hobby actions' }).first()
-      if (!(await actionButton.isVisible().catch(() => false))) break
+      if (!(await actionButton.isVisible({ timeout: 1000 }).catch(() => false))) break
       await actionButton.click()
       await page.getByRole('menuitem', { name: 'Delete' }).click()
       await page.getByRole('button', { name: 'Delete' }).click()
-      await page.waitForTimeout(500)
+      await page.waitForTimeout(1000)
     }
   })
 

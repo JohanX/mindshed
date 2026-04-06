@@ -35,6 +35,12 @@ export const updateHobbySchema = z.object({
 
 export type UpdateHobbyInput = z.infer<typeof updateHobbySchema>
 
+export const reorderHobbiesSchema = z.object({
+  orderedIds: z.array(z.uuid()).min(1, 'At least one hobby required'),
+})
+
+export type ReorderHobbiesInput = z.infer<typeof reorderHobbiesSchema>
+
 export type HobbyWithCounts = {
   id: string
   name: string

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createHobbySchema, updateHobbySchema, HOBBY_COLORS } from '../schemas/hobby'
+import { createHobbySchema, updateHobbySchema, reorderHobbiesSchema, HOBBY_COLORS } from '../schemas/hobby'
 
 describe('createHobbySchema', () => {
   it('rejects empty name', () => {
@@ -82,6 +82,28 @@ describe('updateHobbySchema', () => {
       name: 'Updated Hobby',
       color: HOBBY_COLORS[2].value,
       icon: 'palette',
+    })
+    expect(result.success).toBe(true)
+  })
+})
+
+describe('reorderHobbiesSchema', () => {
+  it('rejects empty array', () => {
+    const result = reorderHobbiesSchema.safeParse({ orderedIds: [] })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects array with invalid UUIDs', () => {
+    const result = reorderHobbiesSchema.safeParse({ orderedIds: ['not-a-uuid'] })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts valid array of UUIDs', () => {
+    const result = reorderHobbiesSchema.safeParse({
+      orderedIds: [
+        '550e8400-e29b-41d4-a716-446655440000',
+        '550e8400-e29b-41d4-a716-446655440001',
+      ],
     })
     expect(result.success).toBe(true)
   })

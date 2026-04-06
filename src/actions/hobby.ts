@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { z } from 'zod/v4'
-import { createHobbySchema, updateHobbySchema, type CreateHobbyInput, type UpdateHobbyInput, type HobbyWithCounts } from '@/lib/schemas/hobby'
+import { createHobbySchema, updateHobbySchema, reorderHobbiesSchema, type CreateHobbyInput, type UpdateHobbyInput, type ReorderHobbiesInput, type HobbyWithCounts } from '@/lib/schemas/hobby'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -28,6 +28,8 @@ export async function createHobby(input: CreateHobbyInput): Promise<ActionResult
     })
 
     revalidatePath('/hobbies')
+    revalidatePath('/settings')
+    revalidatePath('/')
     return { success: true, data: { id: hobby.id } }
   } catch (error) {
     console.error('createHobby failed:', error)
@@ -74,6 +76,8 @@ export async function updateHobby(input: UpdateHobbyInput): Promise<ActionResult
     })
 
     revalidatePath('/hobbies')
+    revalidatePath('/settings')
+    revalidatePath('/')
     return { success: true, data: { id: hobby.id } }
   } catch (error) {
     console.error('updateHobby failed:', error)
@@ -93,9 +97,36 @@ export async function deleteHobby(id: string): Promise<ActionResult<null>> {
     })
 
     revalidatePath('/hobbies')
+    revalidatePath('/settings')
+    revalidatePath('/')
     return { success: true, data: null }
   } catch (error) {
     console.error('deleteHobby failed:', { id }, error)
     return { success: false, error: 'Failed to delete hobby. Please try again.' }
+  }
+}
+
+export async function reorderHobbies(input: ReorderHobbiesInput): Promise<ActionResult<null>> {
+  const parsed = reorderHobbiesSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
+  }
+
+  try {
+    await prisma.$transaction(
+      parsed.data.orderedIds.map((id, index) =>
+        prisma.hobby.update({
+          where: { id },
+          data: { sortOrder: index },
+        })
+      )
+    )
+
+    revalidatePath('/settings')
+    revalidatePath('/hobbies')
+    return { success: true, data: null }
+  } catch (error) {
+    console.error('reorderHobbies failed:', error)
+    return { success: false, error: 'Failed to save new order. Please try again.' }
   }
 }
