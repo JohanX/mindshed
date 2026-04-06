@@ -210,4 +210,59 @@ test.describe('Project Management', () => {
       await expect(page.getByText('In Progress')).toBeVisible()
     }
   })
+
+  test('can edit a step name', async ({ page }) => {
+    // Navigate to the step test project created above
+    await page.goto(`/hobbies/${hobbyId}`)
+    await page.waitForLoadState('networkidle')
+    await page.getByText('Step Test Project').first().click()
+    await page.waitForLoadState('networkidle')
+
+    // Edit via context menu
+    const stepActions = page.getByRole('button', { name: 'Step actions' }).first()
+    await stepActions.click()
+    await page.getByRole('menuitem', { name: 'Edit' }).click()
+
+    // Change name
+    const editInput = page.getByRole('textbox').first()
+    await editInput.clear()
+    await editInput.fill('Edited Step')
+    await page.getByRole('button', { name: 'Save' }).click()
+    await page.waitForTimeout(1000)
+
+    // Verify updated
+    await page.goto(page.url())
+    await expect(page.getByText('Edited Step')).toBeVisible()
+  })
+
+  test('can delete a step with confirmation', async ({ page }) => {
+    // Navigate to the step test project
+    await page.goto(`/hobbies/${hobbyId}`)
+    await page.waitForLoadState('networkidle')
+    await page.getByText('Step Test Project').first().click()
+    await page.waitForLoadState('networkidle')
+
+    // Wait for steps to render
+    await expect(page.getByRole('button', { name: 'Step actions' }).first()).toBeVisible()
+    const countBefore = await page.getByRole('button', { name: 'Step actions' }).count()
+
+    // Delete last step via context menu
+    await page.getByRole('button', { name: 'Step actions' }).last().click()
+    await page.getByRole('menuitem', { name: 'Delete' }).click()
+
+    // Confirm deletion
+    await page.getByRole('button', { name: 'Delete' }).click()
+    await page.waitForTimeout(1000)
+
+    // Verify one fewer step
+    await page.goto(page.url())
+    await page.waitForLoadState('networkidle')
+    if (countBefore > 1) {
+      const countAfter = await page.getByRole('button', { name: 'Step actions' }).count()
+      expect(countAfter).toBe(countBefore - 1)
+    } else {
+      // If only one step, should show empty state or just Add Step
+      await expect(page.getByRole('button', { name: 'Add Step' })).toBeVisible()
+    }
+  })
 })

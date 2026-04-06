@@ -1,9 +1,10 @@
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/page-header'
-import { StepStateBadge } from '@/components/step-state-badge'
 import { ProjectActions } from '@/components/project/project-actions'
-import { Card, CardContent } from '@/components/ui/card'
+import { StepList } from '@/components/project/step-list'
+import { EmptyStateCard } from '@/components/empty-state-card'
+import type { StepState } from '@/lib/step-states'
 
 interface ProjectDetailPageProps {
   params: Promise<{ hobbyId: string; projectId: string }>
@@ -20,6 +21,13 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   })
 
   if (!project || project.hobbyId !== hobbyId) notFound()
+
+  const steps = project.steps.map(s => ({
+    id: s.id,
+    name: s.name,
+    state: s.state as StepState,
+    sortOrder: s.sortOrder,
+  }))
 
   return (
     <div className="space-y-6">
@@ -43,16 +51,11 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         <p className="text-muted-foreground">{project.description}</p>
       )}
 
-      <div className="space-y-3">
-        {project.steps.map((step) => (
-          <Card key={step.id}>
-            <CardContent className="flex items-center justify-between">
-              <span className="font-medium">{step.name}</span>
-              <StepStateBadge state={step.state} />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {steps.length > 0 || !project.isCompleted ? (
+        <StepList steps={steps} projectId={project.id} isCompleted={project.isCompleted} />
+      ) : (
+        <EmptyStateCard message="Add steps to track your progress." />
+      )}
     </div>
   )
 }
