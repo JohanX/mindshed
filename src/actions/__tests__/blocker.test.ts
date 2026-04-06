@@ -4,6 +4,9 @@ vi.mock('@/lib/db', () => ({
   prisma: {
     blocker: {
       create: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      count: vi.fn(),
     },
     step: {
       findUnique: vi.fn(),
@@ -20,7 +23,7 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { createBlocker } from '../blocker'
+import { createBlocker, resolveBlocker } from '../blocker'
 import { prisma } from '@/lib/db'
 
 const mockTransaction = vi.mocked(prisma.$transaction)
@@ -225,5 +228,246 @@ describe('createBlocker', () => {
     const result = await createBlocker({ stepId: STEP_ID, description: 'Blocked' })
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toBe('Step not found.')
+  })
+})
+
+const RESOLVE_BLOCKER_ID = '990e8400-e29b-41d4-a716-446655440004'
+
+function makeBlockerRecord(overrides: Record<string, unknown> = {}) {
+  return {
+    id: RESOLVE_BLOCKER_ID,
+    description: 'Waiting for parts',
+    stepId: STEP_ID,
+    step: {
+      id: STEP_ID,
+      previousState: 'IN_PROGRESS' as const,
+      projectId: PROJECT_ID,
+    },
+    ...overrides,
+  }
+}
+
+function makeUpdatedBlocker(overrides: Record<string, unknown> = {}) {
+  return {
+    id: RESOLVE_BLOCKER_ID,
+    description: 'Waiting for parts',
+    isResolved: true,
+    ...overrides,
+  }
+}
+
+describe('resolveBlocker', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('marks blocker as resolved', async () => {
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        blocker: {
+          findUnique: vi.fn().mockResolvedValue(makeBlockerRecord()),
+          update: vi.fn().mockResolvedValue(makeUpdatedBlocker()),
+          count: vi.fn().mockResolvedValue(0),
+        },
+        step: {
+          update: vi.fn().mockResolvedValue({}),
+        },
+        project: {
+          update: vi.fn().mockResolvedValue({ hobbyId: HOBBY_ID }),
+        },
+      }
+      return fn(tx as never)
+    })
+
+    const result = await resolveBlocker({ blockerId: RESOLVE_BLOCKER_ID })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.isResolved).toBe(true)
+      expect(result.data.id).toBe(RESOLVE_BLOCKER_ID)
+    }
+  })
+
+  it('reverts step to previousState when last blocker resolved', async () => {
+    const mockStepUpdate = vi.fn().mockResolvedValue({})
+
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        blocker: {
+          findUnique: vi.fn().mockResolvedValue(makeBlockerRecord()),
+          update: vi.fn().mockResolvedValue(makeUpdatedBlocker()),
+          count: vi.fn().mockResolvedValue(0),
+        },
+        step: {
+          update: mockStepUpdate,
+        },
+        project: {
+          update: vi.fn().mockResolvedValue({ hobbyId: HOBBY_ID }),
+        },
+      }
+      return fn(tx as never)
+    })
+
+    await resolveBlocker({ blockerId: RESOLVE_BLOCKER_ID })
+
+    expect(mockStepUpdate).toHaveBeenCalledWith({
+      where: { id: STEP_ID },
+      data: {
+        state: 'IN_PROGRESS',
+        previousState: null,
+      },
+    })
+  })
+
+  it('clears previousState to null when last blocker resolved', async () => {
+    const mockStepUpdate = vi.fn().mockResolvedValue({})
+
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        blocker: {
+          findUnique: vi.fn().mockResolvedValue(makeBlockerRecord()),
+          update: vi.fn().mockResolvedValue(makeUpdatedBlocker()),
+          count: vi.fn().mockResolvedValue(0),
+        },
+        step: {
+          update: mockStepUpdate,
+        },
+        project: {
+          update: vi.fn().mockResolvedValue({ hobbyId: HOBBY_ID }),
+        },
+      }
+      return fn(tx as never)
+    })
+
+    await resolveBlocker({ blockerId: RESOLVE_BLOCKER_ID })
+
+    const stepUpdateCall = mockStepUpdate.mock.calls[0]?.[0]
+    expect(stepUpdateCall?.data?.previousState).toBeNull()
+  })
+
+  it('keeps step BLOCKED when multiple blockers remain', async () => {
+    const mockStepUpdate = vi.fn()
+
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        blocker: {
+          findUnique: vi.fn().mockResolvedValue(makeBlockerRecord()),
+          update: vi.fn().mockResolvedValue(makeUpdatedBlocker()),
+          count: vi.fn().mockResolvedValue(2),
+        },
+        step: {
+          update: mockStepUpdate,
+        },
+        project: {
+          update: vi.fn().mockResolvedValue({ hobbyId: HOBBY_ID }),
+        },
+      }
+      return fn(tx as never)
+    })
+
+    const result = await resolveBlocker({ blockerId: RESOLVE_BLOCKER_ID })
+
+    expect(result.success).toBe(true)
+    expect(mockStepUpdate).not.toHaveBeenCalled()
+  })
+
+  it('falls back to NOT_STARTED if previousState is null', async () => {
+    const mockStepUpdate = vi.fn().mockResolvedValue({})
+
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        blocker: {
+          findUnique: vi.fn().mockResolvedValue(
+            makeBlockerRecord({
+              step: { id: STEP_ID, previousState: null, projectId: PROJECT_ID },
+            }),
+          ),
+          update: vi.fn().mockResolvedValue(makeUpdatedBlocker()),
+          count: vi.fn().mockResolvedValue(0),
+        },
+        step: {
+          update: mockStepUpdate,
+        },
+        project: {
+          update: vi.fn().mockResolvedValue({ hobbyId: HOBBY_ID }),
+        },
+      }
+      return fn(tx as never)
+    })
+
+    await resolveBlocker({ blockerId: RESOLVE_BLOCKER_ID })
+
+    expect(mockStepUpdate).toHaveBeenCalledWith({
+      where: { id: STEP_ID },
+      data: {
+        state: 'NOT_STARTED',
+        previousState: null,
+      },
+    })
+  })
+
+  it('updates lastActivityAt on the project', async () => {
+    const mockProjectUpdate = vi.fn().mockResolvedValue({ hobbyId: HOBBY_ID })
+
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        blocker: {
+          findUnique: vi.fn().mockResolvedValue(makeBlockerRecord()),
+          update: vi.fn().mockResolvedValue(makeUpdatedBlocker()),
+          count: vi.fn().mockResolvedValue(0),
+        },
+        step: {
+          update: vi.fn().mockResolvedValue({}),
+        },
+        project: {
+          update: mockProjectUpdate,
+        },
+      }
+      return fn(tx as never)
+    })
+
+    await resolveBlocker({ blockerId: RESOLVE_BLOCKER_ID })
+
+    expect(mockProjectUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: PROJECT_ID },
+        data: { lastActivityAt: expect.any(Date) },
+      }),
+    )
+  })
+
+  it('returns validation error for invalid UUID', async () => {
+    const result = await resolveBlocker({ blockerId: 'not-a-uuid' })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toBeTruthy()
+    }
+  })
+
+  it('returns error for non-existent blocker', async () => {
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        blocker: {
+          findUnique: vi.fn().mockResolvedValue(null),
+          update: vi.fn(),
+          count: vi.fn(),
+        },
+        step: {
+          update: vi.fn(),
+        },
+        project: {
+          update: vi.fn(),
+        },
+      }
+      return fn(tx as never)
+    })
+
+    const result = await resolveBlocker({ blockerId: RESOLVE_BLOCKER_ID })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toBe('Blocker not found.')
+    }
   })
 })

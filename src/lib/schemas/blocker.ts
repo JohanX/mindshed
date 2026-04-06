@@ -6,3 +6,9 @@ export const createBlockerSchema = z.object({
 })
 
 export type CreateBlockerInput = z.infer<typeof createBlockerSchema>
+
+export const resolveBlockerSchema = z.object({
+  blockerId: z.uuid(),
+})
+
+export type ResolveBlockerInput = z.infer<typeof resolveBlockerSchema>

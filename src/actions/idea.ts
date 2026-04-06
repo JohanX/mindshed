@@ -50,7 +50,7 @@ export async function getIdeasByHobby(hobbyId: string): Promise<ActionResult<Ide
   try {
     const ideas = await prisma.idea.findMany({
       where: { hobbyId: parsed.data },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ isPromoted: 'asc' }, { createdAt: 'desc' }],
     })
     return { success: true, data: ideas }
   } catch (error) {

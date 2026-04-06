@@ -1,7 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/db'
-import { createBlockerSchema, type CreateBlockerInput } from '@/lib/schemas/blocker'
+import { createBlockerSchema, type CreateBlockerInput, resolveBlockerSchema, type ResolveBlockerInput } from '@/lib/schemas/blocker'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -69,5 +69,91 @@ export async function createBlocker(
       if (error.message === 'STEP_NOT_FOUND') return { success: false, error: 'Step not found.' }
     }
     return { success: false, error: 'Failed to add blocker.' }
+  }
+}
+
+export async function resolveBlocker(
+  input: ResolveBlockerInput,
+): Promise<ActionResult<{ id: string; description: string; isResolved: boolean }>> {
+  const parsed = resolveBlockerSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const blocker = await tx.blocker.findUnique({
+        where: { id: parsed.data.blockerId },
+        select: {
+          id: true,
+          description: true,
+          stepId: true,
+          step: {
+            select: { id: true, previousState: true, projectId: true },
+          },
+        },
+      })
+      if (!blocker) throw new Error('BLOCKER_NOT_FOUND')
+
+      // Mark blocker as resolved
+      const updatedBlocker = await tx.blocker.update({
+        where: { id: blocker.id },
+        data: { isResolved: true },
+      })
+
+      // Count remaining unresolved blockers on the same step (excluding this one)
+      const unresolvedCount = await tx.blocker.count({
+        where: {
+          stepId: blocker.stepId,
+          isResolved: false,
+          id: { not: blocker.id },
+        },
+      })
+
+      // If this was the last unresolved blocker, revert step state
+      if (unresolvedCount === 0) {
+        await tx.step.update({
+          where: { id: blocker.step.id },
+          data: {
+            state: blocker.step.previousState ?? 'NOT_STARTED',
+            previousState: null,
+          },
+        })
+      }
+      // If count > 0, step stays BLOCKED — no update needed
+
+      // Update project lastActivityAt
+      const project = await tx.project.update({
+        where: { id: blocker.step.projectId },
+        data: { lastActivityAt: new Date() },
+        select: { hobbyId: true },
+      })
+
+      return {
+        blocker: updatedBlocker,
+        projectId: blocker.step.projectId,
+        hobbyId: project.hobbyId,
+      }
+    })
+
+    revalidatePath(`/hobbies/${result.hobbyId}/projects/${result.projectId}`)
+    revalidatePath(`/hobbies/${result.hobbyId}`)
+    revalidatePath('/projects')
+    revalidatePath('/')
+
+    return {
+      success: true,
+      data: {
+        id: result.blocker.id,
+        description: result.blocker.description,
+        isResolved: result.blocker.isResolved,
+      },
+    }
+  } catch (error) {
+    console.error('resolveBlocker failed:', error)
+    if (error instanceof Error) {
+      if (error.message === 'BLOCKER_NOT_FOUND') return { success: false, error: 'Blocker not found.' }
+    }
+    return { success: false, error: 'Failed to resolve blocker.' }
   }
 }

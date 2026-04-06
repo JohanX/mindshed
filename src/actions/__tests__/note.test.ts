@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('@/lib/db', () => ({
   prisma: {
     $transaction: vi.fn(),
+    stepNote: { findMany: vi.fn() },
   },
 }))
 
@@ -10,7 +11,7 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { addStepNote } from '../note'
+import { addStepNote, getStepNotes } from '../note'
 import { prisma } from '@/lib/db'
 import { revalidatePath } from 'next/cache'
 
@@ -120,5 +121,58 @@ describe('addStepNote', () => {
     expect(mockNoteCreate).toHaveBeenCalledWith({
       data: { stepId: validStepId, text: 'Trimmed note' },
     })
+  })
+})
+
+const mockFindMany = vi.mocked(prisma.stepNote.findMany)
+
+describe('getStepNotes', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('rejects invalid stepId', async () => {
+    const result = await getStepNotes('bad-id')
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Invalid step ID.')
+    expect(mockFindMany).not.toHaveBeenCalled()
+  })
+
+  it('returns notes ordered by createdAt desc', async () => {
+    const notes = [
+      { id: 'n2', stepId: validStepId, text: 'Second', createdAt: new Date('2026-01-02') },
+      { id: 'n1', stepId: validStepId, text: 'First', createdAt: new Date('2026-01-01') },
+    ]
+    mockFindMany.mockResolvedValue(notes)
+
+    const result = await getStepNotes(validStepId)
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data).toHaveLength(2)
+      expect(result.data[0].id).toBe('n2')
+    }
+    expect(mockFindMany).toHaveBeenCalledWith({
+      where: { stepId: validStepId },
+      orderBy: { createdAt: 'desc' },
+    })
+  })
+
+  it('returns empty array when no notes exist', async () => {
+    mockFindMany.mockResolvedValue([])
+
+    const result = await getStepNotes(validStepId)
+
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data).toEqual([])
+  })
+
+  it('returns error on database failure', async () => {
+    mockFindMany.mockRejectedValue(new Error('DB error'))
+
+    const result = await getStepNotes(validStepId)
+
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Failed to load notes. Please try again.')
   })
 })

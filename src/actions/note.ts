@@ -1,9 +1,11 @@
 'use server'
 
+import { z } from 'zod/v4'
 import { prisma } from '@/lib/db'
 import { createNoteSchema, type CreateNoteInput } from '@/lib/schemas/note'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
+import type { StepNote } from '@/generated/prisma/client'
 
 export async function addStepNote(input: CreateNoteInput): Promise<ActionResult<{ id: string }>> {
   const parsed = createNoteSchema.safeParse(input)
@@ -43,5 +45,24 @@ export async function addStepNote(input: CreateNoteInput): Promise<ActionResult<
       return { success: false, error: 'Step not found.' }
     }
     return { success: false, error: 'Failed to add note. Please try again.' }
+  }
+}
+
+export async function getStepNotes(stepId: string): Promise<ActionResult<StepNote[]>> {
+  const parsed = z.uuid().safeParse(stepId)
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid step ID.' }
+  }
+
+  try {
+    const notes = await prisma.stepNote.findMany({
+      where: { stepId: parsed.data },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    return { success: true, data: notes }
+  } catch (error) {
+    console.error('getStepNotes failed:', error)
+    return { success: false, error: 'Failed to load notes. Please try again.' }
   }
 }

@@ -7,6 +7,7 @@ vi.mock('@/lib/db', () => ({
     },
     idea: {
       create: vi.fn(),
+      findMany: vi.fn(),
     },
   },
 }))
@@ -15,11 +16,12 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { createIdea } from '../idea'
+import { createIdea, getIdeasByHobby } from '../idea'
 import { prisma } from '@/lib/db'
 
 const mockHobbyFindUnique = vi.mocked(prisma.hobby.findUnique)
 const mockIdeaCreate = vi.mocked(prisma.idea.create)
+const mockIdeaFindMany = vi.mocked(prisma.idea.findMany)
 
 const validUuid = '550e8400-e29b-41d4-a716-446655440000'
 
@@ -105,5 +107,54 @@ describe('createIdea', () => {
     const result = await createIdea({ hobbyId: validUuid, title: 'Test' })
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toContain('Failed to create idea')
+  })
+})
+
+describe('getIdeasByHobby', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('rejects invalid hobbyId', async () => {
+    const result = await getIdeasByHobby('not-a-uuid')
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Invalid hobby ID')
+    expect(mockIdeaFindMany).not.toHaveBeenCalled()
+  })
+
+  it('returns ideas sorted by isPromoted asc then createdAt desc', async () => {
+    const mockIdeas = [
+      { id: '1', title: 'Unpromoted new', isPromoted: false, createdAt: new Date('2026-03-02') },
+      { id: '2', title: 'Unpromoted old', isPromoted: false, createdAt: new Date('2026-03-01') },
+      { id: '3', title: 'Promoted', isPromoted: true, createdAt: new Date('2026-03-03') },
+    ]
+    mockIdeaFindMany.mockResolvedValue(mockIdeas as never)
+
+    const result = await getIdeasByHobby(validUuid)
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data).toHaveLength(3)
+    }
+    expect(mockIdeaFindMany).toHaveBeenCalledWith({
+      where: { hobbyId: validUuid },
+      orderBy: [{ isPromoted: 'asc' }, { createdAt: 'desc' }],
+    })
+  })
+
+  it('returns empty array when no ideas exist', async () => {
+    mockIdeaFindMany.mockResolvedValue([])
+
+    const result = await getIdeasByHobby(validUuid)
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data).toEqual([])
+  })
+
+  it('handles Prisma errors gracefully', async () => {
+    mockIdeaFindMany.mockRejectedValue(new Error('DB error'))
+
+    const result = await getIdeasByHobby(validUuid)
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Failed to load ideas.')
   })
 })

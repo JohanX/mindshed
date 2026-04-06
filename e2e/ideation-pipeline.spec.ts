@@ -108,4 +108,53 @@ test.describe('Ideation Pipeline', () => {
 
     await expect(page.getByText(`${testPrefix} Global Idea`)).toBeVisible()
   })
+
+  test('hobby ideas page shows idea cards after creating an idea', async ({ page }) => {
+    await page.goto('/hobbies')
+    await page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) }).click()
+    await page.waitForLoadState('networkidle')
+    await page.goto(page.url().replace(/\/?$/, '/ideas'))
+    await page.waitForLoadState('networkidle')
+
+    // Should show idea cards for previously created ideas
+    const cards = page.getByTestId('idea-card')
+    await expect(cards.first()).toBeVisible()
+    const count = await cards.count()
+    expect(count).toBeGreaterThanOrEqual(2)
+  })
+
+  test('hobby ideas page shows breadcrumbs', async ({ page }) => {
+    await page.goto('/hobbies')
+    await page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) }).click()
+    await page.waitForLoadState('networkidle')
+    await page.goto(page.url().replace(/\/?$/, '/ideas'))
+    await page.waitForLoadState('networkidle')
+
+    // Breadcrumbs: Hobbies > <hobby name> > Ideas
+    const breadcrumb = page.getByLabel('breadcrumb')
+    await expect(breadcrumb.getByRole('link', { name: 'Hobbies' })).toBeVisible()
+    await expect(breadcrumb.getByRole('link', { name: hobbyName })).toBeVisible()
+    await expect(breadcrumb.getByText('Ideas')).toBeVisible()
+  })
+
+  test('empty hobby ideas page shows empty state message', async ({ page }) => {
+    // Create a fresh hobby with no ideas
+    const emptyHobbyName = `${testPrefix} EmptyIdeas`
+    await page.goto('/hobbies')
+    await page.locator('main').getByRole('button', { name: 'Add Hobby' }).first().click()
+    await page.getByPlaceholder('e.g., Woodworking').fill(emptyHobbyName)
+    await page.getByTitle('Terracotta').click()
+    await page.getByRole('button', { name: 'Save' }).click()
+    await expect(page.getByRole('link', { name: new RegExp(`${emptyHobbyName}.*projects`) })).toBeVisible()
+
+    // Navigate to the ideas page of this empty hobby
+    await page.getByRole('link', { name: new RegExp(`${emptyHobbyName}.*projects`) }).click()
+    await page.waitForLoadState('networkidle')
+    await page.goto(page.url().replace(/\/?$/, '/ideas'))
+    await page.waitForLoadState('networkidle')
+
+    // Verify empty state
+    await expect(page.getByText('No ideas captured yet. When inspiration strikes, add it here.')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'New Idea' }).first()).toBeVisible()
+  })
 })
