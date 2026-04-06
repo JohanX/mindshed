@@ -1,7 +1,8 @@
 'use server'
 
 import { prisma } from '@/lib/db'
-import { createProjectSchema, type CreateProjectInput } from '@/lib/schemas/project'
+import { createProjectSchema, updateProjectSchema, type CreateProjectInput, type UpdateProjectInput } from '@/lib/schemas/project'
+import { z } from 'zod/v4'
 import { STEP_STATE_CONFIG, type StepState } from '@/lib/step-states'
 import type { ProjectCardData } from '@/components/project/project-card'
 import { revalidatePath } from 'next/cache'
@@ -93,5 +94,125 @@ export async function getAllProjects(): Promise<ActionResult<ProjectWithHobby[]>
   } catch (error) {
     console.error('getAllProjects failed:', error)
     return { success: false, error: 'Failed to load projects.' }
+  }
+}
+
+export async function updateProject(input: UpdateProjectInput): Promise<ActionResult<{ id: string }>> {
+  const parsed = updateProjectSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
+  }
+
+  try {
+    const project = await prisma.project.update({
+      where: { id: parsed.data.id },
+      data: {
+        name: parsed.data.name,
+        description: parsed.data.description ?? null,
+        lastActivityAt: new Date(),
+      },
+    })
+
+    revalidatePath(`/hobbies/${project.hobbyId}/projects/${project.id}`)
+    revalidatePath(`/hobbies/${project.hobbyId}`)
+    revalidatePath('/projects')
+    revalidatePath('/')
+    return { success: true, data: { id: project.id } }
+  } catch (error: unknown) {
+    console.error('updateProject failed:', error)
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return { success: false, error: 'Project not found.' }
+    }
+    return { success: false, error: 'Failed to update project. Please try again.' }
+  }
+}
+
+export async function deleteProject(id: string): Promise<ActionResult<{ hobbyId: string }>> {
+  const parsed = z.uuid().safeParse(id)
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid project ID' }
+  }
+
+  try {
+    const project = await prisma.project.delete({
+      where: { id: parsed.data },
+    })
+
+    revalidatePath(`/hobbies/${project.hobbyId}`)
+    revalidatePath('/projects')
+    revalidatePath('/')
+    return { success: true, data: { hobbyId: project.hobbyId } }
+  } catch (error: unknown) {
+    console.error('deleteProject failed:', error)
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return { success: false, error: 'Project not found.' }
+    }
+    return { success: false, error: 'Failed to delete project. Please try again.' }
+  }
+}
+
+export async function archiveProject(id: string): Promise<ActionResult<null>> {
+  const parsed = z.uuid().safeParse(id)
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid project ID' }
+  }
+
+  try {
+    const project = await prisma.project.update({
+      where: { id: parsed.data },
+      data: { isArchived: true },
+    })
+
+    revalidatePath(`/hobbies/${project.hobbyId}`)
+    revalidatePath('/projects')
+    revalidatePath('/')
+    return { success: true, data: null }
+  } catch (error: unknown) {
+    console.error('archiveProject failed:', error)
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return { success: false, error: 'Project not found.' }
+    }
+    return { success: false, error: 'Failed to archive project.' }
+  }
+}
+
+export async function completeProject(id: string): Promise<ActionResult<null>> {
+  const parsed = z.uuid().safeParse(id)
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid project ID' }
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const project = await tx.project.findUnique({
+        where: { id: parsed.data },
+        include: { steps: true },
+      })
+      if (!project) throw new Error('PROJECT_NOT_FOUND')
+
+      const allCompleted = project.steps.every(s => s.state === 'COMPLETED')
+      if (!allCompleted) throw new Error('STEPS_NOT_COMPLETED')
+
+      await tx.project.update({
+        where: { id: parsed.data },
+        data: { isCompleted: true },
+      })
+    })
+
+    // Get hobbyId for revalidation
+    const project = await prisma.project.findUnique({ where: { id: parsed.data }, select: { hobbyId: true } })
+    if (project) {
+      revalidatePath(`/hobbies/${project.hobbyId}`)
+    }
+    revalidatePath('/projects')
+    revalidatePath('/')
+    return { success: true, data: null }
+  } catch (error: unknown) {
+    console.error('completeProject failed:', error)
+    if (error instanceof Error) {
+      if (error.message === 'PROJECT_NOT_FOUND') return { success: false, error: 'Project not found.' }
+      if (error.message === 'STEPS_NOT_COMPLETED') return { success: false, error: 'All steps must be completed first.' }
+    }
+    return { success: false, error: 'Failed to complete project.' }
   }
 }

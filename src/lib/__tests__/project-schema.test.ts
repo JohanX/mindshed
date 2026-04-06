@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createProjectSchema } from '../schemas/project'
+import { createProjectSchema, updateProjectSchema } from '../schemas/project'
 
 describe('createProjectSchema', () => {
   it('rejects empty project name', () => {
@@ -68,5 +68,29 @@ describe('createProjectSchema', () => {
       expect(result.data.name).toBe('Trimmed')
       expect(result.data.steps[0].name).toBe('Step')
     }
+  })
+})
+
+describe('updateProjectSchema', () => {
+  it('rejects missing id', () => {
+    const result = updateProjectSchema.safeParse({ name: 'Test' })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects empty name', () => {
+    const result = updateProjectSchema.safeParse({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      name: '',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts valid input', () => {
+    const result = updateProjectSchema.safeParse({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      name: 'Updated Project',
+      description: 'Updated desc',
+    })
+    expect(result.success).toBe(true)
   })
 })

@@ -11,3 +11,11 @@ export const createProjectSchema = z.object({
 })
 
 export type CreateProjectInput = z.infer<typeof createProjectSchema>
+
+export const updateProjectSchema = z.object({
+  id: z.uuid(),
+  name: z.string().trim().min(1, 'Project name is required').max(200),
+  description: z.string().max(2000).nullable().optional(),
+})
+
+export type UpdateProjectInput = z.infer<typeof updateProjectSchema>

@@ -104,4 +104,47 @@ test.describe('Project Management', () => {
     await expect(page.getByText('Test Table')).toBeVisible()
     await expect(page.getByText('E2E Project Hobby')).toBeVisible()
   })
+
+  test('can edit a project name via context menu', async ({ page }) => {
+    // Navigate to the project
+    await page.goto(`/hobbies/${hobbyId}`)
+    await page.getByText('Test Table').click()
+    await page.waitForLoadState('networkidle')
+
+    // Open context menu and click Edit
+    await page.getByRole('button', { name: 'Project actions' }).click()
+    await page.getByRole('menuitem', { name: 'Edit' }).click()
+
+    // Change name
+    const nameInput = page.getByLabel('Project Name')
+    await nameInput.clear()
+    await nameInput.fill('Renamed Table')
+    await page.getByRole('button', { name: 'Save' }).click()
+    await page.waitForTimeout(1000)
+
+    // Verify updated
+    await expect(page.getByRole('heading', { name: 'Renamed Table' })).toBeVisible()
+  })
+
+  test('can delete a project via context menu', async ({ page }) => {
+    // Create a project to delete
+    await page.goto(`/hobbies/${hobbyId}`)
+    await page.getByRole('button', { name: 'Create Project' }).first().click()
+    await page.getByPlaceholder('e.g., Walnut Side Table').fill('Delete Me Project')
+    await page.getByPlaceholder('Step 1 name').fill('Step One')
+    await page.getByRole('button', { name: 'Save' }).click()
+    await page.waitForTimeout(2000)
+
+    // Should be on project view
+    await expect(page.getByRole('heading', { name: 'Delete Me Project' })).toBeVisible()
+
+    // Delete it
+    await page.getByRole('button', { name: 'Project actions' }).click()
+    await page.getByRole('menuitem', { name: 'Delete' }).click()
+    await page.getByRole('button', { name: 'Delete' }).click()
+    await page.waitForTimeout(1000)
+
+    // Should redirect to hobby page
+    await expect(page).toHaveURL(new RegExp(`/hobbies/${hobbyId}`))
+  })
 })

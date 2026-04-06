@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/page-header'
 import { StepStateBadge } from '@/components/step-state-badge'
+import { ProjectActions } from '@/components/project/project-actions'
 import { Card, CardContent } from '@/components/ui/card'
 
 interface ProjectDetailPageProps {
@@ -29,7 +30,14 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           { label: project.hobby.name, href: `/hobbies/${hobbyId}` },
           { label: project.name },
         ]}
-      />
+      >
+        <ProjectActions project={{
+          id: project.id,
+          name: project.name,
+          description: project.description,
+          hobbyId: project.hobbyId,
+        }} />
+      </PageHeader>
 
       {project.description && (
         <p className="text-muted-foreground">{project.description}</p>
