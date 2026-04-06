@@ -42,11 +42,15 @@ test.describe('Hobby Management', () => {
     await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled()
   })
 
-  test('save button is disabled when no color is selected', async ({ page }) => {
+  test('first color is pre-selected by default', async ({ page }) => {
     await page.goto('/hobbies')
     await page.getByRole('button', { name: 'Add Hobby' }).first().click()
+    // Terracotta (first color) should be pre-selected — indicated by ring styling
+    const firstColor = page.getByTitle('Terracotta')
+    await expect(firstColor).toBeVisible()
+    // With name filled, Save should be enabled (color already selected)
     await page.getByPlaceholder('e.g., Woodworking').fill('Test Hobby')
-    await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Save' })).toBeEnabled()
   })
 
   test('can edit a hobby via context menu', async ({ page }) => {

@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { ColorPicker } from './color-picker'
 import { IconPicker } from './icon-picker'
 import { createHobby, updateHobby } from '@/actions/hobby'
+import { HOBBY_COLORS } from '@/lib/schemas/hobby'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
 import { Plus, Loader2 } from 'lucide-react'
 
@@ -36,7 +37,7 @@ export function HobbyFormDialog({ hobby, open: controlledOpen, onOpenChange }: H
   const open = controlledOpen ?? internalOpen
 
   const [name, setName] = useState(hobby?.name ?? '')
-  const [color, setColor] = useState<string | null>(hobby?.color ?? null)
+  const [color, setColor] = useState<string | null>(hobby?.color ?? HOBBY_COLORS[0].value)
   const [icon, setIcon] = useState<string | null>(hobby?.icon ?? null)
   const [isPending, startTransition] = useTransition()
 
@@ -61,7 +62,7 @@ export function HobbyFormDialog({ hobby, open: controlledOpen, onOpenChange }: H
   function resetForm() {
     if (!isEditMode) {
       setName('')
-      setColor(null)
+      setColor(HOBBY_COLORS[0].value)
       setIcon(null)
     }
   }
@@ -118,27 +119,40 @@ export function HobbyFormDialog({ hobby, open: controlledOpen, onOpenChange }: H
           />
         </div>
         <div className="space-y-2">
-          <Label>Color</Label>
+          <div className="flex items-baseline gap-2">
+            <Label>Color</Label>
+            <span className="text-xs text-muted-foreground">Pick a color for your hobby</span>
+          </div>
           <ColorPicker value={color} onChange={setColor} />
         </div>
         <div className="space-y-2">
-          <Label>Icon (optional)</Label>
+          <div className="flex items-baseline gap-2">
+            <Label>Icon</Label>
+            <span className="text-xs text-muted-foreground">optional</span>
+          </div>
           <IconPicker value={icon} onChange={setIcon} />
         </div>
-        <Button
-          type="submit"
-          disabled={!isValid || isPending}
-          className="w-full"
-        >
-          {isPending ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              {isEditMode ? 'Saving...' : 'Creating...'}
-            </>
-          ) : (
-            'Save'
+        <div className="relative group">
+          <Button
+            type="submit"
+            disabled={!isValid || isPending}
+            className="w-full"
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                {isEditMode ? 'Saving...' : 'Creating...'}
+              </>
+            ) : (
+              'Save'
+            )}
+          </Button>
+          {!isValid && !isPending && (
+            <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs text-muted-foreground bg-card border border-border rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+              {name.trim().length === 0 ? 'Enter a hobby name' : 'Select a color to continue'}
+            </span>
           )}
-        </Button>
+        </div>
       </form>
     </DialogContent>
   )
