@@ -45,6 +45,7 @@ interface StepListProps {
   steps: StepData[]
   projectId: string
   isCompleted: boolean
+  hideStepDisplay?: boolean
 }
 
 function SortableStepItem({
@@ -215,7 +216,7 @@ function SortableStepItem({
   )
 }
 
-export function StepList({ steps: initialSteps, projectId, isCompleted }: StepListProps) {
+export function StepList({ steps: initialSteps, projectId, isCompleted, hideStepDisplay }: StepListProps) {
   const [steps, setSteps] = useState(initialSteps)
   const lastConfirmedOrderRef = useRef(initialSteps)
   const [newStepName, setNewStepName] = useState('')
@@ -328,36 +329,38 @@ export function StepList({ steps: initialSteps, projectId, isCompleted }: StepLi
 
   return (
     <div className="space-y-3">
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext items={steps.map(s => s.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-3">
-            {steps.map((step, index) => (
-              <SortableStepItem
-                key={step.id}
-                step={step}
-                index={index}
-                total={steps.length}
-                isCompleted={isCompleted}
-                editingStepId={editingStepId}
-                editName={editName}
-                setEditName={setEditName}
-                isPending={isPending}
-                onEditStep={handleEditStep}
-                onCancelEdit={() => setEditingStepId(null)}
-                onStartEdit={(id, name) => { setEditingStepId(id); setEditName(name) }}
-                onDeleteStep={(id) => setDeleteStepId(id)}
-                onStateChange={handleStateChange}
-                onMoveUp={handleMoveUp}
-                onMoveDown={handleMoveDown}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+      {!hideStepDisplay && (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={steps.map(s => s.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">
+              {steps.map((step, index) => (
+                <SortableStepItem
+                  key={step.id}
+                  step={step}
+                  index={index}
+                  total={steps.length}
+                  isCompleted={isCompleted}
+                  editingStepId={editingStepId}
+                  editName={editName}
+                  setEditName={setEditName}
+                  isPending={isPending}
+                  onEditStep={handleEditStep}
+                  onCancelEdit={() => setEditingStepId(null)}
+                  onStartEdit={(id, name) => { setEditingStepId(id); setEditName(name) }}
+                  onDeleteStep={(id) => setDeleteStepId(id)}
+                  onStateChange={handleStateChange}
+                  onMoveUp={handleMoveUp}
+                  onMoveDown={handleMoveDown}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
 
       {!isCompleted && (
         addingStep ? (
