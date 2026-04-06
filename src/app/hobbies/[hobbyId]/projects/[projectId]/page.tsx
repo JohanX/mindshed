@@ -52,7 +52,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       )}
 
       {steps.length > 0 || !project.isCompleted ? (
-        <StepList key={steps.map(s => s.id).join(',')} steps={steps} projectId={project.id} isCompleted={project.isCompleted} />
+        <StepList key={steps.map(s => `${s.id}:${s.state}`).join(',')} steps={steps} projectId={project.id} isCompleted={project.isCompleted} />
       ) : (
         <EmptyStateCard message="Add steps to track your progress." />
       )}

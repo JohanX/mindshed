@@ -201,11 +201,13 @@ test.describe('Project Management', () => {
     await page.goto(page.url())
     await expect(page.getByText('New Step')).toBeVisible()
 
-    // Start a step
+    // Start a step — verify UI updates immediately (no reload)
     const startButton = page.getByTitle('Start step').first()
     if (await startButton.isVisible({ timeout: 2000 }).catch(() => false)) {
       await startButton.click()
-      await page.waitForTimeout(1000)
+      // Verify state badge updates without page reload
+      await expect(page.getByText('In Progress')).toBeVisible({ timeout: 5000 })
+      // Also verify it persists after reload
       await page.goto(page.url())
       await expect(page.getByText('In Progress')).toBeVisible()
     }
