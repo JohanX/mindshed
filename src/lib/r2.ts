@@ -1,4 +1,4 @@
-import { S3Client } from '@aws-sdk/client-s3'
+import { DeleteObjectCommand, S3Client } from '@aws-sdk/client-s3'
 
 function getR2Env() {
   const endpoint = process.env.R2_ENDPOINT
@@ -41,4 +41,21 @@ export function getR2Bucket(): string {
     _bucket = env.bucket
   }
   return _bucket
+}
+
+export function getPublicUrl(storageKey: string): string {
+  const endpoint = process.env.R2_ENDPOINT
+  const bucket = process.env.R2_BUCKET_NAME
+  if (!endpoint || !bucket) {
+    throw new Error('Missing R2_ENDPOINT or R2_BUCKET_NAME environment variables.')
+  }
+  return `${endpoint}/${bucket}/${storageKey}`
+}
+
+export async function deleteObject(storageKey: string): Promise<void> {
+  const client = getR2Client()
+  const bucket = getR2Bucket()
+  await client.send(
+    new DeleteObjectCommand({ Bucket: bucket, Key: storageKey }),
+  )
 }

@@ -8,6 +8,9 @@ vi.mock('@/lib/db', () => ({
     },
     stepImage: {
       create: vi.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      delete: vi.fn(),
     },
     project: {
       update: vi.fn(),
@@ -19,11 +22,15 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { addStepImageLink, addStepImage } from '../image'
+vi.mock('@/lib/r2', () => ({
+  getPublicUrl: vi.fn((key: string) => `https://r2.example.com/bucket/${key}`),
+  deleteObject: vi.fn().mockResolvedValue(undefined),
+}))
+
+import { addStepImageLink, addStepImage, getStepImages, deleteStepImage } from '../image'
+import { deleteObject } from '@/lib/r2'
 import { prisma } from '@/lib/db'
 
-const mockStepFindUnique = vi.mocked(prisma.step.findUnique)
-const mockStepImageCreate = vi.mocked(prisma.stepImage.create)
 const mockProjectUpdate = vi.mocked(prisma.project.update)
 
 const VALID_UUID = '550e8400-e29b-41d4-a716-446655440000'
@@ -214,3 +221,157 @@ describe('addStepImage', () => {
     if (!result.success) expect(result.error).toBe('Failed to add image. Please try again.')
   })
 })
+
+const mockStepImageFindMany = vi.mocked(prisma.stepImage.findMany)
+
+describe('getStepImages', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('rejects invalid stepId', async () => {
+    const result = await getStepImages('not-a-uuid')
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toContain('Invalid')
+  })
+
+  it('returns empty array when no images exist', async () => {
+    mockStepImageFindMany.mockResolvedValue([])
+
+    const result = await getStepImages(VALID_UUID)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.images).toEqual([])
+    }
+  })
+
+  it('constructs displayUrl from R2 for UPLOAD type images', async () => {
+    mockStepImageFindMany.mockResolvedValue([
+      {
+        id: 'img1',
+        stepId: VALID_UUID,
+        type: 'UPLOAD',
+        storageKey: 'steps/abc/def.jpg',
+        url: null,
+        originalFilename: 'photo.jpg',
+        contentType: 'image/jpeg',
+        sizeBytes: 12345,
+        createdAt: new Date('2026-01-01'),
+      },
+    ] as never)
+
+    const result = await getStepImages(VALID_UUID)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.images).toHaveLength(1)
+      expect(result.data.images[0].displayUrl).toBe('https://r2.example.com/bucket/steps/abc/def.jpg')
+    }
+  })
+
+  it('uses url field directly for LINK type images', async () => {
+    mockStepImageFindMany.mockResolvedValue([
+      {
+        id: 'img2',
+        stepId: VALID_UUID,
+        type: 'LINK',
+        storageKey: null,
+        url: 'https://example.com/photo.jpg',
+        originalFilename: null,
+        contentType: null,
+        sizeBytes: null,
+        createdAt: new Date('2026-01-02'),
+      },
+    ] as never)
+
+    const result = await getStepImages(VALID_UUID)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.images).toHaveLength(1)
+      expect(result.data.images[0].displayUrl).toBe('https://example.com/photo.jpg')
+    }
+  })
+
+  it('orders images by createdAt desc', async () => {
+    mockStepImageFindMany.mockResolvedValue([])
+
+    await getStepImages(VALID_UUID)
+
+    expect(mockStepImageFindMany).toHaveBeenCalledWith({
+      where: { stepId: VALID_UUID },
+      orderBy: { createdAt: 'desc' },
+    })
+  })
+
+  it('returns error on database failure', async () => {
+    mockStepImageFindMany.mockRejectedValue(new Error('DB down'))
+
+    const result = await getStepImages(VALID_UUID)
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Failed to load images.')
+  })
+})
+
+const mockStepImageFindUnique = vi.mocked(prisma.stepImage.findUnique)
+const mockStepImageDelete = vi.mocked(prisma.stepImage.delete)
+const mockDeleteObject = vi.mocked(deleteObject)
+
+describe('deleteStepImage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('rejects invalid imageId', async () => {
+    const result = await deleteStepImage('bad-id')
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Invalid image ID.')
+  })
+
+  it('returns error when image not found', async () => {
+    mockStepImageFindUnique.mockResolvedValue(null)
+    const result = await deleteStepImage(VALID_UUID)
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Image not found.')
+  })
+
+  it('deletes UPLOAD image from R2 + DB', async () => {
+    mockStepImageFindUnique.mockResolvedValue({
+      id: VALID_UUID, type: 'UPLOAD', storageKey: 'steps/abc/def.jpg',
+      step: { projectId: 'p1', project: { hobbyId: 'h1' } },
+    } as never)
+    mockStepImageDelete.mockResolvedValue({} as never)
+    mockProjectUpdate.mockResolvedValue({} as never)
+
+    const result = await deleteStepImage(VALID_UUID)
+    expect(result.success).toBe(true)
+    expect(mockDeleteObject).toHaveBeenCalledWith('steps/abc/def.jpg')
+    expect(mockStepImageDelete).toHaveBeenCalledWith({ where: { id: VALID_UUID } })
+  })
+
+  it('deletes LINK image from DB only', async () => {
+    mockStepImageFindUnique.mockResolvedValue({
+      id: VALID_UUID, type: 'LINK', storageKey: null,
+      step: { projectId: 'p1', project: { hobbyId: 'h1' } },
+    } as never)
+    mockStepImageDelete.mockResolvedValue({} as never)
+    mockProjectUpdate.mockResolvedValue({} as never)
+
+    const result = await deleteStepImage(VALID_UUID)
+    expect(result.success).toBe(true)
+    expect(mockDeleteObject).not.toHaveBeenCalled()
+  })
+
+  it('still deletes DB record when R2 fails (best effort)', async () => {
+    mockStepImageFindUnique.mockResolvedValue({
+      id: VALID_UUID, type: 'UPLOAD', storageKey: 'steps/abc/def.jpg',
+      step: { projectId: 'p1', project: { hobbyId: 'h1' } },
+    } as never)
+    mockDeleteObject.mockRejectedValue(new Error('R2 error'))
+    mockStepImageDelete.mockResolvedValue({} as never)
+    mockProjectUpdate.mockResolvedValue({} as never)
+
+    const result = await deleteStepImage(VALID_UUID)
+    expect(result.success).toBe(true)
+    expect(mockStepImageDelete).toHaveBeenCalled()
+  })
+})
+
