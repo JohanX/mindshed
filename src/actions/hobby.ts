@@ -1,7 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/db'
-import { createHobbySchema, type CreateHobbyInput } from '@/lib/schemas/hobby'
+import { createHobbySchema, type CreateHobbyInput, type HobbyWithCounts } from '@/lib/schemas/hobby'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -31,5 +31,27 @@ export async function createHobby(input: CreateHobbyInput): Promise<ActionResult
   } catch (error) {
     console.error('createHobby failed:', error)
     return { success: false, error: 'Failed to create hobby. Please try again.' }
+  }
+}
+
+export async function getHobbies(): Promise<ActionResult<HobbyWithCounts[]>> {
+  try {
+    const hobbies = await prisma.hobby.findMany({
+      orderBy: { sortOrder: 'asc' },
+    })
+    return {
+      success: true,
+      // TODO(epic-3): Replace hardcoded zeros with real counts via Prisma _count when Project model exists
+      data: hobbies.map(h => ({
+        ...h,
+        projectCount: 0,
+        activeCount: 0,
+        blockedCount: 0,
+        idleCount: 0,
+      })),
+    }
+  } catch (error) {
+    console.error('getHobbies failed:', error)
+    return { success: false, error: 'Failed to load hobbies.' }
   }
 }

@@ -25,3 +25,17 @@ export const createHobbySchema = z.object({
 })
 
 export type CreateHobbyInput = z.infer<typeof createHobbySchema>
+
+export type HobbyWithCounts = {
+  id: string
+  name: string
+  color: string
+  icon: string | null
+  sortOrder: number
+  createdAt: Date
+  updatedAt: Date
+  projectCount: number
+  activeCount: number
+  blockedCount: number
+  idleCount: number
+}
