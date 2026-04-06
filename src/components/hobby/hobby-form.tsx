@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ColorPicker } from './color-picker'
+import { IconPicker } from './icon-picker'
 import { createHobby } from '@/actions/hobby'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
 import { Plus, Loader2 } from 'lucide-react'
@@ -20,6 +21,7 @@ export function HobbyFormDialog() {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [color, setColor] = useState<string | null>(null)
+  const [icon, setIcon] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const isValid = name.trim().length > 0 && color !== null
@@ -27,6 +29,7 @@ export function HobbyFormDialog() {
   function resetForm() {
     setName('')
     setColor(null)
+    setIcon(null)
   }
 
   function handleSubmit(e?: React.FormEvent) {
@@ -37,7 +40,7 @@ export function HobbyFormDialog() {
       const result = await createHobby({
         name: name.trim(),
         color,
-        icon: null,
+        icon,
       })
 
       if (result.success) {
@@ -77,6 +80,10 @@ export function HobbyFormDialog() {
           <div className="space-y-2">
             <Label>Color</Label>
             <ColorPicker value={color} onChange={setColor} />
+          </div>
+          <div className="space-y-2">
+            <Label>Icon (optional)</Label>
+            <IconPicker value={icon} onChange={setIcon} />
           </div>
           <Button
             type="submit"

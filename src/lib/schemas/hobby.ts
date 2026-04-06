@@ -1,4 +1,5 @@
 import { z } from 'zod/v4'
+import { HOBBY_ICON_OPTIONS } from '@/lib/hobby-icons'
 
 export const HOBBY_COLORS = [
   { name: 'Terracotta', value: 'hsl(15, 55%, 55%)' },
@@ -20,7 +21,7 @@ export const hobbyColorValues = HOBBY_COLORS.map(c => c.value) as unknown as [st
 export const createHobbySchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(100, 'Name must be under 100 characters'),
   color: z.enum(hobbyColorValues, { error: 'Please select a valid color' }),
-  icon: z.string().max(50).nullable().optional(),
+  icon: z.enum(HOBBY_ICON_OPTIONS as unknown as [string, ...string[]]).nullable().optional(),
 })
 
 export type CreateHobbyInput = z.infer<typeof createHobbySchema>
