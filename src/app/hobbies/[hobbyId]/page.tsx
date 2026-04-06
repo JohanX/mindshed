@@ -2,10 +2,9 @@ import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/page-header'
 import { ProjectCreateDialog } from '@/components/project/project-create-dialog'
+import { ProjectCard, type ProjectCardData } from '@/components/project/project-card'
 import { EmptyStateCard } from '@/components/empty-state-card'
-import { Card, CardContent } from '@/components/ui/card'
-import { StepStateBadge } from '@/components/step-state-badge'
-import Link from 'next/link'
+import { STEP_STATE_CONFIG, type StepState } from '@/lib/step-states'
 
 interface HobbyDetailPageProps {
   params: Promise<{ hobbyId: string }>
@@ -28,7 +27,22 @@ export default async function HobbyDetailPage({ params }: HobbyDetailPageProps) 
 
   if (!hobby) notFound()
 
-  const projects = hobby.projects
+  const projects: ProjectCardData[] = hobby.projects.map((project) => {
+    const currentStep = project.steps.find(s => s.state === 'IN_PROGRESS') ??
+      project.steps.find(s => s.state === 'NOT_STARTED')
+
+    return {
+      id: project.id,
+      name: project.name,
+      hobbyId: project.hobbyId,
+      totalSteps: project.steps.length,
+      completedSteps: project.steps.filter(s => s.state === 'COMPLETED').length,
+      currentStepName: currentStep?.name ?? null,
+      currentStepState: currentStep?.state && currentStep.state in STEP_STATE_CONFIG
+        ? (currentStep.state as StepState) : null,
+      hasBlockedSteps: project.steps.some(s => s.state === 'BLOCKED'),
+    }
+  })
 
   return (
     <div className="space-y-6">
@@ -44,33 +58,9 @@ export default async function HobbyDetailPage({ params }: HobbyDetailPageProps) 
 
       {projects.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => {
-            const totalSteps = project.steps.length
-            const completedSteps = project.steps.filter(s => s.state === 'COMPLETED').length
-            const currentStep = project.steps.find(s => s.state === 'IN_PROGRESS') ??
-              project.steps.find(s => s.state === 'NOT_STARTED')
-
-            return (
-              <Link key={project.id} href={`/hobbies/${hobbyId}/projects/${project.id}`} className="block">
-                <Card className="min-h-[44px]">
-                  <CardContent className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-medium">{project.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {completedSteps}/{totalSteps} steps
-                      </span>
-                    </div>
-                    {currentStep && (
-                      <div className="flex items-center gap-2">
-                        <StepStateBadge state={currentStep.state} size="sm" />
-                        <span className="text-sm text-muted-foreground truncate">{currentStep.name}</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </Link>
-            )
-          })}
+          {projects.map((project) => (
+            <ProjectCard key={project.id} project={project} hobby={{ name: hobby.name, color: hobby.color, icon: hobby.icon }} />
+          ))}
         </div>
       ) : (
         <EmptyStateCard message={`No projects yet in ${hobby.name}. Start one!`}>
