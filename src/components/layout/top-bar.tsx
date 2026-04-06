@@ -33,12 +33,12 @@ export function TopBar({ hobbies }: TopBarProps) {
           MindShed
         </Link>
 
-        {/* Center: Dashboard + Hobby icons */}
-        <nav className="flex items-center gap-1">
+        {/* Center: Dashboard + Hobby links */}
+        <nav className="flex items-center gap-1 min-w-0 overflow-x-auto">
           <Link
             href="/"
             className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px]',
+              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px] shrink-0',
               pathname === '/'
                 ? 'bg-accent text-foreground'
                 : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
@@ -48,9 +48,10 @@ export function TopBar({ hobbies }: TopBarProps) {
             <span>Dashboard</span>
           </Link>
 
-          {/* Hobby icons */}
+          {/* Hobby links — show names when < 7, compact icon-only when 7+ */}
           {hobbies.map((hobby) => {
             const isActive = pathname.startsWith(`/hobbies/${hobby.id}`)
+            const compact = hobbies.length >= 7
             const iconElement = renderHobbyIcon(hobby.icon, {
               className: 'h-4 w-4',
               style: { color: hobby.color },
@@ -62,7 +63,8 @@ export function TopBar({ hobbies }: TopBarProps) {
                 href={`/hobbies/${hobby.id}`}
                 title={hobby.name}
                 className={cn(
-                  'flex items-center gap-1.5 px-2 py-2 rounded-lg transition-colors min-h-[44px] min-w-[44px] justify-center',
+                  'flex items-center gap-1.5 rounded-lg transition-colors min-h-[44px] shrink-0',
+                  compact ? 'px-2 py-2 min-w-[44px] justify-center' : 'px-3 py-2 text-sm font-medium',
                   isActive
                     ? 'bg-accent text-foreground ring-1 ring-foreground/10'
                     : 'text-muted-foreground hover:bg-accent/50'
@@ -70,11 +72,11 @@ export function TopBar({ hobbies }: TopBarProps) {
               >
                 {iconElement || (
                   <span
-                    className="inline-block w-3 h-3 rounded-full"
+                    className="inline-block w-3 h-3 rounded-full shrink-0"
                     style={{ backgroundColor: hobby.color }}
                   />
                 )}
-                {!iconElement && null}
+                {!compact && <span className="truncate max-w-[120px]">{hobby.name}</span>}
               </Link>
             )
           })}
