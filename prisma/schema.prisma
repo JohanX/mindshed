@@ -22,6 +22,7 @@ model Hobby {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   projects Project[]
+  ideas    Idea[]
 
   @@map("hobby")
 }
@@ -52,15 +53,57 @@ enum StepState {
 }
 
 model Step {
-  id        String    @id @default(uuid())
-  name      String
-  projectId String    @map("project_id")
-  state     StepState @default(NOT_STARTED)
-  sortOrder Int       @default(0) @map("sort_order")
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+  id            String     @id @default(uuid())
+  name          String
+  projectId     String     @map("project_id")
+  state         StepState  @default(NOT_STARTED)
+  previousState StepState? @map("previous_state")
+  sortOrder     Int        @default(0) @map("sort_order")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project  Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  notes    StepNote[]
+  blockers Blocker[]
 
   @@map("step")
+}
+
+model StepNote {
+  id        String   @id @default(uuid())
+  stepId    String   @map("step_id")
+  text      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  step Step @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@map("step_note")
+}
+
+model Blocker {
+  id          String   @id @default(uuid())
+  stepId      String   @map("step_id")
+  description String
+  isResolved  Boolean  @default(false) @map("is_resolved")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  step Step @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@map("blocker")
+}
+
+model Idea {
+  id            String   @id @default(uuid())
+  hobbyId       String   @map("hobby_id")
+  title         String
+  description   String?
+  referenceLink String?  @map("reference_link")
+  isPromoted    Boolean  @default(false) @map("is_promoted")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  hobby Hobby @relation(fields: [hobbyId], references: [id], onDelete: Cascade)
+
+  @@map("idea")
 }

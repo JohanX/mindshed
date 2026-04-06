@@ -19,7 +19,7 @@ export default async function globalSetup() {
 
   try {
     await client.query(`
-      TRUNCATE TABLE step, project, hobby RESTART IDENTITY CASCADE
+      TRUNCATE TABLE step_note, blocker, idea, step, project, hobby RESTART IDENTITY CASCADE
     `)
     console.log('[e2e] Test database ready — all tables truncated.')
   } finally {
