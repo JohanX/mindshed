@@ -299,7 +299,7 @@ test.describe('Project Management', () => {
     await page.waitForLoadState('networkidle')
     await page.setViewportSize({ width: 375, height: 812 })
 
-    const stepNames = await page.locator('.font-medium.truncate').allTextContents()
+    const stepNames = await page.getByTestId('step-name').allTextContents()
     expect(stepNames[0]).toBe('Step Beta')
     expect(stepNames[1]).toBe('Step Alpha')
     expect(stepNames[2]).toBe('Step Gamma')

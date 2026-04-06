@@ -25,8 +25,6 @@ const defaultProps = {
   step: baseStep,
   variant: 'current' as const,
   isProjectCompleted: false,
-  projectId: 'proj-1',
-  hobbyId: 'hobby-1',
 }
 
 describe('StepCard', () => {

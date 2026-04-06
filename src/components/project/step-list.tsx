@@ -181,7 +181,7 @@ function SortableStepItem({
                       <Check className="h-4 w-4" />
                     </Button>
                   )}
-                  <span className="font-medium truncate">{step.name}</span>
+                  <span className="font-medium truncate" data-testid="step-name">{step.name}</span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <StepStateBadge state={step.state} size="sm" />
@@ -226,7 +226,7 @@ export function StepList({ steps: initialSteps, projectId, isCompleted }: StepLi
   const [isPending, startTransition] = useTransition()
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })

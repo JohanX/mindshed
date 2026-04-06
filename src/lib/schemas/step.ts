@@ -17,7 +17,7 @@ export const updateStepStateSchema = z.object({
 
 export const reorderStepsSchema = z.object({
   projectId: z.uuid(),
-  orderedStepIds: z.array(z.uuid()).min(1, 'At least one step required')
+  orderedStepIds: z.array(z.uuid()).min(1, 'At least one step required').max(50, 'Maximum 50 steps')
     .refine(ids => new Set(ids).size === ids.length, 'Duplicate step IDs'),
 })
 

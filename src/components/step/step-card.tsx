@@ -18,8 +18,6 @@ interface StepCardProps {
   }
   variant: 'current' | 'other'
   isProjectCompleted: boolean
-  projectId: string
-  hobbyId: string
 }
 
 export function StepCard({
@@ -52,6 +50,7 @@ export function StepCard({
           'min-h-[44px] cursor-pointer',
         )}
         aria-expanded={expanded}
+        aria-controls={`step-content-${step.id}`}
         onClick={() => setExpanded((prev) => !prev)}
       >
         <span className="font-medium truncate">{step.name}</span>
@@ -59,6 +58,7 @@ export function StepCard({
       </button>
 
       <div
+        id={`step-content-${step.id}`}
         className={cn(
           'grid transition-[grid-template-rows] duration-200 motion-reduce:transition-none',
           expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',

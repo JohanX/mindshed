@@ -24,8 +24,6 @@ import { createStep, updateStep, deleteStep, updateStepState, reorderSteps } fro
 import { prisma } from '@/lib/db'
 
 const mockTransaction = vi.mocked(prisma.$transaction)
-const mockStepUpdate = vi.mocked(prisma.step.update)
-const mockStepDelete = vi.mocked(prisma.step.delete)
 const mockProjectUpdate = vi.mocked(prisma.project.update)
 
 describe('createStep', () => {
