@@ -5,6 +5,7 @@ vi.mock('@/lib/db', () => ({
     blocker: {
       create: vi.fn(),
       findUnique: vi.fn(),
+      findMany: vi.fn(),
       update: vi.fn(),
       count: vi.fn(),
     },
@@ -23,7 +24,7 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { createBlocker, resolveBlocker } from '../blocker'
+import { createBlocker, resolveBlocker, getActiveBlockers } from '../blocker'
 import { prisma } from '@/lib/db'
 
 const mockTransaction = vi.mocked(prisma.$transaction)
@@ -468,6 +469,111 @@ describe('resolveBlocker', () => {
     expect(result.success).toBe(false)
     if (!result.success) {
       expect(result.error).toBe('Blocker not found.')
+    }
+  })
+})
+
+const mockFindMany = vi.mocked(prisma.blocker.findMany)
+
+function makeBlockerWithContext(overrides: Record<string, unknown> = {}) {
+  return {
+    id: BLOCKER_ID,
+    description: 'Waiting for parts',
+    isResolved: false,
+    createdAt: new Date('2026-04-01T10:00:00Z'),
+    step: {
+      name: 'Sand the frame',
+      project: {
+        id: PROJECT_ID,
+        name: 'Build a chair',
+        hobbyId: HOBBY_ID,
+        hobby: {
+          id: HOBBY_ID,
+          name: 'Woodworking',
+          color: '#8B4513',
+          icon: 'hammer',
+        },
+      },
+    },
+    ...overrides,
+  }
+}
+
+describe('getActiveBlockers', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns only unresolved blockers', async () => {
+    const unresolvedBlocker = makeBlockerWithContext()
+    mockFindMany.mockResolvedValue([unresolvedBlocker] as never)
+
+    const result = await getActiveBlockers()
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data).toHaveLength(1)
+      expect(result.data[0]!.isResolved).toBe(false)
+    }
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { isResolved: false },
+      }),
+    )
+  })
+
+  it('includes context (step, project, hobby)', async () => {
+    const blocker = makeBlockerWithContext()
+    mockFindMany.mockResolvedValue([blocker] as never)
+
+    const result = await getActiveBlockers()
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      const b = result.data[0]!
+      expect(b.step.name).toBe('Sand the frame')
+      expect(b.step.project.name).toBe('Build a chair')
+      expect(b.step.project.id).toBe(PROJECT_ID)
+      expect(b.step.project.hobbyId).toBe(HOBBY_ID)
+      expect(b.step.project.hobby.id).toBe(HOBBY_ID)
+      expect(b.step.project.hobby.name).toBe('Woodworking')
+      expect(b.step.project.hobby.color).toBe('#8B4513')
+      expect(b.step.project.hobby.icon).toBe('hammer')
+    }
+  })
+
+  it('returns empty array when no active blockers', async () => {
+    mockFindMany.mockResolvedValue([] as never)
+
+    const result = await getActiveBlockers()
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data).toEqual([])
+    }
+  })
+
+  it('orders by createdAt desc', async () => {
+    mockFindMany.mockResolvedValue([] as never)
+
+    await getActiveBlockers()
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: { createdAt: 'desc' },
+      }),
+    )
+  })
+
+  it('returns error on database failure', async () => {
+    mockFindMany.mockRejectedValue(new Error('DB down'))
+
+    const result = await getActiveBlockers()
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toBe('Failed to load active blockers.')
     }
   })
 })

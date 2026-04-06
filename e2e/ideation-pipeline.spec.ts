@@ -123,6 +123,31 @@ test.describe('Ideation Pipeline', () => {
     expect(count).toBeGreaterThanOrEqual(2)
   })
 
+  test('global ideas page shows ideas from multiple hobbies with hobby badges', async ({ page }) => {
+    // Create a second hobby and add an idea to it
+    const secondHobbyName = `${testPrefix} Painting`
+    await page.goto('/hobbies')
+    await page.locator('main').getByRole('button', { name: 'Add Hobby' }).first().click()
+    await page.getByPlaceholder('e.g., Woodworking').fill(secondHobbyName)
+    await page.getByTitle('Denim').click()
+    await page.getByRole('button', { name: 'Save' }).click()
+    await expect(page.getByRole('link', { name: new RegExp(`${secondHobbyName}.*projects`) })).toBeVisible()
+
+    // Create an idea from global page for the second hobby
+    await page.goto('/ideas')
+    await page.waitForLoadState('networkidle')
+    await page.getByRole('button', { name: 'New Idea' }).first().click()
+    await page.getByRole('combobox').click()
+    await page.getByRole('option', { name: new RegExp(secondHobbyName) }).click()
+    await page.getByPlaceholder("What's the idea?").fill(`${testPrefix} Cross Hobby Idea`)
+    await page.getByRole('button', { name: 'Save' }).click()
+    await expect(page.getByText(`${testPrefix} Cross Hobby Idea`)).toBeVisible()
+
+    // Verify badges from both hobbies are visible
+    await expect(page.getByText(hobbyName).first()).toBeVisible()
+    await expect(page.getByText(secondHobbyName).first()).toBeVisible()
+  })
+
   test('hobby ideas page shows breadcrumbs', async ({ page }) => {
     await page.goto('/hobbies')
     await page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) }).click()

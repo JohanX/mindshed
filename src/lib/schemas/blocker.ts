@@ -12,3 +12,25 @@ export const resolveBlockerSchema = z.object({
 })
 
 export type ResolveBlockerInput = z.infer<typeof resolveBlockerSchema>
+
+/** Blocker with navigation context (step, project, hobby). */
+export type BlockerWithContext = {
+  id: string
+  description: string
+  isResolved: boolean
+  createdAt: Date
+  step: {
+    name: string
+    project: {
+      id: string
+      name: string
+      hobbyId: string
+      hobby: {
+        id: string
+        name: string
+        color: string
+        icon: string | null
+      }
+    }
+  }
+}

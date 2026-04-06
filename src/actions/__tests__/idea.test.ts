@@ -16,7 +16,7 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { createIdea, getIdeasByHobby } from '../idea'
+import { createIdea, getIdeasByHobby, getAllIdeas } from '../idea'
 import { prisma } from '@/lib/db'
 
 const mockHobbyFindUnique = vi.mocked(prisma.hobby.findUnique)
@@ -154,6 +154,59 @@ describe('getIdeasByHobby', () => {
     mockIdeaFindMany.mockRejectedValue(new Error('DB error'))
 
     const result = await getIdeasByHobby(validUuid)
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Failed to load ideas.')
+  })
+})
+
+describe('getAllIdeas', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns ideas with hobby data sorted by createdAt desc', async () => {
+    const mockIdeas = [
+      {
+        id: '1',
+        title: 'Newest idea',
+        createdAt: new Date('2026-04-02'),
+        hobby: { id: 'h1', name: 'Woodworking', color: '#B87333' },
+      },
+      {
+        id: '2',
+        title: 'Older idea',
+        createdAt: new Date('2026-04-01'),
+        hobby: { id: 'h2', name: 'Painting', color: '#4A90D9' },
+      },
+    ]
+    mockIdeaFindMany.mockResolvedValue(mockIdeas as never)
+
+    const result = await getAllIdeas()
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data).toHaveLength(2)
+      expect(result.data[0].hobby.name).toBe('Woodworking')
+      expect(result.data[1].hobby.name).toBe('Painting')
+    }
+    expect(mockIdeaFindMany).toHaveBeenCalledWith({
+      orderBy: { createdAt: 'desc' },
+      include: { hobby: { select: { id: true, name: true, color: true } } },
+    })
+  })
+
+  it('returns empty array when no ideas exist', async () => {
+    mockIdeaFindMany.mockResolvedValue([])
+
+    const result = await getAllIdeas()
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data).toEqual([])
+  })
+
+  it('handles Prisma errors gracefully', async () => {
+    mockIdeaFindMany.mockRejectedValue(new Error('DB error'))
+
+    const result = await getAllIdeas()
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toBe('Failed to load ideas.')
   })

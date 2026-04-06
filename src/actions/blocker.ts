@@ -1,7 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/db'
-import { createBlockerSchema, type CreateBlockerInput, resolveBlockerSchema, type ResolveBlockerInput } from '@/lib/schemas/blocker'
+import { createBlockerSchema, type CreateBlockerInput, resolveBlockerSchema, type ResolveBlockerInput, type BlockerWithContext } from '@/lib/schemas/blocker'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -155,5 +155,45 @@ export async function resolveBlocker(
       if (error.message === 'BLOCKER_NOT_FOUND') return { success: false, error: 'Blocker not found.' }
     }
     return { success: false, error: 'Failed to resolve blocker.' }
+  }
+}
+
+export async function getActiveBlockers(): Promise<ActionResult<BlockerWithContext[]>> {
+  try {
+    const blockers = await prisma.blocker.findMany({
+      where: { isResolved: false },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        description: true,
+        isResolved: true,
+        createdAt: true,
+        step: {
+          select: {
+            name: true,
+            project: {
+              select: {
+                id: true,
+                name: true,
+                hobbyId: true,
+                hobby: {
+                  select: {
+                    id: true,
+                    name: true,
+                    color: true,
+                    icon: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    return { success: true, data: blockers }
+  } catch (error) {
+    console.error('getActiveBlockers failed:', error)
+    return { success: false, error: 'Failed to load active blockers.' }
   }
 }
