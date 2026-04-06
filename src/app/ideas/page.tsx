@@ -33,12 +33,13 @@ export default async function IdeasPage() {
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-base flex items-center gap-2">
                     {idea.title}
-                    {idea.referenceLink && (
+                    {idea.referenceLink && /^https?:\/\//.test(idea.referenceLink) && (
                       <a
                         href={idea.referenceLink}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-muted-foreground hover:text-foreground"
+                        aria-label={`Open reference link for ${idea.title}`}
                       >
                         <ExternalLink className="h-4 w-4" />
                       </a>

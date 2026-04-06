@@ -6,6 +6,7 @@ export function formatRelativeTime(date: Date): string {
   const diffHours = Math.floor(diffMinutes / 60)
   const diffDays = Math.floor(diffHours / 24)
 
+  if (diffMs < 0) return 'just now'
   if (diffSeconds < 60) return 'just now'
   if (diffMinutes < 60) return `${diffMinutes}m ago`
   if (diffHours < 24) return `${diffHours}h ago`
