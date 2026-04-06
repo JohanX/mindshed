@@ -95,4 +95,13 @@ test.describe('Project Management', () => {
 
     await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled()
   })
+
+  test('all-projects page shows projects with hobby badges', async ({ page }) => {
+    await page.goto('/projects')
+    await page.waitForLoadState('networkidle')
+
+    // The project created earlier should appear with hobby name
+    await expect(page.getByText('Test Table')).toBeVisible()
+    await expect(page.getByText('E2E Project Hobby')).toBeVisible()
+  })
 })

@@ -2,6 +2,8 @@
 
 import { prisma } from '@/lib/db'
 import { createProjectSchema, type CreateProjectInput } from '@/lib/schemas/project'
+import { STEP_STATE_CONFIG, type StepState } from '@/lib/step-states'
+import type { ProjectCardData } from '@/components/project/project-card'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -51,5 +53,45 @@ export async function createProject(input: CreateProjectInput): Promise<ActionRe
       return { success: false, error: 'Hobby not found' }
     }
     return { success: false, error: 'Failed to create project. Please try again.' }
+  }
+}
+
+export type ProjectWithHobby = ProjectCardData & {
+  hobby: { name: string; color: string; icon: string | null }
+}
+
+export async function getAllProjects(): Promise<ActionResult<ProjectWithHobby[]>> {
+  try {
+    const projects = await prisma.project.findMany({
+      where: { isArchived: false, isCompleted: false },
+      orderBy: { lastActivityAt: 'desc' },
+      include: {
+        hobby: { select: { name: true, color: true, icon: true } },
+        steps: { orderBy: { sortOrder: 'asc' } },
+      },
+    })
+
+    return {
+      success: true,
+      data: projects.map((p) => {
+        const currentStep = p.steps.find(s => s.state === 'IN_PROGRESS') ??
+          p.steps.find(s => s.state === 'NOT_STARTED')
+        return {
+          id: p.id,
+          name: p.name,
+          hobbyId: p.hobbyId,
+          totalSteps: p.steps.length,
+          completedSteps: p.steps.filter(s => s.state === 'COMPLETED').length,
+          currentStepName: currentStep?.name ?? null,
+          currentStepState: currentStep?.state && currentStep.state in STEP_STATE_CONFIG
+            ? (currentStep.state as StepState) : null,
+          hasBlockedSteps: p.steps.some(s => s.state === 'BLOCKED'),
+          hobby: p.hobby,
+        }
+      }),
+    }
+  } catch (error) {
+    console.error('getAllProjects failed:', error)
+    return { success: false, error: 'Failed to load projects.' }
   }
 }
