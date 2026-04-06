@@ -22,7 +22,7 @@ export default async function SettingsPage() {
         {!result.success ? (
           <EmptyStateCard message="Failed to load hobbies. Please refresh." />
         ) : hobbies.length > 0 ? (
-          <SortableHobbyList hobbies={hobbies} />
+          <SortableHobbyList key={hobbies.map(h => h.id).join(',')} hobbies={hobbies} />
         ) : (
           <EmptyStateCard message="No hobbies yet. Add your first hobby to get started.">
             <HobbyFormDialog />

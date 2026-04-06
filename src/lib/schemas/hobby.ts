@@ -26,17 +26,15 @@ export const createHobbySchema = z.object({
 
 export type CreateHobbyInput = z.infer<typeof createHobbySchema>
 
-export const updateHobbySchema = z.object({
+export const updateHobbySchema = createHobbySchema.extend({
   id: z.string().uuid(),
-  name: z.string().trim().min(1, 'Name is required').max(100, 'Name must be under 100 characters'),
-  color: z.enum(hobbyColorValues, { error: 'Please select a valid color' }),
-  icon: z.enum(HOBBY_ICON_OPTIONS as unknown as [string, ...string[]]).nullable().optional(),
 })
 
 export type UpdateHobbyInput = z.infer<typeof updateHobbySchema>
 
 export const reorderHobbiesSchema = z.object({
-  orderedIds: z.array(z.uuid()).min(1, 'At least one hobby required'),
+  orderedIds: z.array(z.uuid()).min(1, 'At least one hobby required')
+    .refine(ids => new Set(ids).size === ids.length, 'Duplicate hobby IDs'),
 })
 
 export type ReorderHobbiesInput = z.infer<typeof reorderHobbiesSchema>

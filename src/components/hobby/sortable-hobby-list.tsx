@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useRef, useTransition } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -29,7 +29,7 @@ interface SortableHobbyListProps {
   hobbies: HobbyWithCounts[]
 }
 
-function SortableItem({ hobby, index, total }: { hobby: HobbyWithCounts; index: number; total: number }) {
+function SortableItem({ hobby, index, total, onMoveUp, onMoveDown }: { hobby: HobbyWithCounts; index: number; total: number; onMoveUp: (id: string) => void; onMoveDown: (id: string) => void }) {
   const {
     attributes,
     listeners,
@@ -61,22 +61,18 @@ function SortableItem({ hobby, index, total }: { hobby: HobbyWithCounts; index: 
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="min-h-[44px] min-w-[44px]"
           disabled={index === 0}
-          onClick={() => {/* handled by parent */}}
-          data-direction="up"
-          data-hobby-id={hobby.id}
+          onClick={() => onMoveUp(hobby.id)}
         >
           <ArrowUp className="h-4 w-4" />
         </Button>
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="min-h-[44px] min-w-[44px]"
           disabled={index === total - 1}
-          onClick={() => {/* handled by parent */}}
-          data-direction="down"
-          data-hobby-id={hobby.id}
+          onClick={() => onMoveDown(hobby.id)}
         >
           <ArrowDown className="h-4 w-4" />
         </Button>
@@ -91,6 +87,7 @@ function SortableItem({ hobby, index, total }: { hobby: HobbyWithCounts; index: 
 
 export function SortableHobbyList({ hobbies: initialHobbies }: SortableHobbyListProps) {
   const [hobbies, setHobbies] = useState(initialHobbies)
+  const lastConfirmedOrderRef = useRef(initialHobbies)
   const [, startTransition] = useTransition()
 
   const sensors = useSensors(
@@ -105,9 +102,11 @@ export function SortableHobbyList({ hobbies: initialHobbies }: SortableHobbyList
       const result = await reorderHobbies({
         orderedIds: newHobbies.map(h => h.id),
       })
-      if (!result.success) {
+      if (result.success) {
+        lastConfirmedOrderRef.current = newHobbies
+      } else {
         showErrorToast(result.error)
-        setHobbies(initialHobbies) // revert on error
+        setHobbies(lastConfirmedOrderRef.current)
       }
     })
   }
@@ -146,18 +145,16 @@ export function SortableHobbyList({ hobbies: initialHobbies }: SortableHobbyList
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={hobbies.map(h => h.id)} strategy={verticalListSortingStrategy}>
-        <div className="space-y-3" onClick={(e) => {
-          const target = e.target as HTMLElement
-          const button = target.closest('[data-direction]') as HTMLElement | null
-          if (!button) return
-          const direction = button.dataset.direction
-          const hobbyId = button.dataset.hobbyId
-          if (!hobbyId) return
-          if (direction === 'up') handleMoveUp(hobbyId)
-          if (direction === 'down') handleMoveDown(hobbyId)
-        }}>
+        <div className="space-y-3">
           {hobbies.map((hobby, index) => (
-            <SortableItem key={hobby.id} hobby={hobby} index={index} total={hobbies.length} />
+            <SortableItem
+              key={hobby.id}
+              hobby={hobby}
+              index={index}
+              total={hobbies.length}
+              onMoveUp={handleMoveUp}
+              onMoveDown={handleMoveDown}
+            />
           ))}
         </div>
       </SortableContext>

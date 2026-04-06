@@ -79,8 +79,11 @@ export async function updateHobby(input: UpdateHobbyInput): Promise<ActionResult
     revalidatePath('/settings')
     revalidatePath('/')
     return { success: true, data: { id: hobby.id } }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('updateHobby failed:', error)
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return { success: false, error: 'Hobby not found.' }
+    }
     return { success: false, error: 'Failed to update hobby. Please try again.' }
   }
 }
@@ -124,6 +127,7 @@ export async function reorderHobbies(input: ReorderHobbiesInput): Promise<Action
 
     revalidatePath('/settings')
     revalidatePath('/hobbies')
+    revalidatePath('/')
     return { success: true, data: null }
   } catch (error) {
     console.error('reorderHobbies failed:', error)

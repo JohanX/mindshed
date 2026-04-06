@@ -18,6 +18,7 @@ interface ConfirmDialogProps {
   title: string
   description: string
   confirmLabel?: string
+  loadingLabel?: string
   onConfirm: () => void
   loading?: boolean
 }
@@ -28,11 +29,12 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel = 'Delete',
+  loadingLabel,
   onConfirm,
   loading = false,
 }: ConfirmDialogProps) {
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={(v) => { if (!loading) onOpenChange(v) }}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
@@ -51,7 +53,7 @@ export function ConfirmDialog({
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Deleting...
+                {loadingLabel ?? `${confirmLabel}ing...`}
               </>
             ) : (
               confirmLabel

@@ -69,13 +69,13 @@ export function HobbyCard({ hobby }: HobbyCardProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setEditOpen(true)}>
+              <DropdownMenuItem className="min-h-[44px]" onClick={(e) => { e.stopPropagation(); setEditOpen(true) }}>
                 <Pencil className="h-4 w-4 mr-2" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => setDeleteOpen(true)}
-                className="text-destructive focus:text-destructive"
+                className="min-h-[44px] text-destructive focus:text-destructive"
+                onClick={(e) => { e.stopPropagation(); setDeleteOpen(true) }}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete
