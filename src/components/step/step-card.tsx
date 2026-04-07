@@ -144,6 +144,7 @@ export function StepCard({
                 onClick={() => handleStateChange('IN_PROGRESS')}
                 disabled={isPending}
                 title="Start step"
+                aria-label="Start step"
               >
                 <Play className="h-4 w-4" />
               </Button>
@@ -156,6 +157,7 @@ export function StepCard({
                 onClick={() => handleStateChange('COMPLETED')}
                 disabled={isPending}
                 title="Mark complete"
+                aria-label="Mark complete"
               >
                 <Check className="h-4 w-4" />
               </Button>
@@ -168,6 +170,7 @@ export function StepCard({
                 onClick={() => handleStateChange('IN_PROGRESS')}
                 disabled={isPending}
                 title="Reopen step"
+                aria-label="Reopen step"
               >
                 <Undo2 className="h-4 w-4" />
               </Button>
