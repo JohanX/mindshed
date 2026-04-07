@@ -228,7 +228,7 @@ export function StepCard({
             <section>
               <h4 className="text-sm font-medium text-muted-foreground mb-2">Notes</h4>
               {!isProjectCompleted && <InlineNoteInput stepId={step.id} />}
-              <NotesList notes={step.notes} />
+              <NotesList notes={step.notes} isProjectCompleted={isProjectCompleted} />
             </section>
 
             {/* Blockers section — only show if blockers exist or project is active */}

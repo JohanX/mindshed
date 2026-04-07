@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('@/lib/db', () => ({
   prisma: {
     $transaction: vi.fn(),
-    stepNote: { findMany: vi.fn() },
+    stepNote: { findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
   },
 }))
 
@@ -174,5 +174,91 @@ describe('getStepNotes', () => {
 
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toBe('Failed to load notes. Please try again.')
+  })
+})
+
+import { updateStepNote, deleteStepNote } from '../note'
+
+describe('updateStepNote', () => {
+  beforeEach(() => { vi.clearAllMocks() })
+
+  it('rejects invalid id', async () => {
+    const result = await updateStepNote({ id: 'bad', text: 'Updated' })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects empty text', async () => {
+    const result = await updateStepNote({ id: validStepId, text: '' })
+    expect(result.success).toBe(false)
+  })
+
+  it('updates note and project lastActivityAt', async () => {
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        stepNote: {
+          findUnique: vi.fn().mockResolvedValue({ step: { projectId: 'p1', project: { hobbyId: 'h1' } } }),
+          update: vi.fn().mockResolvedValue({ id: 'n1' }),
+        },
+        project: { update: vi.fn().mockResolvedValue({}) },
+      }
+      return fn(tx as never)
+    })
+
+    const result = await updateStepNote({ id: validStepId, text: 'Updated text' })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.id).toBe('n1')
+  })
+
+  it('returns error when note not found', async () => {
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        stepNote: { findUnique: vi.fn().mockResolvedValue(null), update: vi.fn() },
+        project: { update: vi.fn() },
+      }
+      return fn(tx as never)
+    })
+
+    const result = await updateStepNote({ id: validStepId, text: 'Test' })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Note not found.')
+  })
+})
+
+describe('deleteStepNote', () => {
+  beforeEach(() => { vi.clearAllMocks() })
+
+  it('rejects invalid id', async () => {
+    const result = await deleteStepNote('bad')
+    expect(result.success).toBe(false)
+  })
+
+  it('deletes note and updates lastActivityAt', async () => {
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        stepNote: {
+          findUnique: vi.fn().mockResolvedValue({ step: { projectId: 'p1', project: { hobbyId: 'h1' } } }),
+          delete: vi.fn().mockResolvedValue({}),
+        },
+        project: { update: vi.fn().mockResolvedValue({}) },
+      }
+      return fn(tx as never)
+    })
+
+    const result = await deleteStepNote(validStepId)
+    expect(result.success).toBe(true)
+  })
+
+  it('returns error when note not found', async () => {
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        stepNote: { findUnique: vi.fn().mockResolvedValue(null), delete: vi.fn() },
+        project: { update: vi.fn() },
+      }
+      return fn(tx as never)
+    })
+
+    const result = await deleteStepNote(validStepId)
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Note not found.')
   })
 })

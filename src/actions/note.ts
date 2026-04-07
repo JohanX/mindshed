@@ -2,7 +2,7 @@
 
 import { z } from 'zod/v4'
 import { prisma } from '@/lib/db'
-import { createNoteSchema, type CreateNoteInput } from '@/lib/schemas/note'
+import { createNoteSchema, type CreateNoteInput, updateNoteSchema, type UpdateNoteInput } from '@/lib/schemas/note'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 import type { StepNote } from '@/generated/prisma/client'
@@ -64,5 +64,82 @@ export async function getStepNotes(stepId: string): Promise<ActionResult<StepNot
   } catch (error) {
     console.error('getStepNotes failed:', error)
     return { success: false, error: 'Failed to load notes. Please try again.' }
+  }
+}
+
+export async function updateStepNote(input: UpdateNoteInput): Promise<ActionResult<{ id: string }>> {
+  const parsed = updateNoteSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
+  }
+
+  try {
+    const { note, hobbyId, projectId } = await prisma.$transaction(async (tx) => {
+      const existing = await tx.stepNote.findUnique({
+        where: { id: parsed.data.id },
+        select: { step: { select: { projectId: true, project: { select: { hobbyId: true } } } } },
+      })
+      if (!existing) throw new Error('NOTE_NOT_FOUND')
+
+      const updated = await tx.stepNote.update({
+        where: { id: parsed.data.id },
+        data: { text: parsed.data.text },
+      })
+
+      await tx.project.update({
+        where: { id: existing.step.projectId },
+        data: { lastActivityAt: new Date() },
+      })
+
+      return { note: updated, hobbyId: existing.step.project.hobbyId, projectId: existing.step.projectId }
+    })
+
+    revalidatePath(`/hobbies/${hobbyId}/projects/${projectId}`)
+    revalidatePath('/')
+
+    return { success: true, data: { id: note.id } }
+  } catch (error) {
+    console.error('updateStepNote failed:', error)
+    if (error instanceof Error && error.message === 'NOTE_NOT_FOUND') {
+      return { success: false, error: 'Note not found.' }
+    }
+    return { success: false, error: 'Failed to update note.' }
+  }
+}
+
+export async function deleteStepNote(noteId: string): Promise<ActionResult<null>> {
+  const parsed = z.uuid().safeParse(noteId)
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid note ID.' }
+  }
+
+  try {
+    const { hobbyId, projectId } = await prisma.$transaction(async (tx) => {
+      const note = await tx.stepNote.findUnique({
+        where: { id: parsed.data },
+        select: { step: { select: { projectId: true, project: { select: { hobbyId: true } } } } },
+      })
+      if (!note) throw new Error('NOTE_NOT_FOUND')
+
+      await tx.stepNote.delete({ where: { id: parsed.data } })
+
+      await tx.project.update({
+        where: { id: note.step.projectId },
+        data: { lastActivityAt: new Date() },
+      })
+
+      return { hobbyId: note.step.project.hobbyId, projectId: note.step.projectId }
+    })
+
+    revalidatePath(`/hobbies/${hobbyId}/projects/${projectId}`)
+    revalidatePath('/')
+
+    return { success: true, data: null }
+  } catch (error) {
+    console.error('deleteStepNote failed:', error)
+    if (error instanceof Error && error.message === 'NOTE_NOT_FOUND') {
+      return { success: false, error: 'Note not found.' }
+    }
+    return { success: false, error: 'Failed to delete note.' }
   }
 }
