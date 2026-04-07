@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { MoreHorizontal, Pencil, Trash2, Play, Check } from 'lucide-react'
+import { MoreHorizontal, Pencil, Trash2, Play, Check, Undo2 } from 'lucide-react'
 import { updateStepState, updateStep, deleteStep } from '@/actions/step'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Input } from '@/components/ui/input'
@@ -158,6 +158,18 @@ export function StepCard({
                 title="Mark complete"
               >
                 <Check className="h-4 w-4" />
+              </Button>
+            )}
+            {!isProjectCompleted && step.state === 'COMPLETED' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="min-h-[44px] min-w-[44px]"
+                onClick={() => handleStateChange('IN_PROGRESS')}
+                disabled={isPending}
+                title="Reopen step"
+              >
+                <Undo2 className="h-4 w-4" />
               </Button>
             )}
             {!isProjectCompleted && (

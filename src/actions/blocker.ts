@@ -18,9 +18,11 @@ export async function createBlocker(
     const result = await prisma.$transaction(async (tx) => {
       const step = await tx.step.findUnique({
         where: { id: parsed.data.stepId },
-        select: { id: true, state: true, previousState: true, projectId: true },
+        select: { id: true, state: true, previousState: true, projectId: true, project: { select: { isCompleted: true } } },
       })
       if (!step) throw new Error('STEP_NOT_FOUND')
+      if (step.project.isCompleted) throw new Error('PROJECT_COMPLETED')
+      if (step.state === 'COMPLETED') throw new Error('STEP_COMPLETED')
 
       const blocker = await tx.blocker.create({
         data: {
@@ -68,6 +70,8 @@ export async function createBlocker(
     console.error('createBlocker failed:', error)
     if (error instanceof Error) {
       if (error.message === 'STEP_NOT_FOUND') return { success: false, error: 'Step not found.' }
+      if (error.message === 'PROJECT_COMPLETED') return { success: false, error: 'Cannot add blockers to a completed project.' }
+      if (error.message === 'STEP_COMPLETED') return { success: false, error: 'Cannot block a completed step.' }
     }
     return { success: false, error: 'Failed to add blocker.' }
   }
@@ -116,7 +120,9 @@ export async function resolveBlocker(
         await tx.step.update({
           where: { id: blocker.step.id },
           data: {
-            state: blocker.step.previousState ?? 'NOT_STARTED',
+            state: blocker.step.previousState === 'COMPLETED'
+              ? 'IN_PROGRESS'
+              : (blocker.step.previousState ?? 'NOT_STARTED'),
             previousState: null,
           },
         })
@@ -219,7 +225,9 @@ export async function deleteBlocker(blockerId: string): Promise<ActionResult<nul
           await tx.step.update({
             where: { id: blocker.step.id },
             data: {
-              state: blocker.step.previousState ?? 'NOT_STARTED',
+              state: blocker.step.previousState === 'COMPLETED'
+              ? 'IN_PROGRESS'
+              : (blocker.step.previousState ?? 'NOT_STARTED'),
               previousState: null,
             },
           })
