@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { MoreHorizontal, Pencil, Trash2, Play, Check } from 'lucide-react'
 import { updateStepState, updateStep, deleteStep } from '@/actions/step'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Input } from '@/components/ui/input'
@@ -136,6 +136,30 @@ export function StepCard({
               <span className="font-medium truncate">{step.name}</span>
               <StepStateBadge state={step.state} size="sm" />
             </button>
+            {!isProjectCompleted && step.state === 'NOT_STARTED' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="min-h-[44px] min-w-[44px]"
+                onClick={() => handleStateChange('IN_PROGRESS')}
+                disabled={isPending}
+                title="Start step"
+              >
+                <Play className="h-4 w-4" />
+              </Button>
+            )}
+            {!isProjectCompleted && step.state === 'IN_PROGRESS' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="min-h-[44px] min-w-[44px]"
+                onClick={() => handleStateChange('COMPLETED')}
+                disabled={isPending}
+                title="Mark complete"
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+            )}
             {!isProjectCompleted && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -169,32 +193,6 @@ export function StepCard({
       >
         <div className="overflow-hidden">
           <CardContent className="space-y-6 pt-0">
-            {/* State action buttons */}
-            {!isProjectCompleted && (step.state === 'NOT_STARTED' || step.state === 'IN_PROGRESS') && (
-              <div className="flex flex-wrap gap-2">
-                {step.state === 'NOT_STARTED' && (
-                  <Button
-                    size="sm"
-                    className="min-h-[44px]"
-                    onClick={(e) => { e.stopPropagation(); handleStateChange('IN_PROGRESS') }}
-                    disabled={isPending}
-                  >
-                    Start
-                  </Button>
-                )}
-                {step.state === 'IN_PROGRESS' && (
-                  <Button
-                    size="sm"
-                    className="min-h-[44px]"
-                    onClick={(e) => { e.stopPropagation(); handleStateChange('COMPLETED') }}
-                    disabled={isPending}
-                  >
-                    Mark Complete
-                  </Button>
-                )}
-              </div>
-            )}
-
             {/* Photos section */}
             <section>
               <h4 className="text-sm font-medium text-muted-foreground mb-2">Photos</h4>

@@ -94,12 +94,12 @@ describe('StepCard', () => {
 
   it('"Start" visible for NOT_STARTED state', () => {
     render(<StepCard {...defaultProps} step={{ ...baseStep, state: 'NOT_STARTED' }} />)
-    expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument()
+    expect(screen.getByTitle('Start step')).toBeInTheDocument()
   })
 
   it('"Mark Complete" visible for IN_PROGRESS state', () => {
     render(<StepCard {...defaultProps} step={{ ...baseStep, state: 'IN_PROGRESS' }} />)
-    expect(screen.getByRole('button', { name: 'Mark Complete' })).toBeInTheDocument()
+    expect(screen.getByTitle('Mark complete')).toBeInTheDocument()
   })
 
   it('renders notes and images when provided', () => {

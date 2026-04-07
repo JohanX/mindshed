@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { addImageLinkSchema } from '@/lib/schemas/image'
 import { addStepImageLink } from '@/actions/image'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
-import { cn } from '@/lib/utils'
 
 interface ImageLinkInputProps {
   stepId: string
@@ -65,20 +64,16 @@ export function ImageLinkInput({ stepId }: ImageLinkInputProps) {
 
   if (!expanded) {
     return (
-      <button
+      <Button
         type="button"
-        className={cn(
-          'flex w-full items-center min-h-[44px] px-3 py-2',
-          'rounded-lg border border-dashed border-border',
-          'text-sm text-muted-foreground',
-          'hover:border-ring hover:text-foreground',
-          'transition-colors cursor-pointer',
-        )}
+        variant="outline"
+        size="sm"
+        className="min-h-[44px]"
         onClick={expand}
         data-testid="add-image-link-prompt"
       >
-        Add image link...
-      </button>
+        Add Image Link
+      </Button>
     )
   }
 

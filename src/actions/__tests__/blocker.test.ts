@@ -579,8 +579,6 @@ describe('getActiveBlockers', () => {
   })
 })
 
-const mockBlockerUpdate = vi.mocked(prisma.blocker.update)
-const mockProjectUpdate = vi.mocked(prisma.project.update)
 
 describe('updateBlocker', () => {
   beforeEach(() => { vi.clearAllMocks() })
