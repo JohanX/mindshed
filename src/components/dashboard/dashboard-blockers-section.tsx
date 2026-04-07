@@ -13,7 +13,7 @@ export function DashboardBlockersSection({ blockers }: DashboardBlockersSectionP
     id: b.id,
     description: b.description,
     isResolved: false as const,
-    createdAt: new Date(),
+    createdAt: b.createdAt,
     step: {
       name: b.step.name,
       project: {

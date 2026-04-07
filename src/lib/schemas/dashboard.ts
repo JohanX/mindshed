@@ -29,6 +29,7 @@ export interface RecentProject {
 export interface ActiveBlocker {
   id: string
   description: string
+  createdAt: Date
   step: {
     id: string
     name: string

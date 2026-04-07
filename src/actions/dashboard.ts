@@ -32,6 +32,7 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
         select: {
           id: true,
           description: true,
+          createdAt: true,
           step: {
             select: {
               id: true,
@@ -60,6 +61,7 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
             lastActivityAt: { lt: thresholdDate },
           },
           orderBy: { lastActivityAt: 'asc' },
+          take: 20,
           include: {
             hobby: { select: { id: true, name: true, color: true, icon: true } },
             steps: {
@@ -71,34 +73,46 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
       })(),
     ])
 
-    // Map recent projects with computed current step + latest photo
-    const recentProjects: RecentProject[] = await Promise.all(
-      rawRecentProjects.map(async (p) => {
-        const currentStepData = p.steps.find(s => s.state === 'IN_PROGRESS')
-          ?? p.steps.find(s => s.state === 'NOT_STARTED')
-
-        // Get latest photo across all steps
-        const latestPhoto = await prisma.stepImage.findFirst({
-          where: { step: { projectId: p.id } },
+    // Batch fetch latest photo per project (avoids N+1)
+    const projectIds = rawRecentProjects.map(p => p.id)
+    const allPhotos = projectIds.length > 0
+      ? await prisma.stepImage.findMany({
+          where: { step: { projectId: { in: projectIds } } },
           orderBy: { createdAt: 'desc' },
-          select: { storageKey: true, originalFilename: true },
+          select: { storageKey: true, originalFilename: true, step: { select: { projectId: true } } },
         })
+      : []
 
-        return {
-          id: p.id,
-          name: p.name,
-          lastActivityAt: p.lastActivityAt,
-          hobbyId: p.hobbyId,
-          hobby: p.hobby,
-          currentStep: currentStepData ? { id: currentStepData.id, name: currentStepData.name } : null,
-          latestPhoto,
-        }
-      }),
-    )
+    // Group: first photo per project = latest
+    const latestPhotoByProject = new Map<string, { storageKey: string | null; originalFilename: string | null }>()
+    for (const photo of allPhotos) {
+      if (!latestPhotoByProject.has(photo.step.projectId)) {
+        latestPhotoByProject.set(photo.step.projectId, {
+          storageKey: photo.storageKey,
+          originalFilename: photo.originalFilename,
+        })
+      }
+    }
+
+    const recentProjects: RecentProject[] = rawRecentProjects.map((p) => {
+      const currentStepData = p.steps.find(s => s.state === 'IN_PROGRESS')
+        ?? p.steps.find(s => s.state === 'NOT_STARTED')
+
+      return {
+        id: p.id,
+        name: p.name,
+        lastActivityAt: p.lastActivityAt,
+        hobbyId: p.hobbyId,
+        hobby: p.hobby,
+        currentStep: currentStepData ? { id: currentStepData.id, name: currentStepData.name } : null,
+        latestPhoto: latestPhotoByProject.get(p.id) ?? null,
+      }
+    })
 
     const activeBlockers: ActiveBlocker[] = rawActiveBlockers.map(b => ({
       id: b.id,
       description: b.description,
+      createdAt: b.createdAt,
       step: {
         id: b.step.id,
         name: b.step.name,
