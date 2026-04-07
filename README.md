@@ -12,7 +12,7 @@ cd mindshed
 docker compose -f docker-compose.prod.yml up --build
 ```
 
-Open http://localhost:3000 — authenticate with token `local-docker-secret` on first visit.
+Open http://localhost:3000?token=local-docker-secret to authenticate on the first visit.
 
 ## Local Development
 
