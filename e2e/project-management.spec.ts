@@ -274,6 +274,68 @@ test.describe('Project Management', () => {
     await expect(page.getByText('Renamed Table').first()).toBeVisible()
   })
 
+  test('can undo step completion', async ({ page }) => {
+    // Navigate to project with steps
+    await page.goto(`/hobbies/${hobbyId}`)
+    await page.waitForLoadState('networkidle')
+    await page.getByText('Step Test Project').first().click()
+    await page.waitForLoadState('networkidle')
+
+    // Start a step if not started
+    const startBtn = page.getByTitle('Start step').first()
+    if (await startBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await startBtn.click()
+      await page.waitForTimeout(1000)
+    }
+
+    // Complete the step
+    const completeBtn = page.getByTitle('Mark complete').first()
+    if (await completeBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await completeBtn.click()
+      await expect(page.getByText('Completed').first()).toBeVisible({ timeout: 5000 })
+
+      // Undo completion
+      const undoBtn = page.getByTitle('Reopen step').first()
+      await expect(undoBtn).toBeVisible({ timeout: 3000 })
+      await undoBtn.click()
+      await expect(page.getByText('In Progress').first()).toBeVisible({ timeout: 5000 })
+    }
+  })
+
+  test('expanded step shows notes and photos sections', async ({ page }) => {
+    await page.goto(`/hobbies/${hobbyId}`)
+    await page.waitForLoadState('networkidle')
+    await page.getByText('Step Test Project').first().click()
+    await page.waitForLoadState('networkidle')
+
+    // The current step should be expanded with section headers
+    await expect(page.getByText('Photos').first()).toBeVisible()
+    await expect(page.getByText('Notes').first()).toBeVisible()
+
+    // Add a note
+    const notePrompt = page.getByText('Add a note...').first()
+    if (await notePrompt.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await notePrompt.click()
+      await page.getByPlaceholder('Write a note...').fill('E2E test note')
+      await page.getByRole('button', { name: 'Save' }).first().click()
+      await page.waitForTimeout(1000)
+
+      // Note should appear in the list
+      await page.goto(page.url())
+      await expect(page.getByText('E2E test note')).toBeVisible()
+    }
+  })
+
+  test('upload photo button is visible on step', async ({ page }) => {
+    await page.goto(`/hobbies/${hobbyId}`)
+    await page.waitForLoadState('networkidle')
+    await page.getByText('Step Test Project').first().click()
+    await page.waitForLoadState('networkidle')
+
+    await expect(page.getByRole('button', { name: 'Upload Photo' }).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Add Image Link' }).first()).toBeVisible()
+  })
+
   test.skip('can reorder steps with up/down buttons — deferred: reorder UI hidden by StepCard integration', async ({ page }) => {
     await page.goto(`/hobbies/${hobbyId}`)
     await page.getByRole('button', { name: 'Create Project' }).first().click()

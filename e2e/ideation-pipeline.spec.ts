@@ -172,10 +172,10 @@ test.describe('Ideation Pipeline', () => {
     await page.getByRole('button', { name: 'Save' }).click()
     await expect(page.getByRole('link', { name: new RegExp(`${emptyHobbyName}.*projects`) })).toBeVisible()
 
-    // Navigate to the ideas page of this empty hobby
-    await page.getByRole('link', { name: new RegExp(`${emptyHobbyName}.*projects`) }).click()
-    await page.waitForLoadState('networkidle')
-    await page.goto(page.url().replace(/\/?$/, '/ideas'))
+    // Get the hobby URL from the link, then navigate to its ideas page
+    const hobbyLink = page.getByRole('link', { name: new RegExp(`${emptyHobbyName}.*projects`) })
+    const hobbyHref = await hobbyLink.getAttribute('href')
+    await page.goto(`${hobbyHref}/ideas`)
     await page.waitForLoadState('networkidle')
 
     // Verify empty state
