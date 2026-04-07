@@ -60,12 +60,27 @@ function ProjectCardContent({
           {project.completedSteps}/{project.totalSteps} steps
         </span>
       </div>
-      {project.currentStepName && project.currentStepState && (
+      {project.currentStepName && project.currentStepState ? (
         <div className="flex items-center gap-2">
           <StepStateBadge state={project.currentStepState} size="sm" />
           <span className="text-sm text-muted-foreground truncate">{project.currentStepName}</span>
         </div>
-      )}
+      ) : project.hasBlockedSteps ? (
+        <div className="flex items-center gap-2">
+          <StepStateBadge state="BLOCKED" size="sm" />
+          <span className="text-sm text-muted-foreground truncate">Has blocked steps</span>
+        </div>
+      ) : project.totalSteps > 0 && project.completedSteps === project.totalSteps ? (
+        <div className="flex items-center gap-2">
+          <StepStateBadge state="COMPLETED" size="sm" />
+          <span className="text-sm text-muted-foreground truncate">All steps completed</span>
+        </div>
+      ) : project.totalSteps > 0 ? (
+        <div className="flex items-center gap-2">
+          <StepStateBadge state="NOT_STARTED" size="sm" />
+          <span className="text-sm text-muted-foreground truncate">Not started</span>
+        </div>
+      ) : null}
       {showHobbyBadge && hobby && (
         <HobbyIdentity hobby={hobby} variant="badge" />
       )}
