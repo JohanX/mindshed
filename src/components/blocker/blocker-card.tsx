@@ -90,6 +90,7 @@ export function BlockerCard({ id, description }: BlockerCardProps) {
             className="min-h-[44px] min-w-[44px]"
             onClick={() => { setEditing(true); setEditText(description) }}
             title="Edit blocker"
+            aria-label="Edit blocker"
           >
             <Pencil className="h-3.5 w-3.5" />
           </Button>
@@ -99,6 +100,7 @@ export function BlockerCard({ id, description }: BlockerCardProps) {
             className="min-h-[44px] min-w-[44px] text-destructive"
             onClick={() => setDeleteOpen(true)}
             title="Delete blocker"
+            aria-label="Delete blocker"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>

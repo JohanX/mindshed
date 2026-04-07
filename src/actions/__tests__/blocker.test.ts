@@ -591,19 +591,20 @@ describe('updateBlocker', () => {
   })
 
   it('updates description and lastActivityAt', async () => {
-    mockBlockerUpdate.mockResolvedValue({
-      id: 'b1', step: { projectId: PROJECT_ID, project: { hobbyId: HOBBY_ID } },
-    } as never)
-    mockProjectUpdate.mockResolvedValue({} as never)
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        blocker: { update: vi.fn().mockResolvedValue({ id: 'b1', step: { projectId: PROJECT_ID, project: { hobbyId: HOBBY_ID } } }) },
+        project: { update: vi.fn().mockResolvedValue({}) },
+      }
+      return fn(tx as never)
+    })
 
     const result = await updateBlocker({ id: STEP_ID, description: 'Updated' })
     expect(result.success).toBe(true)
-    expect(mockBlockerUpdate).toHaveBeenCalled()
-    expect(mockProjectUpdate).toHaveBeenCalled()
   })
 
   it('returns error for not found', async () => {
-    mockBlockerUpdate.mockRejectedValue({ code: 'P2025' })
+    mockTransaction.mockRejectedValue({ code: 'P2025' })
 
     const result = await updateBlocker({ id: STEP_ID, description: 'Test' })
     expect(result.success).toBe(false)

@@ -115,7 +115,7 @@ function IdeaCard({ idea }: { idea: Idea }) {
         )}
       </Card>
 
-      <IdeaEditDialog idea={idea} open={editOpen} onOpenChange={setEditOpen} />
+      {editOpen && <IdeaEditDialog key={idea.id} idea={idea} open={editOpen} onOpenChange={setEditOpen} />}
 
       <ConfirmDialog
         open={deleteOpen}

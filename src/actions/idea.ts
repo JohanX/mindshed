@@ -81,35 +81,47 @@ export async function promoteIdea(ideaId: string): Promise<ActionResult<{ projec
   }
 
   try {
-    const idea = await prisma.idea.findUnique({
-      where: { id: parsed.data },
-      select: { id: true, title: true, description: true, hobbyId: true, isPromoted: true },
-    })
-    if (!idea) return { success: false, error: 'Idea not found.' }
-    if (idea.isPromoted) return { success: false, error: 'Idea already promoted.' }
+    const result = await prisma.$transaction(async (tx) => {
+      const idea = await tx.idea.findUnique({
+        where: { id: parsed.data },
+        select: { id: true, title: true, description: true, hobbyId: true, isPromoted: true },
+      })
+      if (!idea) throw new Error('IDEA_NOT_FOUND')
+      if (idea.isPromoted) throw new Error('ALREADY_PROMOTED')
 
-    const project = await prisma.project.create({
-      data: {
-        name: idea.title,
-        description: idea.description,
-        hobbyId: idea.hobbyId,
-        lastActivityAt: new Date(),
-      },
+      const hobby = await tx.hobby.findUnique({ where: { id: idea.hobbyId }, select: { id: true } })
+      if (!hobby) throw new Error('HOBBY_NOT_FOUND')
+
+      const project = await tx.project.create({
+        data: {
+          name: idea.title,
+          description: idea.description,
+          hobbyId: idea.hobbyId,
+          lastActivityAt: new Date(),
+        },
+      })
+
+      await tx.idea.update({
+        where: { id: parsed.data },
+        data: { isPromoted: true },
+      })
+
+      return { projectId: project.id, hobbyId: idea.hobbyId }
     })
 
-    await prisma.idea.update({
-      where: { id: parsed.data },
-      data: { isPromoted: true },
-    })
-
-    revalidatePath(`/hobbies/${idea.hobbyId}/ideas`)
-    revalidatePath(`/hobbies/${idea.hobbyId}`)
+    revalidatePath(`/hobbies/${result.hobbyId}/ideas`)
+    revalidatePath(`/hobbies/${result.hobbyId}`)
     revalidatePath('/ideas')
     revalidatePath('/projects')
 
-    return { success: true, data: { projectId: project.id } }
+    return { success: true, data: { projectId: result.projectId } }
   } catch (error) {
     console.error('promoteIdea failed:', error)
+    if (error instanceof Error) {
+      if (error.message === 'IDEA_NOT_FOUND') return { success: false, error: 'Idea not found.' }
+      if (error.message === 'ALREADY_PROMOTED') return { success: false, error: 'Idea already promoted.' }
+      if (error.message === 'HOBBY_NOT_FOUND') return { success: false, error: 'Hobby not found.' }
+    }
     return { success: false, error: 'Failed to promote idea.' }
   }
 }

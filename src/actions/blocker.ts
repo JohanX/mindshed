@@ -166,21 +166,25 @@ export async function updateBlocker(input: UpdateBlockerInput): Promise<ActionRe
   }
 
   try {
-    const blocker = await prisma.blocker.update({
-      where: { id: parsed.data.id },
-      data: { description: parsed.data.description },
-      select: { id: true, step: { select: { projectId: true, project: { select: { hobbyId: true } } } } },
+    const result = await prisma.$transaction(async (tx) => {
+      const blocker = await tx.blocker.update({
+        where: { id: parsed.data.id },
+        data: { description: parsed.data.description },
+        select: { id: true, step: { select: { projectId: true, project: { select: { hobbyId: true } } } } },
+      })
+
+      await tx.project.update({
+        where: { id: blocker.step.projectId },
+        data: { lastActivityAt: new Date() },
+      })
+
+      return { id: blocker.id, hobbyId: blocker.step.project.hobbyId, projectId: blocker.step.projectId }
     })
 
-    await prisma.project.update({
-      where: { id: blocker.step.projectId },
-      data: { lastActivityAt: new Date() },
-    })
-
-    revalidatePath(`/hobbies/${blocker.step.project.hobbyId}/projects/${blocker.step.projectId}`)
+    revalidatePath(`/hobbies/${result.hobbyId}/projects/${result.projectId}`)
     revalidatePath('/')
 
-    return { success: true, data: { id: blocker.id } }
+    return { success: true, data: { id: result.id } }
   } catch (error) {
     console.error('updateBlocker failed:', error)
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
