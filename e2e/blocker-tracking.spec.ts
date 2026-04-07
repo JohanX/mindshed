@@ -43,31 +43,19 @@ test.describe('Blocker Tracking', () => {
     await page.close()
   })
 
-  test.skip('can add a blocker to a step — deferred: CSS grid animation overflow-hidden blocks Playwright visibility', async ({ page }) => {
+  test('can add a blocker to a step', async ({ page }) => {
     await page.goto(`/hobbies/${hobbyId}`)
     await page.waitForLoadState('networkidle')
     await page.getByText('Blocker Test Project').first().click()
     await page.waitForLoadState('networkidle')
 
-    // The step card should be expanded since it's the current step (IN_PROGRESS)
-    // Click the expand button to ensure it's open, then wait
-    const expandBtn = page.locator('button[aria-expanded="false"]').first()
-    if (await expandBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await expandBtn.click()
-    }
-    await page.waitForTimeout(1000)
+    // The current step should be expanded — click Add Blocker
+    const addBlockerBtn = page.getByRole('button', { name: 'Add Blocker' }).first()
+    await expect(addBlockerBtn).toBeVisible({ timeout: 5000 })
+    await addBlockerBtn.click()
 
-    // Scroll to bottom of the page to find the Add Blocker button
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
-    await page.waitForTimeout(500)
-
-    // Click Add Blocker
-    await page.getByText('Add Blocker', { exact: true }).click({ timeout: 10000 })
-    await page.waitForTimeout(300)
-
-    // Fill the blocker description
-    await page.locator('textarea').last().fill('Waiting for materials')
-    await page.locator('button:has-text("Save")').first().click()
+    await page.getByPlaceholder("Describe what's blocking this step...").fill('Waiting for materials')
+    await page.getByRole('button', { name: 'Save' }).first().click()
     await page.waitForTimeout(1000)
 
     // Verify blocker appears and step shows Blocked
@@ -77,15 +65,23 @@ test.describe('Blocker Tracking', () => {
     await expect(page.getByText('Blocked').first()).toBeVisible()
   })
 
-  test.skip('can resolve a blocker — depends on add blocker test above', async ({ page }) => {
+  test('can resolve a blocker', async ({ page }) => {
     await page.goto(`/hobbies/${hobbyId}`)
     await page.waitForLoadState('networkidle')
     await page.getByText('Blocker Test Project').first().click()
     await page.waitForLoadState('networkidle')
 
+    // The step is now BLOCKED — may not be auto-expanded. Expand it.
+    const stepBtn = page.locator('button[aria-controls^="step-content-"]').first()
+    const isExpanded = await stepBtn.getAttribute('aria-expanded')
+    if (isExpanded === 'false') {
+      await stepBtn.click()
+      await page.waitForTimeout(500)
+    }
+
     // Resolve the blocker
     const resolveBtn = page.getByRole('button', { name: 'Resolve' }).first()
-    await expect(resolveBtn).toBeVisible()
+    await resolveBtn.scrollIntoViewIfNeeded()
     await resolveBtn.click()
     await page.waitForTimeout(1000)
 

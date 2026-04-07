@@ -348,7 +348,7 @@ test.describe('Project Management', () => {
     await expect(page.getByRole('button', { name: 'Add Image Link' }).first()).toBeVisible()
   })
 
-  test.skip('can reorder steps with up/down buttons — deferred: reorder UI hidden by StepCard integration', async ({ page }) => {
+  test('can reorder steps with up/down buttons', async ({ page }) => {
     await page.goto(`/hobbies/${hobbyId}`)
     await page.getByRole('button', { name: 'Create Project' }).first().click()
     await page.getByPlaceholder('e.g., Walnut Side Table').fill('Reorder Test Project')
@@ -365,20 +365,21 @@ test.describe('Project Management', () => {
     // Set mobile viewport for up/down buttons
     await page.setViewportSize({ width: 375, height: 812 })
 
-    // Move "Step Beta" up
-    const moveUpButtons = page.getByRole('button', { name: 'Move step up' })
+    // Move "Step Beta" up using the reorder buttons on StepCard
+    const moveUpButtons = page.getByLabel('Move step up')
     await moveUpButtons.nth(1).click()
     await page.waitForTimeout(1000)
 
     // Reload and verify order persists
     await page.goto(page.url())
     await page.waitForLoadState('networkidle')
-    await page.setViewportSize({ width: 375, height: 812 })
 
-    const stepNames = await page.getByTestId('step-name').allTextContents()
-    expect(stepNames[0]).toBe('Step Beta')
-    expect(stepNames[1]).toBe('Step Alpha')
-    expect(stepNames[2]).toBe('Step Gamma')
+    // Read step card headers in order (filter by aria-controls which only step cards have)
+    const stepHeaders = page.locator('button[aria-controls^="step-content-"]')
+    const names = await stepHeaders.allTextContents()
+    expect(names[0]).toContain('Step Beta')
+    expect(names[1]).toContain('Step Alpha')
+    expect(names[2]).toContain('Step Gamma')
   })
 
 })

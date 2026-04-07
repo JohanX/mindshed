@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/page-header'
 import { ProjectActions } from '@/components/project/project-actions'
-import { StepCard, type StepCardData } from '@/components/step/step-card'
+import { type StepCardData } from '@/components/step/step-card'
+import { StepCardList } from '@/components/step/step-card-list'
 import { StepList } from '@/components/project/step-list'
 import { EmptyStateCard } from '@/components/empty-state-card'
 import type { StepState } from '@/lib/step-states'
@@ -92,16 +93,13 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       )}
 
       {stepCards.length > 0 ? (
-        <div key={stepKey} className="space-y-3">
-          {stepCards.map((step) => (
-            <StepCard
-              key={step.id}
-              step={step}
-              variant={step.id === currentStepId ? 'current' : 'other'}
-              isProjectCompleted={project.isCompleted}
-            />
-          ))}
-        </div>
+        <StepCardList
+          key={stepKey}
+          initialSteps={stepCards}
+          currentStepId={currentStepId}
+          isProjectCompleted={project.isCompleted}
+          projectId={project.id}
+        />
       ) : null}
 
       {!project.isCompleted && (
