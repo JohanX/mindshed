@@ -25,7 +25,7 @@ export function MobileNav({ hobbies }: MobileNavProps) {
   if (activeHobby) {
     // Contextual hobby navigation
     const contextItems = [
-      { href: '/hobbies', label: '← Hobbies', icon: ArrowLeft },
+      { href: '/hobbies', label: 'Hobbies', icon: ArrowLeft },
       { href: `/hobbies/${activeHobby.id}`, label: 'Projects', icon: FolderOpen },
       { href: `/hobbies/${activeHobby.id}/ideas`, label: 'Ideas', icon: Lightbulb },
       { href: `/settings`, label: 'More', icon: MoreHorizontal },
