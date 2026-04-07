@@ -31,7 +31,7 @@ describe('MobileNav — hobby context', () => {
     const { usePathname } = await import('next/navigation')
     vi.mocked(usePathname).mockReturnValue('/hobbies/1')
     render(<MobileNav hobbies={mockHobbies} />)
-    expect(screen.getByText('← Hobbies')).toBeInTheDocument()
+    expect(screen.getByText('Hobbies')).toBeInTheDocument()
     expect(screen.getByText('Projects')).toBeInTheDocument()
     expect(screen.getByText('Ideas')).toBeInTheDocument()
     vi.mocked(usePathname).mockReturnValue('/')

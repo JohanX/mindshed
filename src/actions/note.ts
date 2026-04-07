@@ -17,9 +17,10 @@ export async function addStepNote(input: CreateNoteInput): Promise<ActionResult<
     const { note, hobbyId, projectId } = await prisma.$transaction(async (tx) => {
       const step = await tx.step.findUnique({
         where: { id: parsed.data.stepId },
-        select: { projectId: true, project: { select: { id: true, hobbyId: true } } },
+        select: { projectId: true, project: { select: { id: true, hobbyId: true, isCompleted: true } } },
       })
       if (!step) throw new Error('STEP_NOT_FOUND')
+      if (step.project.isCompleted) throw new Error('PROJECT_COMPLETED')
 
       const created = await tx.stepNote.create({
         data: { stepId: parsed.data.stepId, text: parsed.data.text },
@@ -41,8 +42,9 @@ export async function addStepNote(input: CreateNoteInput): Promise<ActionResult<
     return { success: true, data: { id: note.id } }
   } catch (error) {
     console.error('addStepNote failed:', error)
-    if (error instanceof Error && error.message === 'STEP_NOT_FOUND') {
-      return { success: false, error: 'Step not found.' }
+    if (error instanceof Error) {
+      if (error.message === 'STEP_NOT_FOUND') return { success: false, error: 'Step not found.' }
+      if (error.message === 'PROJECT_COMPLETED') return { success: false, error: 'Cannot modify notes on a completed project.' }
     }
     return { success: false, error: 'Failed to add note. Please try again.' }
   }
@@ -77,9 +79,10 @@ export async function updateStepNote(input: UpdateNoteInput): Promise<ActionResu
     const { note, hobbyId, projectId } = await prisma.$transaction(async (tx) => {
       const existing = await tx.stepNote.findUnique({
         where: { id: parsed.data.id },
-        select: { step: { select: { projectId: true, project: { select: { hobbyId: true } } } } },
+        select: { step: { select: { projectId: true, project: { select: { hobbyId: true, isCompleted: true } } } } },
       })
       if (!existing) throw new Error('NOTE_NOT_FOUND')
+      if (existing.step.project.isCompleted) throw new Error('PROJECT_COMPLETED')
 
       const updated = await tx.stepNote.update({
         where: { id: parsed.data.id },
@@ -100,8 +103,9 @@ export async function updateStepNote(input: UpdateNoteInput): Promise<ActionResu
     return { success: true, data: { id: note.id } }
   } catch (error) {
     console.error('updateStepNote failed:', error)
-    if (error instanceof Error && error.message === 'NOTE_NOT_FOUND') {
-      return { success: false, error: 'Note not found.' }
+    if (error instanceof Error) {
+      if (error.message === 'NOTE_NOT_FOUND') return { success: false, error: 'Note not found.' }
+      if (error.message === 'PROJECT_COMPLETED') return { success: false, error: 'Cannot modify notes on a completed project.' }
     }
     return { success: false, error: 'Failed to update note.' }
   }
@@ -117,9 +121,10 @@ export async function deleteStepNote(noteId: string): Promise<ActionResult<null>
     const { hobbyId, projectId } = await prisma.$transaction(async (tx) => {
       const note = await tx.stepNote.findUnique({
         where: { id: parsed.data },
-        select: { step: { select: { projectId: true, project: { select: { hobbyId: true } } } } },
+        select: { step: { select: { projectId: true, project: { select: { hobbyId: true, isCompleted: true } } } } },
       })
       if (!note) throw new Error('NOTE_NOT_FOUND')
+      if (note.step.project.isCompleted) throw new Error('PROJECT_COMPLETED')
 
       await tx.stepNote.delete({ where: { id: parsed.data } })
 
@@ -137,8 +142,9 @@ export async function deleteStepNote(noteId: string): Promise<ActionResult<null>
     return { success: true, data: null }
   } catch (error) {
     console.error('deleteStepNote failed:', error)
-    if (error instanceof Error && error.message === 'NOTE_NOT_FOUND') {
-      return { success: false, error: 'Note not found.' }
+    if (error instanceof Error) {
+      if (error.message === 'NOTE_NOT_FOUND') return { success: false, error: 'Note not found.' }
+      if (error.message === 'PROJECT_COMPLETED') return { success: false, error: 'Cannot modify notes on a completed project.' }
     }
     return { success: false, error: 'Failed to delete note.' }
   }
