@@ -25,6 +25,6 @@ export const STEP_STATE_CONFIG: Record<
   },
   BLOCKED: {
     label: 'Blocked',
-    colorClass: 'bg-step-blocked text-foreground',
+    colorClass: 'bg-step-blocked text-white',
   },
 }
