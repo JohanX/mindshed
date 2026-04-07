@@ -43,14 +43,26 @@ export async function getHobbies(): Promise<ActionResult<HobbyWithCounts[]>> {
       orderBy: { sortOrder: 'asc' },
       include: {
         projects: {
-          select: { id: true, isArchived: true, isCompleted: true },
+          select: {
+            id: true,
+            isArchived: true,
+            isCompleted: true,
+            lastActivityAt: true,
+            steps: { select: { state: true } },
+          },
         },
       },
     })
+
+    const idleThreshold = new Date()
+    idleThreshold.setDate(idleThreshold.getDate() - 30)
+
     return {
       success: true,
       data: hobbies.map(h => {
         const active = h.projects.filter(p => !p.isArchived && !p.isCompleted)
+        const blocked = active.filter(p => p.steps.some(s => s.state === 'BLOCKED'))
+        const idle = active.filter(p => p.lastActivityAt < idleThreshold)
         return {
           id: h.id,
           name: h.name,
@@ -61,8 +73,8 @@ export async function getHobbies(): Promise<ActionResult<HobbyWithCounts[]>> {
           updatedAt: h.updatedAt,
           projectCount: h.projects.length,
           activeCount: active.length,
-          blockedCount: 0,
-          idleCount: 0,
+          blockedCount: blocked.length,
+          idleCount: idle.length,
         }
       }),
     }
