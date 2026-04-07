@@ -2,6 +2,8 @@ import { getDashboardData } from '@/actions/dashboard'
 import { DashboardContinueSection } from '@/components/dashboard/dashboard-continue-section'
 import { DashboardBlockersSection } from '@/components/dashboard/dashboard-blockers-section'
 import { DashboardIdleSection } from '@/components/dashboard/dashboard-idle-section'
+import { EmptyStateCard } from '@/components/empty-state-card'
+import { HobbyFormDialog } from '@/components/hobby/hobby-form'
 
 export default async function DashboardPage() {
   const result = await getDashboardData()
@@ -19,7 +21,19 @@ export default async function DashboardPage() {
     )
   }
 
-  const { recentProjects, activeBlockers, idleProjects } = result.data
+  const { totalHobbies, recentProjects, activeBlockers, idleProjects } = result.data
+
+  // First-time user — no hobbies at all
+  if (totalHobbies === 0) {
+    return (
+      <main className="max-w-5xl mx-auto p-4 space-y-8">
+        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <EmptyStateCard message="Welcome to MindShed! Add your first hobby to get started.">
+          <HobbyFormDialog />
+        </EmptyStateCard>
+      </main>
+    )
+  }
 
   return (
     <main className="max-w-5xl mx-auto p-4 space-y-8">
