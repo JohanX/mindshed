@@ -7,8 +7,8 @@
 - `pnpm test run` — unit tests (vitest)
 - `pnpm lint` — eslint
 - `pnpm build` — production build
-- `pnpm exec playwright test` — E2E tests (all browsers)
-- `pnpm exec playwright test --project=chromium` — E2E chromium only
+- `pnpm test:e2e` — E2E tests (all browsers)
+- `pnpm test:e2e:chrome` — E2E chromium only
 
 Do NOT prefix PATH or use `pnpm exec` for things with scripts. Node and pnpm are in global PATH.
 
