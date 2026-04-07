@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
 import type { RecentProject } from '@/lib/schemas/dashboard'
@@ -53,15 +52,12 @@ export function DashboardContinueCard({ project, variant }: DashboardContinueCar
       <Card className="transition-colors hover:bg-accent/50">
         <CardContent className="flex items-start gap-4">
           {photoUrl && (
-            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg">
-              <Image
-                src={photoUrl}
-                alt={`Latest photo for ${project.name}`}
-                fill
-                className="object-cover"
-                sizes="64px"
-              />
-            </div>
+            <img
+              src={photoUrl}
+              alt={`Latest photo for ${project.name}`}
+              className="h-16 w-16 shrink-0 rounded-lg object-cover"
+              loading="lazy"
+            />
           )}
           <div className="min-w-0 flex-1 space-y-1">
             <p className="text-base font-medium truncate">{project.name}</p>
