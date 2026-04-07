@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getAllIdeas } from '@/actions/idea'
 import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/page-header'

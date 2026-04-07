@@ -13,6 +13,13 @@ export const resolveBlockerSchema = z.object({
 
 export type ResolveBlockerInput = z.infer<typeof resolveBlockerSchema>
 
+export const updateBlockerSchema = z.object({
+  id: z.uuid(),
+  description: z.string().trim().min(1, 'Description is required').max(500, 'Description must be 500 characters or less'),
+})
+
+export type UpdateBlockerInput = z.infer<typeof updateBlockerSchema>
+
 /** Blocker with navigation context (step, project, hobby). */
 export type BlockerWithContext = {
   id: string

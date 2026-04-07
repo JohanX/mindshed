@@ -7,6 +7,7 @@ vi.mock('@/lib/db', () => ({
       findUnique: vi.fn(),
       findMany: vi.fn(),
       update: vi.fn(),
+      delete: vi.fn(),
       count: vi.fn(),
     },
     step: {
@@ -24,7 +25,7 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { createBlocker, resolveBlocker, getActiveBlockers } from '../blocker'
+import { createBlocker, resolveBlocker, getActiveBlockers, updateBlocker, deleteBlocker } from '../blocker'
 import { prisma } from '@/lib/db'
 
 const mockTransaction = vi.mocked(prisma.$transaction)
@@ -575,5 +576,105 @@ describe('getActiveBlockers', () => {
     if (!result.success) {
       expect(result.error).toBe('Failed to load active blockers.')
     }
+  })
+})
+
+const mockBlockerUpdate = vi.mocked(prisma.blocker.update)
+const mockProjectUpdate = vi.mocked(prisma.project.update)
+
+describe('updateBlocker', () => {
+  beforeEach(() => { vi.clearAllMocks() })
+
+  it('rejects invalid id', async () => {
+    const result = await updateBlocker({ id: 'bad', description: 'Test' })
+    expect(result.success).toBe(false)
+  })
+
+  it('updates description and lastActivityAt', async () => {
+    mockBlockerUpdate.mockResolvedValue({
+      id: 'b1', step: { projectId: PROJECT_ID, project: { hobbyId: HOBBY_ID } },
+    } as never)
+    mockProjectUpdate.mockResolvedValue({} as never)
+
+    const result = await updateBlocker({ id: STEP_ID, description: 'Updated' })
+    expect(result.success).toBe(true)
+    expect(mockBlockerUpdate).toHaveBeenCalled()
+    expect(mockProjectUpdate).toHaveBeenCalled()
+  })
+
+  it('returns error for not found', async () => {
+    mockBlockerUpdate.mockRejectedValue({ code: 'P2025' })
+
+    const result = await updateBlocker({ id: STEP_ID, description: 'Test' })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Blocker not found.')
+  })
+})
+
+describe('deleteBlocker', () => {
+  beforeEach(() => { vi.clearAllMocks() })
+
+  it('rejects invalid id', async () => {
+    const result = await deleteBlocker('bad')
+    expect(result.success).toBe(false)
+  })
+
+  it('deletes blocker and reverts state when last unresolved', async () => {
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        blocker: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: 'b1', isResolved: false, stepId: 's1',
+            step: { id: 's1', previousState: 'IN_PROGRESS', projectId: PROJECT_ID },
+          }),
+          delete: vi.fn(),
+          count: vi.fn().mockResolvedValue(0),
+        },
+        step: { update: vi.fn() },
+        project: { update: vi.fn().mockResolvedValue({ hobbyId: HOBBY_ID }) },
+      }
+      return fn(tx as never)
+    })
+
+    const result = await deleteBlocker(STEP_ID)
+    expect(result.success).toBe(true)
+  })
+
+  it('keeps step BLOCKED when other unresolved blockers remain', async () => {
+    const mockStepUpdate = vi.fn()
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        blocker: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: 'b1', isResolved: false, stepId: 's1',
+            step: { id: 's1', previousState: 'IN_PROGRESS', projectId: PROJECT_ID },
+          }),
+          delete: vi.fn(),
+          count: vi.fn().mockResolvedValue(1),
+        },
+        step: { update: mockStepUpdate },
+        project: { update: vi.fn().mockResolvedValue({ hobbyId: HOBBY_ID }) },
+      }
+      return fn(tx as never)
+    })
+
+    const result = await deleteBlocker(STEP_ID)
+    expect(result.success).toBe(true)
+    expect(mockStepUpdate).not.toHaveBeenCalled()
+  })
+
+  it('returns error for not found', async () => {
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        blocker: { findUnique: vi.fn().mockResolvedValue(null), delete: vi.fn(), count: vi.fn() },
+        step: { update: vi.fn() },
+        project: { update: vi.fn() },
+      }
+      return fn(tx as never)
+    })
+
+    const result = await deleteBlocker(STEP_ID)
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Blocker not found.')
   })
 })

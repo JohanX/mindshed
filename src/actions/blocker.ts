@@ -1,7 +1,8 @@
 'use server'
 
+import { z } from 'zod/v4'
 import { prisma } from '@/lib/db'
-import { createBlockerSchema, type CreateBlockerInput, resolveBlockerSchema, type ResolveBlockerInput, type BlockerWithContext } from '@/lib/schemas/blocker'
+import { createBlockerSchema, type CreateBlockerInput, resolveBlockerSchema, type ResolveBlockerInput, updateBlockerSchema, type UpdateBlockerInput, type BlockerWithContext } from '@/lib/schemas/blocker'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -155,6 +156,91 @@ export async function resolveBlocker(
       if (error.message === 'BLOCKER_NOT_FOUND') return { success: false, error: 'Blocker not found.' }
     }
     return { success: false, error: 'Failed to resolve blocker.' }
+  }
+}
+
+export async function updateBlocker(input: UpdateBlockerInput): Promise<ActionResult<{ id: string }>> {
+  const parsed = updateBlockerSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
+  }
+
+  try {
+    const blocker = await prisma.blocker.update({
+      where: { id: parsed.data.id },
+      data: { description: parsed.data.description },
+      select: { id: true, step: { select: { projectId: true, project: { select: { hobbyId: true } } } } },
+    })
+
+    await prisma.project.update({
+      where: { id: blocker.step.projectId },
+      data: { lastActivityAt: new Date() },
+    })
+
+    revalidatePath(`/hobbies/${blocker.step.project.hobbyId}/projects/${blocker.step.projectId}`)
+    revalidatePath('/')
+
+    return { success: true, data: { id: blocker.id } }
+  } catch (error) {
+    console.error('updateBlocker failed:', error)
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return { success: false, error: 'Blocker not found.' }
+    }
+    return { success: false, error: 'Failed to update blocker.' }
+  }
+}
+
+export async function deleteBlocker(blockerId: string): Promise<ActionResult<null>> {
+  const parsed = z.uuid().safeParse(blockerId)
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid blocker ID.' }
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const blocker = await tx.blocker.findUnique({
+        where: { id: parsed.data },
+        select: { id: true, isResolved: true, stepId: true, step: { select: { id: true, previousState: true, projectId: true } } },
+      })
+      if (!blocker) throw new Error('BLOCKER_NOT_FOUND')
+
+      await tx.blocker.delete({ where: { id: parsed.data } })
+
+      // If blocker was unresolved, check if step should revert from BLOCKED
+      if (!blocker.isResolved) {
+        const unresolvedCount = await tx.blocker.count({
+          where: { stepId: blocker.stepId, isResolved: false },
+        })
+        if (unresolvedCount === 0) {
+          await tx.step.update({
+            where: { id: blocker.step.id },
+            data: {
+              state: blocker.step.previousState ?? 'NOT_STARTED',
+              previousState: null,
+            },
+          })
+        }
+      }
+
+      const project = await tx.project.update({
+        where: { id: blocker.step.projectId },
+        data: { lastActivityAt: new Date() },
+        select: { hobbyId: true },
+      })
+
+      return { projectId: blocker.step.projectId, hobbyId: project.hobbyId }
+    })
+
+    revalidatePath(`/hobbies/${result.hobbyId}/projects/${result.projectId}`)
+    revalidatePath('/')
+
+    return { success: true, data: null }
+  } catch (error) {
+    console.error('deleteBlocker failed:', error)
+    if (error instanceof Error && error.message === 'BLOCKER_NOT_FOUND') {
+      return { success: false, error: 'Blocker not found.' }
+    }
+    return { success: false, error: 'Failed to delete blocker.' }
   }
 }
 
