@@ -41,17 +41,30 @@ export async function getHobbies(): Promise<ActionResult<HobbyWithCounts[]>> {
   try {
     const hobbies = await prisma.hobby.findMany({
       orderBy: { sortOrder: 'asc' },
+      include: {
+        projects: {
+          select: { id: true, isArchived: true, isCompleted: true },
+        },
+      },
     })
     return {
       success: true,
-      // TODO(epic-3): Replace hardcoded zeros with real counts via Prisma _count when Project model exists
-      data: hobbies.map(h => ({
-        ...h,
-        projectCount: 0,
-        activeCount: 0,
-        blockedCount: 0,
-        idleCount: 0,
-      })),
+      data: hobbies.map(h => {
+        const active = h.projects.filter(p => !p.isArchived && !p.isCompleted)
+        return {
+          id: h.id,
+          name: h.name,
+          color: h.color,
+          icon: h.icon,
+          sortOrder: h.sortOrder,
+          createdAt: h.createdAt,
+          updatedAt: h.updatedAt,
+          projectCount: h.projects.length,
+          activeCount: active.length,
+          blockedCount: 0,
+          idleCount: 0,
+        }
+      }),
     }
   } catch (error) {
     console.error('getHobbies failed:', error)

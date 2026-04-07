@@ -268,6 +268,18 @@ test.describe('Project Management', () => {
     }
   })
 
+  test('settings page shows correct project count for hobby', async ({ page }) => {
+    await page.goto('/settings')
+    await page.waitForLoadState('networkidle')
+
+    // The hobby card (with project count) should show real count, not 0
+    const hobbyCard = page.getByRole('link', { name: new RegExp(`${hobbyName}.*project`) })
+    await expect(hobbyCard).toBeVisible()
+    // Should NOT show "0 projects" — we created projects in earlier tests
+    const cardText = await hobbyCard.textContent()
+    expect(cardText).not.toContain('0 projects')
+  })
+
   test('fresh projects are not idle', async ({ page }) => {
     await page.goto('/projects')
     await page.waitForLoadState('networkidle')
