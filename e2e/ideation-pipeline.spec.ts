@@ -5,6 +5,7 @@ test.describe.configure({ mode: 'serial' })
 test.describe('Ideation Pipeline', () => {
   let testPrefix: string
   let hobbyName: string
+  let hobbyIdeasUrl: string
 
   test.beforeAll(async ({ browserName }) => {
     testPrefix = `IP-${browserName}-${Date.now()}`
@@ -17,7 +18,10 @@ test.describe('Ideation Pipeline', () => {
     await page.getByPlaceholder('e.g., Woodworking').fill(hobbyName)
     await page.getByTitle('Terracotta').click()
     await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) })).toBeVisible()
+    const hobbyLink = page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) })
+    await expect(hobbyLink).toBeVisible()
+    const href = await hobbyLink.getAttribute('href')
+    hobbyIdeasUrl = `${href}/ideas`
   })
 
   test('can create idea with title only on hobby ideas page', async ({ page }) => {
@@ -181,5 +185,84 @@ test.describe('Ideation Pipeline', () => {
     // Verify empty state
     await expect(page.getByText('No ideas captured yet. When inspiration strikes, add it here.')).toBeVisible()
     await expect(page.getByRole('button', { name: 'New Idea' }).first()).toBeVisible()
+  })
+
+  test('can edit an idea via dropdown', async ({ page }) => {
+    await page.goto(hobbyIdeasUrl)
+    await page.waitForLoadState('networkidle')
+
+    // Open dropdown on first idea
+    const actionsBtn = page.getByRole('button', { name: 'Idea actions' }).first()
+    await expect(actionsBtn).toBeVisible()
+    await actionsBtn.click()
+    await page.getByRole('menuitem', { name: 'Edit' }).click()
+
+    // Edit the title
+    const titleInput = page.getByLabel('Title')
+    await titleInput.clear()
+    await titleInput.fill('Edited Idea Title')
+    await page.getByRole('button', { name: 'Save' }).click()
+    await page.waitForTimeout(1000)
+
+    // Verify updated
+    await page.goto(hobbyIdeasUrl)
+    await expect(page.getByText('Edited Idea Title')).toBeVisible()
+  })
+
+  test('can delete an idea via dropdown', async ({ page }) => {
+    // Create a throwaway idea
+    await page.goto(hobbyIdeasUrl)
+    await page.waitForLoadState('networkidle')
+    await page.getByRole('button', { name: 'New Idea' }).first().click()
+    await page.getByLabel('Title').fill('Delete Me Idea')
+    await page.getByRole('button', { name: 'Save' }).click()
+    await page.waitForTimeout(1000)
+
+    await page.goto(hobbyIdeasUrl)
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText('Delete Me Idea')).toBeVisible()
+
+    // Delete via dropdown
+    // Find the card with "Delete Me Idea" and its actions button
+    const cards = page.getByTestId('idea-card')
+    const targetCard = cards.filter({ hasText: 'Delete Me Idea' })
+    await targetCard.getByRole('button', { name: 'Idea actions' }).click()
+    await page.getByRole('menuitem', { name: 'Delete' }).click()
+    await page.getByRole('button', { name: 'Delete' }).click()
+    await page.waitForTimeout(1000)
+
+    await page.goto(hobbyIdeasUrl)
+    await expect(page.getByText('Delete Me Idea')).not.toBeVisible()
+  })
+
+  test('can promote an idea to a project', async ({ page }) => {
+    // Create an idea to promote
+    await page.goto(hobbyIdeasUrl)
+    await page.waitForLoadState('networkidle')
+    await page.getByRole('button', { name: 'New Idea' }).first().click()
+    await page.getByLabel('Title').fill('Promote Me Idea')
+    await page.getByRole('button', { name: 'Save' }).click()
+    await page.waitForTimeout(1000)
+
+    await page.goto(hobbyIdeasUrl)
+    await page.waitForLoadState('networkidle')
+
+    // Promote via dropdown
+    const cards = page.getByTestId('idea-card')
+    const targetCard = cards.filter({ hasText: 'Promote Me Idea' })
+    await targetCard.getByRole('button', { name: 'Idea actions' }).click()
+    await page.getByRole('menuitem', { name: 'Promote to Project' }).click()
+    await page.waitForTimeout(1000)
+
+    // Verify idea is marked as promoted (muted styling)
+    await page.goto(hobbyIdeasUrl)
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText('Promoted').first()).toBeVisible()
+
+    // Verify project was created on the hobby page
+    const hobbyUrl = hobbyIdeasUrl.replace('/ideas', '')
+    await page.goto(hobbyUrl)
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText('Promote Me Idea').first()).toBeVisible()
   })
 })
