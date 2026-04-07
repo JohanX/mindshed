@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/db'
 import { getProjectsByHobby } from '@/actions/project'
@@ -5,6 +6,8 @@ import { PageHeader } from '@/components/layout/page-header'
 import { ProjectCreateDialog } from '@/components/project/project-create-dialog'
 import { ProjectList } from '@/components/project/project-list'
 import { EmptyStateCard } from '@/components/empty-state-card'
+import { Button } from '@/components/ui/button'
+import { Lightbulb } from 'lucide-react'
 
 interface HobbyDetailPageProps {
   params: Promise<{ hobbyId: string }>
@@ -31,7 +34,15 @@ export default async function HobbyDetailPage({ params }: HobbyDetailPageProps) 
           { label: hobby.name },
         ]}
       >
-        <ProjectCreateDialog hobbyId={hobbyId} />
+        <div className="flex items-center gap-2">
+          <Link href={`/hobbies/${hobbyId}/ideas`}>
+            <Button variant="outline" size="sm" className="min-h-[44px]">
+              <Lightbulb className="h-4 w-4 mr-1" />
+              Ideas
+            </Button>
+          </Link>
+          <ProjectCreateDialog hobbyId={hobbyId} />
+        </div>
       </PageHeader>
 
       {projects.length > 0 ? (
