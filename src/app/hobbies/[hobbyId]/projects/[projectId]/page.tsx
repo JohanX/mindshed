@@ -80,7 +80,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         title={project.name}
         breadcrumbs={[
           { label: 'Hobbies', href: '/hobbies' },
-          { label: project.hobby.name, href: `/hobbies/${hobbyId}` },
+          { label: project.hobby.name, href: `/hobbies/${hobbyId}`, hobbyColor: project.hobby.color },
           { label: project.name },
         ]}
       >

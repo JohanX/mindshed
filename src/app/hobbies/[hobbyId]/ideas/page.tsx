@@ -28,7 +28,7 @@ export default async function HobbyIdeasPage({ params }: HobbyIdeasPageProps) {
         title={`${hobby.name} Ideas`}
         breadcrumbs={[
           { label: 'Hobbies', href: '/hobbies' },
-          { label: hobby.name, href: `/hobbies/${hobbyId}` },
+          { label: hobby.name, href: `/hobbies/${hobbyId}`, hobbyColor: hobby.color },
           { label: 'Ideas' },
         ]}
       >

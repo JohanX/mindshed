@@ -4,6 +4,7 @@ import Link from 'next/link'
 import type { BlockerWithContext } from '@/lib/schemas/blocker'
 import { BlockerCard } from '@/components/blocker/blocker-card'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
+import { hobbyColorWithAlpha } from '@/lib/hobby-color'
 
 interface BlockerListProps {
   blockers: BlockerWithContext[]
@@ -21,7 +22,11 @@ export function BlockerList({ blockers }: BlockerListProps) {
   return (
     <ul className="space-y-3">
       {blockers.map((blocker) => (
-        <li key={blocker.id} className="space-y-1">
+        <li
+          key={blocker.id}
+          className="space-y-1 border-l-4 pl-3 rounded-sm"
+          style={{ borderLeftColor: blocker.step.project.hobby.color, backgroundColor: hobbyColorWithAlpha(blocker.step.project.hobby.color, 0.05) }}
+        >
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <HobbyIdentity hobby={blocker.step.project.hobby} variant="badge" />
             <span aria-hidden="true">/</span>

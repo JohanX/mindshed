@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { IdeaFormDialog } from '@/components/idea/idea-form'
 import { EmptyStateCard } from '@/components/empty-state-card'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { hobbyColorWithAlpha } from '@/lib/hobby-color'
 import { Badge } from '@/components/ui/badge'
 import { ExternalLink } from 'lucide-react'
 
@@ -30,7 +31,11 @@ export default async function IdeasPage() {
       {ideas.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {ideas.map((idea) => (
-            <Card key={idea.id}>
+            <Card
+              key={idea.id}
+              className="border-l-4"
+              style={{ borderLeftColor: idea.hobby.color, backgroundColor: hobbyColorWithAlpha(idea.hobby.color, 0.05) }}
+            >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-base flex items-center gap-2">

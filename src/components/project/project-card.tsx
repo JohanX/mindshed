@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { StepStateBadge } from '@/components/step-state-badge'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
+import { hobbyColorWithAlpha } from '@/lib/hobby-color'
 import type { StepState } from '@/lib/step-states'
 
 export interface ProjectCardData {
@@ -26,7 +27,10 @@ export function ProjectCard({ project, hobby, showHobbyBadge }: ProjectCardProps
     <Link href={`/hobbies/${project.hobbyId}/projects/${project.id}`} className="block">
       {hobby ? (
         <HobbyIdentity hobby={hobby} variant="accent">
-          <Card className="border-0 ring-0 rounded-none min-h-[44px]">
+          <Card
+            className="border-0 ring-0 rounded-none min-h-[44px]"
+            style={{ backgroundColor: hobbyColorWithAlpha(hobby.color, 0.05) }}
+          >
             <CardContent className="space-y-2">
               <ProjectCardContent project={project} hobby={hobby} showHobbyBadge={showHobbyBadge} />
             </CardContent>

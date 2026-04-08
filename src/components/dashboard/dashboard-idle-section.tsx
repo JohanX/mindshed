@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
+import { hobbyColorWithAlpha } from '@/lib/hobby-color'
 import { formatRelativeTime } from '@/lib/format-date'
 import type { IdleProject } from '@/lib/schemas/dashboard'
 
@@ -30,7 +31,11 @@ export function DashboardIdleSection({ projects }: DashboardIdleSectionProps) {
             href={`/hobbies/${p.hobbyId}/projects/${p.id}`}
             className="block min-h-[44px]"
           >
-            <Card size="sm" className="transition-colors hover:bg-accent/50">
+            <Card
+              size="sm"
+              className="transition-colors hover:bg-accent/50 border-l-4"
+              style={{ borderLeftColor: p.hobby.color, backgroundColor: hobbyColorWithAlpha(p.hobby.color, 0.05) }}
+            >
               <CardContent className="space-y-1">
                 <div className="flex items-center gap-2">
                   <HobbyIdentity hobby={p.hobby} variant="dot" />

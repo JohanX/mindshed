@@ -6,6 +6,7 @@ import { LayoutDashboard, Lightbulb, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
 import { getHobbyContext } from '@/lib/hobby-utils'
+import { hobbyColorWithAlpha } from '@/lib/hobby-color'
 import { HobbyFormDialog } from '@/components/hobby/hobby-form'
 import type { HobbyWithCounts } from '@/lib/schemas/hobby'
 
@@ -18,14 +19,10 @@ export function TopBar({ hobbies }: TopBarProps) {
   const activeHobby = getHobbyContext(pathname, hobbies)
 
   return (
-    <header className="hidden lg:flex fixed top-0 left-0 right-0 z-50 h-16 items-center border-b border-border bg-card">
-      {/* Hobby color tint overlay */}
-      {activeHobby && (
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ backgroundColor: activeHobby.color, opacity: 0.1 }}
-        />
-      )}
+    <header
+      className="hidden lg:flex fixed top-0 left-0 right-0 z-50 h-16 items-center border-b border-border bg-card"
+      style={activeHobby ? { backgroundColor: hobbyColorWithAlpha(activeHobby.color, 0.12) } : undefined}
+    >
 
       <div className="relative flex items-center justify-between w-full px-6">
         {/* Left: Logo */}

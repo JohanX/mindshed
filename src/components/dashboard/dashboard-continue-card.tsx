@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
+import { hobbyColorWithAlpha } from '@/lib/hobby-color'
 import type { RecentProject } from '@/lib/schemas/dashboard'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 
@@ -29,7 +30,11 @@ export function DashboardContinueCard({ project, variant }: DashboardContinueCar
         href={`/hobbies/${project.hobbyId}/projects/${project.id}`}
         className="block min-h-[44px]"
       >
-        <Card size="sm" className="transition-colors hover:bg-accent/50">
+        <Card
+          size="sm"
+          className="transition-colors hover:bg-accent/50 border-l-4"
+          style={{ borderLeftColor: project.hobby.color, backgroundColor: hobbyColorWithAlpha(project.hobby.color, 0.05) }}
+        >
           <CardContent className="flex items-center gap-3">
             <HobbyIdentity hobby={project.hobby} variant="dot" />
             <div className="min-w-0 flex-1">
@@ -51,7 +56,10 @@ export function DashboardContinueCard({ project, variant }: DashboardContinueCar
       href={`/hobbies/${project.hobbyId}/projects/${project.id}`}
       className="block min-h-[44px]"
     >
-      <Card className="transition-colors hover:bg-accent/50">
+      <Card
+        className="transition-colors hover:bg-accent/50 border-l-4"
+        style={{ borderLeftColor: project.hobby.color, backgroundColor: hobbyColorWithAlpha(project.hobby.color, 0.05) }}
+      >
         <CardContent className="flex items-start gap-4">
           {photoUrl && (
             <img

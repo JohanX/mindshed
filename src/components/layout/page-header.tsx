@@ -11,6 +11,7 @@ import React from 'react'
 export interface BreadcrumbSegment {
   label: string
   href?: string
+  hobbyColor?: string
 }
 
 interface PageHeaderProps {
@@ -33,9 +34,25 @@ export function PageHeader({ title, breadcrumbs, children }: PageHeaderProps) {
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
                   {index === breadcrumbs.length - 1 ? (
-                    <BreadcrumbPage>{segment.label}</BreadcrumbPage>
+                    <BreadcrumbPage className="inline-flex items-center gap-1.5">
+                      {segment.hobbyColor && (
+                        <span
+                          className="inline-block w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: segment.hobbyColor }}
+                          aria-hidden="true"
+                        />
+                      )}
+                      {segment.label}
+                    </BreadcrumbPage>
                   ) : (
-                    <BreadcrumbLink href={segment.href ?? '#'}>
+                    <BreadcrumbLink href={segment.href ?? '#'} className="inline-flex items-center gap-1.5">
+                      {segment.hobbyColor && (
+                        <span
+                          className="inline-block w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: segment.hobbyColor }}
+                          aria-hidden="true"
+                        />
+                      )}
                       {segment.label}
                     </BreadcrumbLink>
                   )}

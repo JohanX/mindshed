@@ -48,6 +48,12 @@
   --color-step-in-progress: var(--step-in-progress);
   --color-step-completed: var(--step-completed);
   --color-step-blocked: var(--step-blocked);
+
+  /* Hobby context colors — overridden by hobby layout inline styles */
+  --color-hobby-primary: var(--hobby-primary);
+  --color-hobby-accent: var(--hobby-accent);
+  --color-hobby-card: var(--hobby-card);
+  --color-hobby-border: var(--hobby-border);
 }
 
 /* Warm Workshop Theme
@@ -115,6 +121,12 @@
   --step-in-progress: oklch(0.7 0.15 70);
   --step-completed: oklch(0.55 0.08 155);
   --step-blocked: oklch(0.56 0.03 260);
+
+  /* Hobby context defaults (inherit from base theme when no hobby layout active) */
+  --hobby-primary: var(--primary);
+  --hobby-accent: var(--accent);
+  --hobby-card: var(--card);
+  --hobby-border: var(--border);
 
   /* Font stacks */
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;

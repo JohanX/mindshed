@@ -31,7 +31,7 @@ export default async function HobbyDetailPage({ params }: HobbyDetailPageProps) 
         title={hobby.name}
         breadcrumbs={[
           { label: 'Hobbies', href: '/hobbies' },
-          { label: hobby.name },
+          { label: hobby.name, hobbyColor: hobby.color },
         ]}
       >
         <div className="flex items-center gap-2">
