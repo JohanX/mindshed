@@ -13,6 +13,8 @@ interface ProjectDetailPageProps {
 }
 
 function getPublicImageUrl(storageKey: string): string {
+  const publicUrl = process.env.R2_PUBLIC_URL
+  if (publicUrl) return `${publicUrl}/${storageKey}`
   const endpoint = process.env.R2_ENDPOINT
   const bucket = process.env.R2_BUCKET_NAME
   if (!endpoint || !bucket) return ''

@@ -44,10 +44,15 @@ export function getR2Bucket(): string {
 }
 
 export function getPublicUrl(storageKey: string): string {
+  const publicUrl = process.env.R2_PUBLIC_URL
+  if (publicUrl) {
+    return `${publicUrl}/${storageKey}`
+  }
+  // Fallback for local dev (MinIO)
   const endpoint = process.env.R2_ENDPOINT
   const bucket = process.env.R2_BUCKET_NAME
   if (!endpoint || !bucket) {
-    throw new Error('Missing R2_ENDPOINT or R2_BUCKET_NAME environment variables.')
+    throw new Error('Missing R2_PUBLIC_URL or R2_ENDPOINT/R2_BUCKET_NAME environment variables.')
   }
   return `${endpoint}/${bucket}/${storageKey}`
 }
