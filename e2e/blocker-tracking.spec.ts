@@ -33,10 +33,12 @@ test.describe('Blocker Tracking', () => {
     await page.getByRole('button', { name: 'Save' }).click()
     await page.waitForTimeout(2000)
 
-    // Start the step
-    const startBtn = page.getByTitle('Start step').first()
-    if (await startBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await startBtn.click()
+    // Start the step via status dropdown
+    const statusSelect = page.getByLabel('Step status').first()
+    if (await statusSelect.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await statusSelect.click()
+      await page.waitForTimeout(500)
+      await page.getByRole('option', { name: /In Progress/ }).click()
       await page.waitForTimeout(1000)
     }
 

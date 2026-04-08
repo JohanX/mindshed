@@ -201,10 +201,12 @@ test.describe('Project Management', () => {
     await page.goto(page.url())
     await expect(page.getByText('New Step')).toBeVisible()
 
-    // Start a step — verify UI updates immediately (no reload)
-    const startButton = page.getByTitle('Start step').first()
-    if (await startButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await startButton.click()
+    // Start a step via status dropdown — verify UI updates immediately (no reload)
+    const statusSelect = page.getByLabel('Step status').first()
+    if (await statusSelect.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await statusSelect.click()
+      await page.waitForTimeout(500)
+      await page.getByRole('option', { name: /In Progress/ }).click()
       // Verify state badge updates without page reload
       await expect(page.getByText('In Progress')).toBeVisible({ timeout: 5000 })
       // Also verify it persists after reload
@@ -293,23 +295,28 @@ test.describe('Project Management', () => {
     await page.getByText('Step Test Project').first().click()
     await page.waitForLoadState('networkidle')
 
-    // Start a step if not started
-    const startBtn = page.getByTitle('Start step').first()
-    if (await startBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await startBtn.click()
+    // Start a step via status dropdown if not started
+    const statusSelect = page.getByLabel('Step status').first()
+    if (await statusSelect.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await statusSelect.click()
+      await page.waitForTimeout(500)
+      await page.getByRole('option', { name: /In Progress/ }).click()
       await page.waitForTimeout(1000)
     }
 
-    // Complete the step
-    const completeBtn = page.getByTitle('Mark complete').first()
-    if (await completeBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await completeBtn.click()
+    // Complete the step via status dropdown
+    const statusSelect2 = page.getByLabel('Step status').first()
+    if (await statusSelect2.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await statusSelect2.click()
+      await page.waitForTimeout(500)
+      await page.getByRole('option', { name: /Completed/ }).click()
       await expect(page.getByText('Completed').first()).toBeVisible({ timeout: 5000 })
 
-      // Undo completion
-      const undoBtn = page.getByTitle('Reopen step').first()
-      await expect(undoBtn).toBeVisible({ timeout: 3000 })
-      await undoBtn.click()
+      // Undo completion via status dropdown
+      const statusSelect3 = page.getByLabel('Step status').first()
+      await statusSelect3.click()
+      await page.waitForTimeout(500)
+      await page.getByRole('option', { name: /In Progress/ }).click()
       await expect(page.getByText('In Progress').first()).toBeVisible({ timeout: 5000 })
     }
   })

@@ -34,11 +34,17 @@ vi.mock('@/components/blocker/inline-blocker-input', () => ({
 vi.mock('@/components/blocker/blocker-card', () => ({
   BlockerCard: ({ description }: { id: string; description: string }) => <div data-testid="mock-blocker-card">{description}</div>,
 }))
+vi.mock('@/components/step/step-status-select', () => ({
+  StepStatusSelect: ({ currentState, disabled }: { currentState: string; previousState: string | null; onStateChange: (s: string) => void; disabled?: boolean }) => (
+    <button aria-label="Step status" disabled={disabled} data-testid="mock-status-select">{currentState === 'NOT_STARTED' ? 'Not Started' : currentState === 'IN_PROGRESS' ? 'In Progress' : currentState === 'COMPLETED' ? 'Completed' : 'Blocked'}</button>
+  ),
+}))
 
 const baseStep = {
   id: 'step-1',
   name: 'Design the layout',
   state: 'NOT_STARTED' as const,
+  previousState: null as null | 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED',
   sortOrder: 0,
   notes: [],
   images: [],
@@ -86,20 +92,24 @@ describe('StepCard', () => {
   it('no mutation actions when isProjectCompleted', () => {
     render(<StepCard {...defaultProps} isProjectCompleted={true} />)
 
-    expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument()
     expect(screen.queryByTestId('mock-note-input-step-1')).not.toBeInTheDocument()
     expect(screen.queryByTestId('mock-upload-btn')).not.toBeInTheDocument()
     expect(screen.queryByTestId('mock-blocker-input')).not.toBeInTheDocument()
   })
 
-  it('"Start" visible for NOT_STARTED state', () => {
+  it('status dropdown visible for active project', () => {
     render(<StepCard {...defaultProps} step={{ ...baseStep, state: 'NOT_STARTED' }} />)
-    expect(screen.getByTitle('Start step')).toBeInTheDocument()
+    expect(screen.getByLabelText('Step status')).toBeInTheDocument()
   })
 
-  it('"Mark Complete" visible for IN_PROGRESS state', () => {
+  it('status dropdown shows current state', () => {
     render(<StepCard {...defaultProps} step={{ ...baseStep, state: 'IN_PROGRESS' }} />)
-    expect(screen.getByTitle('Mark complete')).toBeInTheDocument()
+    expect(screen.getByText('In Progress')).toBeInTheDocument()
+  })
+
+  it('status dropdown is disabled on completed project', () => {
+    render(<StepCard {...defaultProps} isProjectCompleted={true} step={{ ...baseStep, state: 'COMPLETED' }} />)
+    expect(screen.getByLabelText('Step status')).toBeDisabled()
   })
 
   it('renders notes and images when provided', () => {

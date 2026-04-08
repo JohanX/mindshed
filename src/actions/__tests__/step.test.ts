@@ -161,7 +161,7 @@ describe('updateStepState', () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         step: {
-          findUniqueOrThrow: vi.fn().mockResolvedValue({ project: { isCompleted: false } }),
+          findUniqueOrThrow: vi.fn().mockResolvedValue({ state: 'NOT_STARTED', previousState: null, project: { isCompleted: false } }),
           update: vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' }),
         },
       }
@@ -174,6 +174,99 @@ describe('updateStepState', () => {
     })
     expect(result.success).toBe(true)
     expect(mockProjectUpdate).toHaveBeenCalled()
+  })
+
+  it('saves previousState when transitioning to BLOCKED', async () => {
+    const mockStepUpdate = vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' })
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        step: {
+          findUniqueOrThrow: vi.fn().mockResolvedValue({ state: 'IN_PROGRESS', previousState: null, project: { isCompleted: false } }),
+          update: mockStepUpdate,
+        },
+      }
+      return fn(tx as never)
+    })
+
+    const result = await updateStepState({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      state: 'BLOCKED',
+    })
+    expect(result.success).toBe(true)
+    expect(mockStepUpdate).toHaveBeenCalledWith({
+      where: { id: '550e8400-e29b-41d4-a716-446655440000' },
+      data: { state: 'BLOCKED', previousState: 'IN_PROGRESS' },
+    })
+  })
+
+  it('restores previousState when transitioning from BLOCKED', async () => {
+    const mockStepUpdate = vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' })
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        step: {
+          findUniqueOrThrow: vi.fn().mockResolvedValue({ state: 'BLOCKED', previousState: 'IN_PROGRESS', project: { isCompleted: false } }),
+          update: mockStepUpdate,
+        },
+      }
+      return fn(tx as never)
+    })
+
+    // The requested state is ignored when restoring from BLOCKED — previousState takes precedence
+    const result = await updateStepState({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      state: 'NOT_STARTED',
+    })
+    expect(result.success).toBe(true)
+    expect(mockStepUpdate).toHaveBeenCalledWith({
+      where: { id: '550e8400-e29b-41d4-a716-446655440000' },
+      data: { state: 'IN_PROGRESS', previousState: null },
+    })
+  })
+
+  it('allows COMPLETED to NOT_STARTED revert', async () => {
+    const mockStepUpdate = vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' })
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        step: {
+          findUniqueOrThrow: vi.fn().mockResolvedValue({ state: 'COMPLETED', previousState: null, project: { isCompleted: false } }),
+          update: mockStepUpdate,
+        },
+      }
+      return fn(tx as never)
+    })
+
+    const result = await updateStepState({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      state: 'NOT_STARTED',
+    })
+    expect(result.success).toBe(true)
+    expect(mockStepUpdate).toHaveBeenCalledWith({
+      where: { id: '550e8400-e29b-41d4-a716-446655440000' },
+      data: { state: 'NOT_STARTED', previousState: null },
+    })
+  })
+
+  it('clears previousState on normal transitions', async () => {
+    const mockStepUpdate = vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' })
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        step: {
+          findUniqueOrThrow: vi.fn().mockResolvedValue({ state: 'NOT_STARTED', previousState: null, project: { isCompleted: false } }),
+          update: mockStepUpdate,
+        },
+      }
+      return fn(tx as never)
+    })
+
+    const result = await updateStepState({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      state: 'COMPLETED',
+    })
+    expect(result.success).toBe(true)
+    expect(mockStepUpdate).toHaveBeenCalledWith({
+      where: { id: '550e8400-e29b-41d4-a716-446655440000' },
+      data: { state: 'COMPLETED', previousState: null },
+    })
   })
 
   it('returns error when step not found', async () => {

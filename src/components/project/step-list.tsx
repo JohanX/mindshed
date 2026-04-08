@@ -27,17 +27,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { StepStateBadge } from '@/components/step-state-badge'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { createStep, updateStep, deleteStep, updateStepState, reorderSteps } from '@/actions/step'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
-import { Plus, MoreHorizontal, Pencil, Trash2, Check, Play, Loader2, GripVertical, ArrowUp, ArrowDown } from 'lucide-react'
+import { Plus, MoreHorizontal, Pencil, Trash2, Loader2, GripVertical, ArrowUp, ArrowDown } from 'lucide-react'
+import { StepStatusSelect } from '@/components/step/step-status-select'
 import type { StepState } from '@/lib/step-states'
 
 interface StepData {
   id: string
   name: string
   state: StepState
+  previousState: StepState | null
   sortOrder: number
 }
 
@@ -160,32 +161,15 @@ function SortableStepItem({
             ) : (
               <>
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  {!isCompleted && step.state === 'NOT_STARTED' && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="shrink-0 min-h-[44px] min-w-[44px]"
-                      onClick={() => onStateChange(step.id, 'IN_PROGRESS')}
-                      title="Start step"
-                    >
-                      <Play className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {!isCompleted && step.state === 'IN_PROGRESS' && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="shrink-0 min-h-[44px] min-w-[44px]"
-                      onClick={() => onStateChange(step.id, 'COMPLETED')}
-                      title="Mark complete"
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                  )}
                   <span className="font-medium truncate" data-testid="step-name">{step.name}</span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <StepStateBadge state={step.state} size="sm" />
+                  <StepStatusSelect
+                    currentState={step.state}
+                    previousState={step.previousState}
+                    onStateChange={(newState) => onStateChange(step.id, newState)}
+                    disabled={isPending || isCompleted}
+                  />
                   {!isCompleted && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -320,7 +304,7 @@ export function StepList({ steps: initialSteps, projectId, isCompleted, hideStep
     startTransition(async () => {
       const result = await updateStepState({ id: stepId, state: newState })
       if (result.success) {
-        showSuccessToast('Step ' + (newState === 'COMPLETED' ? 'completed' : 'started'))
+        showSuccessToast(`Step marked as ${newState.replace('_', ' ').toLowerCase()}`)
       } else {
         showErrorToast(result.error)
       }

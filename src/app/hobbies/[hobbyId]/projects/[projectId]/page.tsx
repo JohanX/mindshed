@@ -52,6 +52,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     id: s.id,
     name: s.name,
     state: s.state as StepState,
+    previousState: (s.previousState as StepState | null) ?? null,
     sortOrder: s.sortOrder,
     notes: s.notes.map(n => ({ id: n.id, text: n.text, createdAt: n.createdAt })),
     images: s.images.map(img => ({
@@ -69,6 +70,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     id: s.id,
     name: s.name,
     state: s.state as StepState,
+    previousState: (s.previousState as StepState | null) ?? null,
     sortOrder: s.sortOrder,
   }))
 

@@ -130,10 +130,39 @@ export async function updateStepState(input: UpdateStepStateInput): Promise<Acti
     const step = await prisma.$transaction(async (tx) => {
       const existing = await tx.step.findUniqueOrThrow({
         where: { id: parsed.data.id },
-        select: { project: { select: { isCompleted: true } } },
+        select: { state: true, previousState: true, project: { select: { isCompleted: true } } },
       })
       if (existing.project.isCompleted) throw new Error('PROJECT_COMPLETED')
-      return tx.step.update({ where: { id: parsed.data.id }, data: { state: parsed.data.state } })
+
+      const newState = parsed.data.state
+
+      // No-op: same state selected — just return existing step unchanged
+      if (newState === existing.state) {
+        return tx.step.findUniqueOrThrow({ where: { id: parsed.data.id } })
+      }
+
+      // Transitioning TO BLOCKED: save current state so it can be restored later
+      if (newState === 'BLOCKED') {
+        return tx.step.update({
+          where: { id: parsed.data.id },
+          data: { state: 'BLOCKED', previousState: existing.state },
+        })
+      }
+
+      // Transitioning FROM BLOCKED: restore previousState if available
+      if (existing.state === 'BLOCKED') {
+        const restoredState = existing.previousState ?? newState
+        return tx.step.update({
+          where: { id: parsed.data.id },
+          data: { state: restoredState, previousState: null },
+        })
+      }
+
+      // All other transitions: update state, clear previousState
+      return tx.step.update({
+        where: { id: parsed.data.id },
+        data: { state: newState, previousState: null },
+      })
     })
 
     await updateProjectActivity(step.projectId)

@@ -122,8 +122,11 @@ test.describe('Hobby Color Palette Theming', () => {
     await page.getByRole('button', { name: 'Save' }).click()
     await page.waitForTimeout(2000)
 
-    // Start the step to make project active for dashboard
-    await page.getByRole('button', { name: 'Start step' }).first().click()
+    // Start the step via status dropdown to make project active for dashboard
+    const statusSelect = page.getByLabel('Step status').first()
+    await statusSelect.click()
+    await page.waitForTimeout(500)
+    await page.getByRole('option', { name: /In Progress/ }).click()
     await page.waitForTimeout(1000)
   })
 

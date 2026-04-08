@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { StepStateBadge } from '@/components/step-state-badge'
+import { StepStatusSelect } from '@/components/step/step-status-select'
 import { InlineNoteInput } from '@/components/note/inline-note-input'
 import { NotesList } from '@/components/note/notes-list'
 import { ImageGallery, type GalleryImage } from '@/components/image/image-gallery'
@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { MoreHorizontal, Pencil, Trash2, Play, Check, Undo2, ArrowUp, ArrowDown } from 'lucide-react'
+import { MoreHorizontal, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-react'
 import { updateStepState, updateStep, deleteStep } from '@/actions/step'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Input } from '@/components/ui/input'
@@ -40,6 +40,7 @@ export interface StepCardData {
   id: string
   name: string
   state: StepState
+  previousState: StepState | null
   sortOrder: number
   notes: StepNoteData[]
   images: GalleryImage[]
@@ -101,9 +102,7 @@ export function StepCard({
     startTransition(async () => {
       const result = await updateStepState({ id: step.id, state: newState })
       if (result.success) {
-        showSuccessToast(
-          'Step ' + (newState === 'COMPLETED' ? 'completed' : 'started'),
-        )
+        showSuccessToast(`Step marked as ${newState.replace('_', ' ').toLowerCase()}`)
       } else {
         showErrorToast(result.error)
       }
@@ -146,7 +145,6 @@ export function StepCard({
               onClick={() => setExpanded((prev) => !prev)}
             >
               <span className="font-medium truncate">{step.name}</span>
-              <StepStateBadge state={step.state} size="sm" />
             </button>
             {!isProjectCompleted && onMoveUp && onMoveDown && index !== undefined && total !== undefined && (
               <div className="flex flex-col gap-0.5">
@@ -172,45 +170,12 @@ export function StepCard({
                 </Button>
               </div>
             )}
-            {!isProjectCompleted && step.state === 'NOT_STARTED' && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="min-h-[44px] min-w-[44px]"
-                onClick={() => handleStateChange('IN_PROGRESS')}
-                disabled={isPending}
-                title="Start step"
-                aria-label="Start step"
-              >
-                <Play className="h-4 w-4" />
-              </Button>
-            )}
-            {!isProjectCompleted && step.state === 'IN_PROGRESS' && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="min-h-[44px] min-w-[44px]"
-                onClick={() => handleStateChange('COMPLETED')}
-                disabled={isPending}
-                title="Mark complete"
-                aria-label="Mark complete"
-              >
-                <Check className="h-4 w-4" />
-              </Button>
-            )}
-            {!isProjectCompleted && step.state === 'COMPLETED' && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="min-h-[44px] min-w-[44px]"
-                onClick={() => handleStateChange('IN_PROGRESS')}
-                disabled={isPending}
-                title="Reopen step"
-                aria-label="Reopen step"
-              >
-                <Undo2 className="h-4 w-4" />
-              </Button>
-            )}
+            <StepStatusSelect
+              currentState={step.state}
+              previousState={step.previousState}
+              onStateChange={handleStateChange}
+              disabled={isPending || isProjectCompleted}
+            />
             {!isProjectCompleted && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
