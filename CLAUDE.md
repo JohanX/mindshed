@@ -16,15 +16,19 @@ Do NOT prefix PATH or use `pnpm exec` for things with scripts. Node and pnpm are
 
 Every story must follow this sequence:
 
-1. Implement all tasks/subtasks in order
-2. Write E2E tests (required for every story)
-3. Run `pnpm lint`, `pnpm test run`, `pnpm build`
-4. Run E2E tests
-5. Run code review (bmad-code-review skill)
-6. Auto-apply review patches (no pause for approval)
-7. Re-run all tests after patches
-8. Commit mindshed/ changes
-9. Commit _bmad-output/ changes separately
+1. Invoke DEV agent to implement all tasks/subtasks in order
+2. Invoke QA agent to write E2E tests and identify potential gaps (required for every story)
+   - QA agent uses Playwright MCP server to interactively explore the running app before writing tests
+   - QA navigates the feature, verifies behavior, identifies edge cases via live browser
+   - Then writes E2E test scripts grounded in observed behavior
+3. Switch back to DEV agent to execute rest of the steps
+4. Run `pnpm lint`, `pnpm test run`, `pnpm build`
+5. Run E2E tests
+6. Run code review (bmad-code-review skill)
+7. Auto-apply review patches (no pause for approval)
+8. Re-run all tests after patches
+9. Commit mindshed/ changes
+10. Commit _bmad-output/ changes separately
 
 ## Code Conventions
 

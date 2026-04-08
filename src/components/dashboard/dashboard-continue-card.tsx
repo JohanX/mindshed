@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
 import type { RecentProject } from '@/lib/schemas/dashboard'
-import { getPublicUrl } from '@/lib/r2'
+import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 
 export interface DashboardContinueCardProps {
   project: RecentProject
@@ -12,7 +12,9 @@ export interface DashboardContinueCardProps {
 function resolvePhotoUrl(storageKey: string | null | undefined): string | null {
   if (!storageKey) return null
   try {
-    return getPublicUrl(storageKey)
+    const adapter = getImageStorageAdapter()
+    if (!adapter) return null
+    return adapter.getPublicUrl(storageKey)
   } catch {
     return null
   }

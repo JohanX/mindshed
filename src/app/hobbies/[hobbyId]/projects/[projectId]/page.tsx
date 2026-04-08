@@ -7,18 +7,20 @@ import { StepCardList } from '@/components/step/step-card-list'
 import { StepList } from '@/components/project/step-list'
 import { EmptyStateCard } from '@/components/empty-state-card'
 import type { StepState } from '@/lib/step-states'
+import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 
 interface ProjectDetailPageProps {
   params: Promise<{ hobbyId: string; projectId: string }>
 }
 
 function getPublicImageUrl(storageKey: string): string {
-  const publicUrl = process.env.R2_PUBLIC_URL
-  const bucket = process.env.R2_BUCKET_NAME
-  if (publicUrl && bucket) return `${publicUrl}/${bucket}/${storageKey}`
-  const endpoint = process.env.R2_ENDPOINT
-  if (!endpoint || !bucket) return ''
-  return `${endpoint}/${bucket}/${storageKey}`
+  const adapter = getImageStorageAdapter()
+  if (!adapter) return ''
+  try {
+    return adapter.getPublicUrl(storageKey)
+  } catch {
+    return ''
+  }
 }
 
 export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {

@@ -8,7 +8,7 @@ import {
   addStepImageSchema,
   type AddStepImageInput,
 } from '@/lib/schemas/image'
-import { getPublicUrl, deleteObject } from '@/lib/r2'
+import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -41,6 +41,7 @@ export async function getStepImages(
       orderBy: { createdAt: 'desc' },
     })
 
+    const adapter = getImageStorageAdapter()
     const withDisplayUrl: StepImageWithDisplayUrl[] = images.map((img) => ({
       id: img.id,
       stepId: img.stepId,
@@ -51,8 +52,8 @@ export async function getStepImages(
       contentType: img.contentType,
       sizeBytes: img.sizeBytes,
       createdAt: img.createdAt,
-      displayUrl: img.type === 'UPLOAD' && img.storageKey
-        ? getPublicUrl(img.storageKey)
+      displayUrl: img.type === 'UPLOAD' && img.storageKey && adapter
+        ? adapter.getPublicUrl(img.storageKey)
         : img.url ?? '',
     }))
 
@@ -160,6 +161,102 @@ export async function addStepImage(
   }
 }
 
+export async function uploadImageCloudinary(
+  formData: FormData,
+): Promise<ActionResult<{ id: string }>> {
+  const stepId = formData.get('stepId') as string | null
+  const file = formData.get('file') as File | null
+
+  if (!stepId || !file) {
+    return { success: false, error: 'Missing stepId or file.' }
+  }
+
+  const parsedStepId = z.uuid().safeParse(stepId)
+  if (!parsedStepId.success) {
+    return { success: false, error: 'Invalid step ID.' }
+  }
+
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+  if (!allowedTypes.includes(file.type)) {
+    return { success: false, error: 'Only JPEG, PNG, and WebP images are allowed.' }
+  }
+
+  const maxSize = 10 * 1024 * 1024 // 10 MB
+  if (file.size > maxSize) {
+    return { success: false, error: 'Image must be under 10 MB.' }
+  }
+
+  const adapter = getImageStorageAdapter()
+  if (!adapter) {
+    return { success: false, error: 'Image storage is not configured.' }
+  }
+
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const ext = file.type.split('/')[1] || 'jpg'
+    const key = `steps/${stepId}/${crypto.randomUUID()}.${ext}`
+
+    const uploadResult = await adapter.upload(buffer, key, file.type)
+
+    let dbSuccess = false
+    try {
+      const { image, hobbyId, projectId } = await prisma.$transaction(async (tx) => {
+        const step = await tx.step.findUnique({
+          where: { id: parsedStepId.data },
+          select: { projectId: true, project: { select: { id: true, hobbyId: true, isCompleted: true } } },
+        })
+        if (!step) throw new Error('STEP_NOT_FOUND')
+        if (step.project.isCompleted) throw new Error('PROJECT_COMPLETED')
+
+        const created = await tx.stepImage.create({
+          data: {
+            stepId: parsedStepId.data,
+            storageKey: uploadResult.storageKey,
+            url: uploadResult.publicUrl,
+            originalFilename: file.name,
+            contentType: file.type,
+            sizeBytes: file.size,
+            type: 'UPLOAD',
+          },
+        })
+
+        await tx.project.update({
+          where: { id: step.projectId },
+          data: { lastActivityAt: new Date() },
+        })
+
+        return { image: created, hobbyId: step.project.hobbyId, projectId: step.projectId }
+      })
+
+      dbSuccess = true
+
+      revalidatePath(`/hobbies/${hobbyId}/projects/${projectId}`)
+      revalidatePath(`/hobbies/${hobbyId}`)
+      revalidatePath('/projects')
+      revalidatePath('/')
+
+      return { success: true, data: { id: image.id } }
+    } catch (error) {
+      // Clean up orphaned upload if DB transaction failed
+      if (!dbSuccess) {
+        try {
+          await adapter.deleteObject(uploadResult.storageKey)
+        } catch (cleanupErr) {
+          console.error('Failed to clean up orphaned upload:', cleanupErr)
+        }
+      }
+      throw error
+    }
+  } catch (error) {
+    console.error('uploadImageCloudinary failed:', error)
+    if (error instanceof Error) {
+      if (error.message === 'STEP_NOT_FOUND') return { success: false, error: 'Step not found.' }
+      if (error.message === 'PROJECT_COMPLETED') return { success: false, error: 'Cannot add images to a completed project.' }
+    }
+    return { success: false, error: 'Failed to upload image. Please try again.' }
+  }
+}
+
 export async function deleteStepImage(imageId: string): Promise<ActionResult<null>> {
   const parsed = z.uuid().safeParse(imageId)
   if (!parsed.success) {
@@ -186,12 +283,15 @@ export async function deleteStepImage(imageId: string): Promise<ActionResult<nul
       return { success: false, error: 'Image not found.' }
     }
 
-    // Best-effort R2 deletion for uploaded images
+    // Best-effort storage deletion for uploaded images
     if (image.type === 'UPLOAD' && image.storageKey) {
       try {
-        await deleteObject(image.storageKey)
+        const adapter = getImageStorageAdapter()
+        if (adapter) {
+          await adapter.deleteObject(image.storageKey)
+        }
       } catch (err) {
-        console.error('R2 deletion failed (continuing):', err)
+        console.error('Storage deletion failed (continuing):', err)
       }
     }
 

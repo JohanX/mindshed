@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Camera, Loader2 } from 'lucide-react'
-import { addStepImage } from '@/actions/image'
+import { addStepImage, uploadImageCloudinary } from '@/actions/image'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
@@ -20,6 +20,70 @@ export function ImageUploadButton({ stepId }: ImageUploadButtonProps) {
 
   const busy = isUploading || isPending
 
+  async function uploadViaS3(file: File) {
+    const presignRes = await fetch('/api/upload/presign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        stepId,
+        filename: file.name,
+        contentType: file.type,
+      }),
+    })
+
+    if (!presignRes.ok) {
+      // Only fall back to Cloudinary on 404 (not S3 mode) or 501 (no provider)
+      // Other errors (400, 401, 500) are real S3 errors — don't silently switch providers
+      if (presignRes.status === 404 || presignRes.status === 501) {
+        return false // signal: not S3 mode, try Cloudinary
+      }
+      throw new Error('Failed to get upload URL')
+    }
+
+    const { url, key } = (await presignRes.json()) as { url: string; key: string }
+
+    const uploadRes = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    })
+
+    if (!uploadRes.ok) {
+      throw new Error('Upload to storage failed')
+    }
+
+    startTransition(async () => {
+      const result = await addStepImage({
+        stepId,
+        storageKey: key,
+        originalFilename: file.name,
+        contentType: file.type as 'image/jpeg' | 'image/png' | 'image/webp',
+        sizeBytes: file.size,
+      })
+
+      if (result.success) {
+        showSuccessToast('Photo added')
+      } else {
+        showErrorToast(result.error)
+      }
+    })
+
+    return true // signal: S3 upload handled
+  }
+
+  async function uploadViaCloudinary(file: File) {
+    const formData = new FormData()
+    formData.append('stepId', stepId)
+    formData.append('file', file)
+
+    const result = await uploadImageCloudinary(formData)
+    if (result.success) {
+      showSuccessToast('Photo added')
+    } else {
+      showErrorToast(result.error)
+    }
+  }
+
   async function handleFile(file: File) {
     if (!ACCEPTED_TYPES.includes(file.type)) {
       showErrorToast('Only JPEG, PNG, and WebP images are allowed.')
@@ -34,55 +98,14 @@ export function ImageUploadButton({ stepId }: ImageUploadButtonProps) {
     setIsUploading(true)
 
     try {
-      // 1. Get presigned URL
-      const presignRes = await fetch('/api/upload/presign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          stepId,
-          filename: file.name,
-          contentType: file.type,
-        }),
-      })
-
-      if (!presignRes.ok) {
-        throw new Error('Failed to get upload URL')
+      const handled = await uploadViaS3(file)
+      if (!handled) {
+        await uploadViaCloudinary(file)
       }
-
-      const { url, key } = (await presignRes.json()) as { url: string; key: string }
-
-      // 2. Upload directly to R2/MinIO
-      const uploadRes = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type },
-        body: file,
-      })
-
-      if (!uploadRes.ok) {
-        throw new Error('Upload to storage failed')
-      }
-
-      // 3. Record the image via server action
-      startTransition(async () => {
-        const result = await addStepImage({
-          stepId,
-          storageKey: key,
-          originalFilename: file.name,
-          contentType: file.type as 'image/jpeg' | 'image/png' | 'image/webp',
-          sizeBytes: file.size,
-        })
-
-        if (result.success) {
-          showSuccessToast('Photo added')
-        } else {
-          showErrorToast(result.error)
-        }
-      })
     } catch {
       showErrorToast('Upload failed — try again')
     } finally {
       setIsUploading(false)
-      // Reset input so the same file can be re-selected
       if (inputRef.current) {
         inputRef.current.value = ''
       }

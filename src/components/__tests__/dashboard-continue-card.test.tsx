@@ -18,9 +18,11 @@ vi.mock('next/image', () => ({
   ),
 }))
 
-// Mock r2 getPublicUrl
-vi.mock('@/lib/r2', () => ({
-  getPublicUrl: (key: string) => `https://r2.example.com/bucket/${key}`,
+// Mock image storage adapter
+vi.mock('@/lib/image-storage/adapter', () => ({
+  getImageStorageAdapter: () => ({
+    getPublicUrl: (key: string) => `https://r2.example.com/bucket/${key}`,
+  }),
 }))
 
 const baseProject: RecentProject = {

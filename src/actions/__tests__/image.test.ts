@@ -22,13 +22,17 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-vi.mock('@/lib/r2', () => ({
-  getPublicUrl: vi.fn((key: string) => `https://r2.example.com/bucket/${key}`),
-  deleteObject: vi.fn().mockResolvedValue(undefined),
+vi.mock('@/lib/image-storage/adapter', () => ({
+  getImageStorageAdapter: vi.fn(() => ({
+    getPublicUrl: vi.fn((key: string) => `https://r2.example.com/bucket/${key}`),
+    deleteObject: vi.fn().mockResolvedValue(undefined),
+    generatePresignedUrl: vi.fn().mockResolvedValue({ url: 'https://presigned.url', key: 'test-key' }),
+    upload: vi.fn().mockResolvedValue({ publicUrl: 'https://cdn.example.com/img.jpg', storageKey: 'test-key' }),
+  })),
 }))
 
 import { addStepImageLink, addStepImage, getStepImages, deleteStepImage } from '../image'
-import { deleteObject } from '@/lib/r2'
+import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 import { prisma } from '@/lib/db'
 
 const mockProjectUpdate = vi.mocked(prisma.project.update)
@@ -313,7 +317,7 @@ describe('getStepImages', () => {
 
 const mockStepImageFindUnique = vi.mocked(prisma.stepImage.findUnique)
 const mockStepImageDelete = vi.mocked(prisma.stepImage.delete)
-const mockDeleteObject = vi.mocked(deleteObject)
+const mockAdapter = vi.mocked(getImageStorageAdapter)
 
 describe('deleteStepImage', () => {
   beforeEach(() => {
@@ -333,7 +337,14 @@ describe('deleteStepImage', () => {
     if (!result.success) expect(result.error).toBe('Image not found.')
   })
 
-  it('deletes UPLOAD image from R2 + DB', async () => {
+  it('deletes UPLOAD image from storage + DB', async () => {
+    const mockDeleteObj = vi.fn().mockResolvedValue(undefined)
+    mockAdapter.mockReturnValue({
+      getPublicUrl: vi.fn(),
+      deleteObject: mockDeleteObj,
+      generatePresignedUrl: vi.fn(),
+      upload: vi.fn(),
+    })
     mockStepImageFindUnique.mockResolvedValue({
       id: VALID_UUID, type: 'UPLOAD', storageKey: 'steps/abc/def.jpg',
       step: { projectId: 'p1', project: { hobbyId: 'h1' } },
@@ -343,11 +354,18 @@ describe('deleteStepImage', () => {
 
     const result = await deleteStepImage(VALID_UUID)
     expect(result.success).toBe(true)
-    expect(mockDeleteObject).toHaveBeenCalledWith('steps/abc/def.jpg')
+    expect(mockDeleteObj).toHaveBeenCalledWith('steps/abc/def.jpg')
     expect(mockStepImageDelete).toHaveBeenCalledWith({ where: { id: VALID_UUID } })
   })
 
   it('deletes LINK image from DB only', async () => {
+    const mockDeleteObj = vi.fn()
+    mockAdapter.mockReturnValue({
+      getPublicUrl: vi.fn(),
+      deleteObject: mockDeleteObj,
+      generatePresignedUrl: vi.fn(),
+      upload: vi.fn(),
+    })
     mockStepImageFindUnique.mockResolvedValue({
       id: VALID_UUID, type: 'LINK', storageKey: null,
       step: { projectId: 'p1', project: { hobbyId: 'h1' } },
@@ -357,15 +375,21 @@ describe('deleteStepImage', () => {
 
     const result = await deleteStepImage(VALID_UUID)
     expect(result.success).toBe(true)
-    expect(mockDeleteObject).not.toHaveBeenCalled()
+    expect(mockDeleteObj).not.toHaveBeenCalled()
   })
 
-  it('still deletes DB record when R2 fails (best effort)', async () => {
+  it('still deletes DB record when storage fails (best effort)', async () => {
+    const mockDeleteObj = vi.fn().mockRejectedValue(new Error('Storage error'))
+    mockAdapter.mockReturnValue({
+      getPublicUrl: vi.fn(),
+      deleteObject: mockDeleteObj,
+      generatePresignedUrl: vi.fn(),
+      upload: vi.fn(),
+    })
     mockStepImageFindUnique.mockResolvedValue({
       id: VALID_UUID, type: 'UPLOAD', storageKey: 'steps/abc/def.jpg',
       step: { projectId: 'p1', project: { hobbyId: 'h1' } },
     } as never)
-    mockDeleteObject.mockRejectedValue(new Error('R2 error'))
     mockStepImageDelete.mockResolvedValue({} as never)
     mockProjectUpdate.mockResolvedValue({} as never)
 
