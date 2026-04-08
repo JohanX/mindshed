@@ -21,6 +21,7 @@ let _bucket: string | null = null
 export function getR2Client(): S3Client {
   if (!_client) {
     const env = getR2Env()
+    const isMinIO = env.endpoint.includes('localhost') || env.endpoint.includes('minio')
     _client = new S3Client({
       region: 'auto',
       endpoint: env.endpoint,
@@ -28,7 +29,7 @@ export function getR2Client(): S3Client {
         accessKeyId: env.accessKeyId,
         secretAccessKey: env.secretAccessKey,
       },
-      forcePathStyle: true,
+      forcePathStyle: isMinIO,
     })
     _bucket = env.bucket
   }
