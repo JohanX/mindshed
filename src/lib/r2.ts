@@ -21,7 +21,6 @@ let _bucket: string | null = null
 export function getR2Client(): S3Client {
   if (!_client) {
     const env = getR2Env()
-    const isMinIO = env.endpoint.includes('localhost') || env.endpoint.includes('minio')
     _client = new S3Client({
       region: 'auto',
       endpoint: env.endpoint,
@@ -29,7 +28,7 @@ export function getR2Client(): S3Client {
         accessKeyId: env.accessKeyId,
         secretAccessKey: env.secretAccessKey,
       },
-      forcePathStyle: isMinIO,
+      forcePathStyle: true,
     })
     _bucket = env.bucket
   }
@@ -46,12 +45,12 @@ export function getR2Bucket(): string {
 
 export function getPublicUrl(storageKey: string): string {
   const publicUrl = process.env.R2_PUBLIC_URL
+  const bucket = process.env.R2_BUCKET_NAME
   if (publicUrl) {
-    return `${publicUrl}/${storageKey}`
+    return `${publicUrl}/${bucket}/${storageKey}`
   }
   // Fallback for local dev (MinIO)
   const endpoint = process.env.R2_ENDPOINT
-  const bucket = process.env.R2_BUCKET_NAME
   if (!endpoint || !bucket) {
     throw new Error('Missing R2_PUBLIC_URL or R2_ENDPOINT/R2_BUCKET_NAME environment variables.')
   }
