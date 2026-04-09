@@ -31,7 +31,7 @@ export function SortableStepCard({ step, variant, isProjectCompleted }: Sortable
     <div ref={setNodeRef} style={style} className="flex items-center gap-2">
       {!isProjectCompleted && (
         <button
-          className="flex items-center justify-center min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing shrink-0"
+          className="flex items-center justify-center min-h-[44px] min-w-[28px] sm:min-w-[44px] text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing shrink-0"
           aria-label="Drag to reorder"
           {...attributes}
           {...listeners}

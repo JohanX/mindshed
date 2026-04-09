@@ -105,7 +105,7 @@ export function StepCard({
 
   return (
     <>
-    <Card data-testid={`step-card-${step.id}`}>
+    <Card data-testid={`step-card-${step.id}`} className={cn(!expanded && 'gap-0 py-0')}>
       <div className="flex items-center">
         {editing ? (
           <form
