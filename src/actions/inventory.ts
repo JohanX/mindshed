@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { z } from 'zod/v4'
-import { createInventoryItemSchema, updateInventoryItemSchema, type CreateInventoryItemInput, type UpdateInventoryItemInput, type InventoryItemData, type InventoryItemOption } from '@/lib/schemas/inventory'
+import { createInventoryItemSchema, updateInventoryItemSchema, updateMaintenanceSchema, type CreateInventoryItemInput, type UpdateInventoryItemInput, type UpdateMaintenanceInput, type InventoryItemData, type InventoryItemOption } from '@/lib/schemas/inventory'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -116,5 +116,58 @@ export async function getInventoryItemOptions(): Promise<ActionResult<InventoryI
   } catch (error) {
     console.error('getInventoryItemOptions failed:', error)
     return { success: false, error: 'Failed to load inventory items.' }
+  }
+}
+
+export async function updateMaintenanceData(input: UpdateMaintenanceInput): Promise<ActionResult<{ id: string }>> {
+  const parsed = updateMaintenanceSchema.safeParse(input)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
+
+  try {
+    const item = await prisma.inventoryItem.findUnique({ where: { id: parsed.data.id }, select: { type: true } })
+    if (!item) return { success: false, error: 'Item not found.' }
+    if (item.type !== 'TOOL') return { success: false, error: 'Maintenance only applies to tools.' }
+
+    const updated = await prisma.inventoryItem.update({
+      where: { id: parsed.data.id },
+      data: {
+        lastMaintenanceDate: parsed.data.lastMaintenanceDate,
+        maintenanceIntervalDays: parsed.data.maintenanceIntervalDays,
+      },
+    })
+
+    revalidatePath('/inventory')
+    revalidatePath('/')
+    return { success: true, data: { id: updated.id } }
+  } catch (error) {
+    console.error('updateMaintenanceData failed:', error)
+    return { success: false, error: 'Failed to update maintenance data.' }
+  }
+}
+
+export async function recordMaintenance(itemId: string): Promise<ActionResult<{ id: string }>> {
+  const parsed = z.uuid().safeParse(itemId)
+  if (!parsed.success) return { success: false, error: 'Invalid item ID.' }
+
+  try {
+    const item = await prisma.inventoryItem.findUnique({
+      where: { id: parsed.data },
+      select: { type: true, maintenanceIntervalDays: true },
+    })
+    if (!item) return { success: false, error: 'Item not found.' }
+    if (item.type !== 'TOOL') return { success: false, error: 'Maintenance only applies to tools.' }
+    if (!item.maintenanceIntervalDays) return { success: false, error: 'No maintenance interval configured.' }
+
+    const updated = await prisma.inventoryItem.update({
+      where: { id: parsed.data },
+      data: { lastMaintenanceDate: new Date() },
+    })
+
+    revalidatePath('/inventory')
+    revalidatePath('/')
+    return { success: true, data: { id: updated.id } }
+  } catch (error) {
+    console.error('recordMaintenance failed:', error)
+    return { success: false, error: 'Failed to record maintenance.' }
   }
 }

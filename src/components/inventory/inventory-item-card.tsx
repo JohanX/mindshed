@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { EditInventoryItemDialog } from '@/components/inventory/edit-inventory-item-dialog'
+import { MaintenanceSection } from '@/components/inventory/maintenance-section'
 import { deleteInventoryItem } from '@/actions/inventory'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
 import { Pencil, Trash2 } from 'lucide-react'
@@ -73,6 +74,7 @@ export function InventoryItemCard({ item }: InventoryItemCardProps) {
               {item.activeBlockerCount} blocker{item.activeBlockerCount > 1 ? 's' : ''}
             </Badge>
           )}
+          <MaintenanceSection item={item} />
         </CardContent>
       </Card>
 

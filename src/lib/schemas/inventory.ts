@@ -36,7 +36,17 @@ export type InventoryItemData = {
   quantity: number | null
   unit: string | null
   notes: string | null
+  lastMaintenanceDate: Date | null
+  maintenanceIntervalDays: number | null
   activeBlockerCount: number
   createdAt: Date
   updatedAt: Date
 }
+
+export const updateMaintenanceSchema = z.object({
+  id: z.uuid(),
+  lastMaintenanceDate: z.coerce.date(),
+  maintenanceIntervalDays: z.number().int().min(1, 'Interval must be at least 1 day').max(365, 'Interval must be 365 days or less'),
+})
+
+export type UpdateMaintenanceInput = z.infer<typeof updateMaintenanceSchema>
