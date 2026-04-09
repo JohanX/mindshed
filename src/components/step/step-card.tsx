@@ -109,7 +109,7 @@ export function StepCard({
       <div className="flex items-center">
         {editing ? (
           <form
-            className="flex-1 flex items-center gap-2 px-4 py-2"
+            className="flex-1 flex items-center gap-2 px-3 py-1.5"
             onSubmit={(e) => { e.preventDefault(); handleEdit() }}
           >
             <Input
@@ -127,7 +127,7 @@ export function StepCard({
             <button
               type="button"
               className={cn(
-                'flex flex-1 items-center gap-3 px-4 py-3 text-left',
+                'flex flex-1 items-center gap-2 px-3 py-2 text-left',
                 'min-h-[44px] cursor-pointer min-w-0',
               )}
               aria-expanded={expanded}
@@ -146,7 +146,7 @@ export function StepCard({
             {!isProjectCompleted && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] mr-2">
+                  <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] mr-1">
                     <MoreHorizontal className="h-4 w-4" />
                     <span className="sr-only">Step actions</span>
                   </Button>
@@ -178,7 +178,7 @@ export function StepCard({
           <CardContent className="pt-0">
             {/* Photos section */}
             <section>
-              <h4 className="text-sm font-semibold text-muted-foreground mb-3">Photos</h4>
+              <h4 className="text-sm font-semibold text-muted-foreground mb-2">Photos</h4>
               {step.images.length > 0 ? (
                 <ImageGallery images={step.images} stepId={step.id} />
               ) : (
@@ -192,11 +192,11 @@ export function StepCard({
               )}
             </section>
 
-            <Separator className="my-4" />
+            <Separator className="my-3" />
 
             {/* Notes section */}
             <section>
-              <h4 className="text-sm font-semibold text-muted-foreground mb-3">Notes</h4>
+              <h4 className="text-sm font-semibold text-muted-foreground mb-2">Notes</h4>
               {!isProjectCompleted && <InlineNoteInput stepId={step.id} />}
               <NotesList notes={step.notes} isProjectCompleted={isProjectCompleted} />
             </section>
@@ -204,9 +204,9 @@ export function StepCard({
             {/* Blockers section — only show if blockers exist or project is active */}
             {(step.blockers.length > 0 || !isProjectCompleted) && (
               <>
-                <Separator className="my-4" />
+                <Separator className="my-3" />
                 <section>
-                  <h4 className="text-sm font-semibold text-muted-foreground mb-3">Blockers</h4>
+                  <h4 className="text-sm font-semibold text-muted-foreground mb-2">Blockers</h4>
                   {step.blockers.map((blocker) => (
                     <BlockerCard key={blocker.id} id={blocker.id} description={blocker.description} />
                   ))}

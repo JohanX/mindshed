@@ -69,8 +69,8 @@ export function BlockerCard({ id, description }: BlockerCardProps) {
           autoFocus
           className="flex-1 h-9"
         />
-        <Button type="submit" size="sm" className="min-h-[44px]" disabled={!editText.trim() || isPending}>Save</Button>
-        <Button type="button" variant="ghost" size="sm" className="min-h-[44px]" onClick={() => { setEditing(false); setEditText(description) }}>Cancel</Button>
+        <Button type="submit" size="sm" className="min-h-[36px]" disabled={!editText.trim() || isPending}>Save</Button>
+        <Button type="button" variant="ghost" size="sm" className="min-h-[36px]" onClick={() => { setEditing(false); setEditText(description) }}>Cancel</Button>
       </form>
     )
   }

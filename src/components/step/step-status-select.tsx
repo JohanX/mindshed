@@ -37,7 +37,7 @@ export function StepStatusSelect({
       disabled={disabled}
     >
       <SelectTrigger
-        className="min-h-[44px] w-auto shrink-0 border-0 bg-transparent p-1 shadow-none ring-0 focus-visible:ring-0 focus-visible:border-0"
+        className="min-h-[44px] w-auto shrink-0 border-0 bg-transparent p-0.5 shadow-none ring-0 focus-visible:ring-0 focus-visible:border-0 [&>svg:last-child]:hidden"
         aria-label="Step status"
       >
         <SelectValue>
@@ -49,7 +49,7 @@ export function StepStatusSelect({
           <SelectItem
             key={state}
             value={state}
-            className="min-h-[44px] rounded-none focus:bg-muted/50 focus:text-foreground"
+            className="min-h-[36px] py-1 pr-2 rounded-none focus:bg-muted/30 focus:text-foreground data-[state=checked]:bg-muted/50 [&>span:first-child]:hidden"
           >
             <StepStateBadge state={state} size="sm" />
             {state !== 'BLOCKED' && currentState === 'BLOCKED' && previousState && state === previousState && (
