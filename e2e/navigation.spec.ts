@@ -1,13 +1,13 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('Navigation', () => {
-  test('mobile: bottom nav visible with 4 items', async ({ page }) => {
+  test('mobile: bottom nav visible with 5 items', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 })
     await page.goto('/')
     await page.waitForLoadState('networkidle')
-    // Bottom nav is a direct child <nav> of body, not inside <header>
     await expect(page.getByRole('link', { name: 'Dashboard' }).first()).toBeVisible()
     await expect(page.getByText('Hobbies')).toBeVisible()
+    await expect(page.locator('nav').getByText('Inventory')).toBeVisible()
     await expect(page.getByText('Settings').first()).toBeVisible()
   })
 
@@ -37,6 +37,20 @@ test.describe('Navigation', () => {
     await page.goto('/ideas')
     await expect(page).toHaveURL('/ideas')
     await expect(page.getByRole('heading', { name: 'Ideas' })).toBeVisible()
+  })
+
+  test('navigation to inventory page', async ({ page }) => {
+    await page.goto('/inventory')
+    await expect(page).toHaveURL('/inventory')
+    await expect(page.getByRole('heading', { name: 'Inventory' })).toBeVisible()
+  })
+
+  test('desktop: inventory link visible in top bar', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    const header = page.locator('header')
+    await expect(header.getByRole('link', { name: 'Inventory' })).toBeVisible()
   })
 
   test('settings page accessible', async ({ page }) => {

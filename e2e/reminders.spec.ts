@@ -36,28 +36,68 @@ test.describe('Reminders', () => {
     projectUrl = page.url()
   })
 
+  test('Remind button is visible on project page', async ({ page }) => {
+    await page.goto(projectUrl)
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByRole('button', { name: 'Remind' })).toBeVisible()
+  })
+
   test('can set a project reminder via date picker', async ({ page }) => {
     await page.goto(projectUrl)
     await page.waitForLoadState('networkidle')
 
-    // Click the Remind button
     await page.getByRole('button', { name: 'Remind' }).click()
     await page.waitForTimeout(500)
 
-    // Select a date in the calendar (next month to ensure it's in the future)
+    // Navigate to next month to ensure future date
     const nextMonthBtn = page.getByRole('button', { name: /next month/i }).first()
     if (await nextMonthBtn.isVisible()) {
       await nextMonthBtn.click()
       await page.waitForTimeout(300)
     }
-    // Click the 15th of the visible month
     await page.getByRole('gridcell', { name: '15' }).first().click()
     await page.waitForTimeout(1000)
 
-    // Verify reminder badge appears after reload
+    // Verify reminder shows as date on the button after reload
     await page.goto(projectUrl)
     await page.waitForLoadState('networkidle')
-    // Should show a date badge (e.g., "May 15" or "Jun 15")
-    await expect(page.getByText(/\d{1,2}/).first()).toBeVisible()
+    // The Remind button should now show the date instead of "Remind"
+    await expect(page.getByRole('button', { name: /\w+ \d+/ })).toBeVisible()
+  })
+
+  test('can update an existing reminder date', async ({ page }) => {
+    await page.goto(projectUrl)
+    await page.waitForLoadState('networkidle')
+
+    // Click the date button (existing reminder)
+    await page.getByRole('button', { name: /\w+ \d+/ }).click()
+    await page.waitForTimeout(500)
+
+    // Pick a different date
+    await page.getByRole('gridcell', { name: '20' }).first().click()
+    await page.waitForTimeout(1000)
+
+    // Verify the date changed
+    await page.goto(projectUrl)
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByRole('button', { name: /\w+ \d+/ })).toBeVisible()
+  })
+
+  test('can remove a reminder', async ({ page }) => {
+    await page.goto(projectUrl)
+    await page.waitForLoadState('networkidle')
+
+    // Open the date picker
+    await page.getByRole('button', { name: /\w+ \d+/ }).click()
+    await page.waitForTimeout(500)
+
+    // Click Remove Reminder
+    await page.getByRole('button', { name: /Remove Reminder/i }).click()
+    await page.waitForTimeout(1000)
+
+    // Verify it's back to "Remind"
+    await page.goto(projectUrl)
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByRole('button', { name: 'Remind' })).toBeVisible()
   })
 })
