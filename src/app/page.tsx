@@ -1,12 +1,17 @@
 import { getDashboardData } from '@/actions/dashboard'
+import { getDashboardReminders } from '@/actions/reminder'
 import { DashboardContinueSection } from '@/components/dashboard/dashboard-continue-section'
 import { DashboardBlockersSection } from '@/components/dashboard/dashboard-blockers-section'
 import { DashboardIdleSection } from '@/components/dashboard/dashboard-idle-section'
+import { DashboardReminderCard } from '@/components/dashboard/dashboard-reminder-card'
 import { EmptyStateCard } from '@/components/empty-state-card'
 import { HobbyFormDialog } from '@/components/hobby/hobby-form'
 
 export default async function DashboardPage() {
-  const result = await getDashboardData()
+  const [result, remindersResult] = await Promise.all([
+    getDashboardData(),
+    getDashboardReminders(),
+  ])
 
   if (!result.success) {
     return (
@@ -22,6 +27,7 @@ export default async function DashboardPage() {
   }
 
   const { totalHobbies, recentProjects, activeBlockers, idleProjects } = result.data
+  const reminders = remindersResult.success ? remindersResult.data : []
 
   // First-time user — no hobbies at all
   if (totalHobbies === 0) {
@@ -39,6 +45,19 @@ export default async function DashboardPage() {
     <main className="max-w-5xl mx-auto p-4 space-y-8">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
       <DashboardContinueSection projects={recentProjects} />
+      {reminders.length > 0 && (
+        <>
+          <hr className="border-border" />
+          <section className="space-y-3">
+            <h2 className="text-xl font-semibold">Reminders</h2>
+            <div className="space-y-2">
+              {reminders.map((r) => (
+                <DashboardReminderCard key={r.id} reminder={r} />
+              ))}
+            </div>
+          </section>
+        </>
+      )}
       {activeBlockers.length > 0 && <hr className="border-border" />}
       <DashboardBlockersSection blockers={activeBlockers} />
       {idleProjects.length > 0 && <hr className="border-border" />}

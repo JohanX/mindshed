@@ -17,6 +17,25 @@ export const updateReminderSchema = z.object({
 
 export type UpdateReminderInput = z.infer<typeof updateReminderSchema>
 
+export const snoozeReminderSchema = z.object({
+  reminderId: z.uuid(),
+  snoozeDays: z.union([z.literal(1), z.literal(3), z.literal(7)]),
+})
+
+export type SnoozeReminderInput = z.infer<typeof snoozeReminderSchema>
+
+export type DashboardReminder = {
+  id: string
+  targetType: 'STEP' | 'PROJECT'
+  targetId: string
+  targetName: string
+  dueDate: Date
+  isOverdue: boolean
+  hobby: { id: string; name: string; color: string; icon: string | null }
+  hobbyId: string
+  projectId: string
+}
+
 export type ReminderData = {
   id: string
   targetType: 'STEP' | 'PROJECT'

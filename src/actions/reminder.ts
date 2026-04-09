@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { z } from 'zod/v4'
-import { createReminderSchema, updateReminderSchema, type CreateReminderInput, type UpdateReminderInput, type ReminderData } from '@/lib/schemas/reminder'
+import { createReminderSchema, updateReminderSchema, snoozeReminderSchema, type CreateReminderInput, type UpdateReminderInput, type SnoozeReminderInput, type ReminderData, type DashboardReminder } from '@/lib/schemas/reminder'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -100,6 +100,101 @@ export async function getRemindersForTarget(
     return { success: true, data: reminders }
   } catch (error) {
     console.error('getRemindersForTarget failed:', error)
+    return { success: false, error: 'Failed to load reminders.' }
+  }
+}
+
+export async function dismissReminder(reminderId: string): Promise<ActionResult<null>> {
+  const parsed = z.uuid().safeParse(reminderId)
+  if (!parsed.success) return { success: false, error: 'Invalid reminder ID.' }
+
+  try {
+    await prisma.reminder.update({ where: { id: parsed.data }, data: { isDismissed: true } })
+    revalidatePath('/')
+    return { success: true, data: null }
+  } catch (error: unknown) {
+    console.error('dismissReminder failed:', error)
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return { success: false, error: 'Reminder not found.' }
+    }
+    return { success: false, error: 'Failed to dismiss reminder.' }
+  }
+}
+
+export async function snoozeReminder(input: SnoozeReminderInput): Promise<ActionResult<null>> {
+  const parsed = snoozeReminderSchema.safeParse(input)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
+
+  try {
+    const snoozedUntil = new Date(Date.now() + parsed.data.snoozeDays * 86400000)
+    await prisma.reminder.update({ where: { id: parsed.data.reminderId }, data: { snoozedUntil } })
+    revalidatePath('/')
+    return { success: true, data: null }
+  } catch (error: unknown) {
+    console.error('snoozeReminder failed:', error)
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return { success: false, error: 'Reminder not found.' }
+    }
+    return { success: false, error: 'Failed to snooze reminder.' }
+  }
+}
+
+export async function getDashboardReminders(): Promise<ActionResult<DashboardReminder[]>> {
+  try {
+    const now = new Date()
+    const weekFromNow = new Date(Date.now() + 7 * 86400000)
+
+    const reminders = await prisma.reminder.findMany({
+      where: {
+        isDismissed: false,
+        OR: [
+          { snoozedUntil: null },
+          { snoozedUntil: { lt: now } },
+        ],
+        dueDate: { lte: weekFromNow },
+      },
+      orderBy: { dueDate: 'asc' },
+    })
+
+    const enriched: DashboardReminder[] = []
+    for (const r of reminders) {
+      if (r.targetType === 'STEP') {
+        const step = await prisma.step.findUnique({
+          where: { id: r.targetId },
+          select: { name: true, project: { select: { id: true, name: true, hobbyId: true, hobby: { select: { id: true, name: true, color: true, icon: true } } } } },
+        })
+        if (step) {
+          enriched.push({
+            id: r.id, targetType: 'STEP', targetId: r.targetId, targetName: step.name,
+            dueDate: r.dueDate, isOverdue: r.dueDate < now,
+            hobby: step.project.hobby, hobbyId: step.project.hobbyId, projectId: step.project.id,
+          })
+        }
+      } else {
+        const project = await prisma.project.findUnique({
+          where: { id: r.targetId },
+          select: { id: true, name: true, hobbyId: true, hobby: { select: { id: true, name: true, color: true, icon: true } } },
+        })
+        if (project) {
+          enriched.push({
+            id: r.id, targetType: 'PROJECT', targetId: r.targetId, targetName: project.name,
+            dueDate: r.dueDate, isOverdue: r.dueDate < now,
+            hobby: project.hobby, hobbyId: project.hobbyId, projectId: project.id,
+          })
+        }
+      }
+    }
+
+    // Sort: overdue first, then upcoming
+    enriched.sort((a, b) => {
+      if (a.isOverdue && !b.isOverdue) return -1
+      if (!a.isOverdue && b.isOverdue) return 1
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+    })
+
+    return { success: true, data: enriched }
+  } catch (error) {
+    console.error('getDashboardReminders failed:', error)
     return { success: false, error: 'Failed to load reminders.' }
   }
 }
