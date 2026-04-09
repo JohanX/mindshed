@@ -111,11 +111,7 @@ export function StepCard({
 
   return (
     <>
-    <Card
-      data-testid={`step-card-${step.id}`}
-      className={cn(variant === 'current' && 'border-l-4')}
-      style={variant === 'current' ? { borderLeftColor: 'var(--hobby-primary)' } : undefined}
-    >
+    <Card data-testid={`step-card-${step.id}`}>
       <div className="flex items-center">
         {editing ? (
           <form

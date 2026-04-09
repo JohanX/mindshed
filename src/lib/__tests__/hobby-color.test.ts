@@ -114,21 +114,21 @@ describe('hobbyColorWithAlpha', () => {
 })
 
 describe('getContrastTextColor', () => {
-  it('returns white for dark hobby colors (lightness < 50%)', () => {
+  it('returns white for dark/mid hobby colors (lightness <= 55%)', () => {
     expect(getContrastTextColor('hsl(25, 45%, 40%)')).toBe('white')   // Walnut
     expect(getContrastTextColor('hsl(140, 25%, 45%)')).toBe('white')  // Sage
     expect(getContrastTextColor('hsl(175, 35%, 45%)')).toBe('white')  // Teal
     expect(getContrastTextColor('hsl(100, 25%, 40%)')).toBe('white')  // Moss
     expect(getContrastTextColor('hsl(220, 25%, 45%)')).toBe('white')  // Storm
+    expect(getContrastTextColor('hsl(215, 40%, 50%)')).toBe('white')  // Denim
+    expect(getContrastTextColor('hsl(210, 15%, 50%)')).toBe('white')  // Slate
+    expect(getContrastTextColor('hsl(280, 30%, 50%)')).toBe('white')  // Plum
+    expect(getContrastTextColor('hsl(45, 60%, 50%)')).toBe('white')   // Ochre
+    expect(getContrastTextColor('hsl(15, 55%, 55%)')).toBe('white')   // Terracotta
+    expect(getContrastTextColor('hsl(25, 70%, 55%)')).toBe('white')   // Copper
   })
 
-  it('returns black for light hobby colors (lightness >= 50%)', () => {
-    expect(getContrastTextColor('hsl(15, 55%, 55%)')).toBe('black')   // Terracotta
-    expect(getContrastTextColor('hsl(215, 40%, 50%)')).toBe('black')  // Denim
-    expect(getContrastTextColor('hsl(25, 70%, 55%)')).toBe('black')   // Copper
-    expect(getContrastTextColor('hsl(210, 15%, 50%)')).toBe('black')  // Slate
-    expect(getContrastTextColor('hsl(280, 30%, 50%)')).toBe('black')  // Plum
-    expect(getContrastTextColor('hsl(45, 60%, 50%)')).toBe('black')   // Ochre
+  it('returns black for light hobby colors (lightness > 55%)', () => {
     expect(getContrastTextColor('hsl(5, 50%, 60%)')).toBe('black')    // Coral
   })
 
