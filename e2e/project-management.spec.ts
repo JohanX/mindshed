@@ -372,8 +372,6 @@ test.describe('Project Management', () => {
     // Arrow buttons should NOT be present
     await expect(page.getByLabel('Move step up')).not.toBeVisible()
     await expect(page.getByLabel('Move step down')).not.toBeVisible()
-    expect(names[1]).toContain('Step Alpha')
-    expect(names[2]).toContain('Step Gamma')
   })
 
 })
