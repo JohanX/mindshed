@@ -3,7 +3,9 @@
 import { useState, useTransition } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import { StepStatusSelect } from '@/components/step/step-status-select'
+import { StepThumbnailStrip } from '@/components/step/step-thumbnail-strip'
 import { InlineNoteInput } from '@/components/note/inline-note-input'
 import { NotesList } from '@/components/note/notes-list'
 import { ImageGallery, type GalleryImage } from '@/components/image/image-gallery'
@@ -133,14 +135,15 @@ export function StepCard({
             <button
               type="button"
               className={cn(
-                'flex flex-1 items-center justify-between gap-3 px-4 py-3 text-left',
-                'min-h-[44px] cursor-pointer',
+                'flex flex-1 items-center gap-3 px-4 py-3 text-left',
+                'min-h-[44px] cursor-pointer min-w-0',
               )}
               aria-expanded={expanded}
               aria-controls={`step-content-${step.id}`}
               onClick={() => setExpanded((prev) => !prev)}
             >
               <span className="font-medium truncate">{step.name}</span>
+              {!expanded && <StepThumbnailStrip images={step.images} />}
             </button>
             {!isProjectCompleted && onMoveUp && onMoveDown && index !== undefined && total !== undefined && (
               <div className="flex flex-col gap-0.5">
@@ -204,10 +207,10 @@ export function StepCard({
         )}
       >
         <div className={expanded ? '' : 'overflow-hidden'}>
-          <CardContent className="space-y-6 pt-0">
+          <CardContent className="pt-0">
             {/* Photos section */}
             <section>
-              <h4 className="text-sm font-medium text-muted-foreground mb-2">Photos</h4>
+              <h4 className="text-sm font-semibold text-muted-foreground mb-3">Photos</h4>
               {step.images.length > 0 ? (
                 <ImageGallery images={step.images} stepId={step.id} />
               ) : (
@@ -221,22 +224,27 @@ export function StepCard({
               )}
             </section>
 
+            <Separator className="my-4" />
+
             {/* Notes section */}
             <section>
-              <h4 className="text-sm font-medium text-muted-foreground mb-2">Notes</h4>
+              <h4 className="text-sm font-semibold text-muted-foreground mb-3">Notes</h4>
               {!isProjectCompleted && <InlineNoteInput stepId={step.id} />}
               <NotesList notes={step.notes} isProjectCompleted={isProjectCompleted} />
             </section>
 
             {/* Blockers section — only show if blockers exist or project is active */}
             {(step.blockers.length > 0 || !isProjectCompleted) && (
-              <section>
-                <h4 className="text-sm font-medium text-muted-foreground mb-2">Blockers</h4>
-                {step.blockers.map((blocker) => (
-                  <BlockerCard key={blocker.id} id={blocker.id} description={blocker.description} />
-                ))}
-                {!isProjectCompleted && <InlineBlockerInput stepId={step.id} />}
-              </section>
+              <>
+                <Separator className="my-4" />
+                <section>
+                  <h4 className="text-sm font-semibold text-muted-foreground mb-3">Blockers</h4>
+                  {step.blockers.map((blocker) => (
+                    <BlockerCard key={blocker.id} id={blocker.id} description={blocker.description} />
+                  ))}
+                  {!isProjectCompleted && <InlineBlockerInput stepId={step.id} />}
+                </section>
+              </>
             )}
           </CardContent>
         </div>

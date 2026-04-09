@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { resolveBlocker, updateBlocker, deleteBlocker } from '@/actions/blocker'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2, Check } from 'lucide-react'
 
 interface BlockerCardProps {
   id: string
@@ -59,8 +59,7 @@ export function BlockerCard({ id, description }: BlockerCardProps) {
   if (editing) {
     return (
       <form
-        className="flex items-center gap-2 rounded-lg border p-3"
-        style={{ borderColor: 'hsl(220, 15%, 55%)' }}
+        className="flex items-center gap-2 rounded-lg border border-border p-2 mb-2"
         onSubmit={(e) => { e.preventDefault(); handleEdit() }}
       >
         <Input
@@ -68,22 +67,19 @@ export function BlockerCard({ id, description }: BlockerCardProps) {
           onChange={(e) => setEditText(e.target.value)}
           maxLength={500}
           autoFocus
-          className="flex-1"
+          className="flex-1 h-9"
         />
-        <Button type="submit" size="sm" disabled={!editText.trim() || isPending}>Save</Button>
-        <Button type="button" variant="ghost" size="sm" onClick={() => { setEditing(false); setEditText(description) }}>Cancel</Button>
+        <Button type="submit" size="sm" className="min-h-[44px]" disabled={!editText.trim() || isPending}>Save</Button>
+        <Button type="button" variant="ghost" size="sm" className="min-h-[44px]" onClick={() => { setEditing(false); setEditText(description) }}>Cancel</Button>
       </form>
     )
   }
 
   return (
     <>
-      <div
-        className="flex items-center justify-between gap-3 rounded-lg border p-3 mb-2"
-        style={{ borderColor: 'hsl(220, 15%, 55%)' }}
-      >
-        <p className="text-sm flex-1">{description}</p>
-        <div className="flex items-center gap-1 shrink-0">
+      <div className="flex items-center gap-2 rounded-lg border border-border p-2 mb-2">
+        <p className="text-sm flex-1 min-w-0 truncate">{description}</p>
+        <div className="flex items-center shrink-0">
           <Button
             variant="ghost"
             size="icon"
@@ -105,14 +101,15 @@ export function BlockerCard({ id, description }: BlockerCardProps) {
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
           <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0 min-h-[44px] transition-opacity motion-reduce:transition-none"
-            style={{ borderColor: 'hsl(220, 15%, 55%)', color: 'hsl(220, 15%, 55%)' }}
+            variant="ghost"
+            size="icon"
+            className="min-h-[44px] min-w-[44px]"
             onClick={handleResolve}
             disabled={isPending}
+            title="Resolve blocker"
+            aria-label="Resolve blocker"
           >
-            {isPending ? 'Resolving...' : 'Resolve'}
+            <Check className="h-4 w-4" />
           </Button>
         </div>
       </div>
