@@ -5,7 +5,7 @@ import { ProjectActions } from '@/components/project/project-actions'
 import { ProjectStatusBadge } from '@/components/project/project-status-badge'
 import { type StepCardData } from '@/components/step/step-card'
 import { StepCardList } from '@/components/step/step-card-list'
-import { StepList } from '@/components/project/step-list'
+import { AddStepForm } from '@/components/step/add-step-form'
 import { EmptyStateCard } from '@/components/empty-state-card'
 import type { StepState } from '@/lib/step-states'
 import { deriveProjectStatus } from '@/lib/project-status'
@@ -70,15 +70,6 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     blockers: s.blockers.map(b => ({ id: b.id, description: b.description })),
   }))
 
-  // Flat step data for StepList (add/reorder functionality)
-  const flatSteps = project.steps.map(s => ({
-    id: s.id,
-    name: s.name,
-    state: s.state as StepState,
-    previousState: (s.previousState as StepState | null) ?? null,
-    sortOrder: s.sortOrder,
-  }))
-
   const stepKey = stepCards.map(s => `${s.id}:${s.state}:${s.notes.length}:${s.images.length}:${s.blockers.length}`).join(',')
 
   return (
@@ -117,13 +108,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       ) : null}
 
       {!isCompleted && (
-        <StepList
-          key={flatSteps.map(s => s.id).join(',')}
-          steps={flatSteps}
-          projectId={project.id}
-          isCompleted={isCompleted}
-          hideStepDisplay
-        />
+        <AddStepForm projectId={project.id} />
       )}
 
       {stepCards.length === 0 && isCompleted && (

@@ -1,10 +1,25 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { StepCard, type StepCardData } from '@/components/step/step-card'
+import { useState, useRef, useTransition } from 'react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable'
+import { type StepCardData } from '@/components/step/step-card'
+import { SortableStepCard } from '@/components/step/sortable-step-card'
 import { reorderSteps } from '@/actions/step'
 import { showErrorToast } from '@/lib/toast'
-import { arrayMove } from '@dnd-kit/sortable'
 
 interface StepCardListProps {
   initialSteps: StepCardData[]
@@ -15,20 +30,21 @@ interface StepCardListProps {
 
 export function StepCardList({ initialSteps, currentStepId, isProjectCompleted, projectId }: StepCardListProps) {
   const [steps, setSteps] = useState(initialSteps)
+  const lastConfirmedOrderRef = useRef(initialSteps)
   const [, startTransition] = useTransition()
 
-  function handleMoveUp(stepId: string) {
-    const idx = steps.findIndex(s => s.id === stepId)
-    if (idx <= 0) return
-    const newSteps = arrayMove(steps, idx, idx - 1)
-    setSteps(newSteps)
-    persistOrder(newSteps)
-  }
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
 
-  function handleMoveDown(stepId: string) {
-    const idx = steps.findIndex(s => s.id === stepId)
-    if (idx >= steps.length - 1) return
-    const newSteps = arrayMove(steps, idx, idx + 1)
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = steps.findIndex(s => s.id === active.id)
+    const newIndex = steps.findIndex(s => s.id === over.id)
+    const newSteps = arrayMove(steps, oldIndex, newIndex)
     setSteps(newSteps)
     persistOrder(newSteps)
   }
@@ -39,27 +55,33 @@ export function StepCardList({ initialSteps, currentStepId, isProjectCompleted, 
         projectId,
         orderedStepIds: newSteps.map(s => s.id),
       })
-      if (!result.success) {
+      if (result.success) {
+        lastConfirmedOrderRef.current = newSteps
+      } else {
         showErrorToast(result.error)
-        setSteps(initialSteps)
+        setSteps(lastConfirmedOrderRef.current)
       }
     })
   }
 
   return (
-    <div className="space-y-3">
-      {steps.map((step, index) => (
-        <StepCard
-          key={step.id}
-          step={step}
-          variant={step.id === currentStepId ? 'current' : 'other'}
-          isProjectCompleted={isProjectCompleted}
-          index={index}
-          total={steps.length}
-          onMoveUp={handleMoveUp}
-          onMoveDown={handleMoveDown}
-        />
-      ))}
-    </div>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext items={steps.map(s => s.id)} strategy={verticalListSortingStrategy}>
+        <div className="space-y-3">
+          {steps.map((step) => (
+            <SortableStepCard
+              key={step.id}
+              step={step}
+              variant={step.id === currentStepId ? 'current' : 'other'}
+              isProjectCompleted={isProjectCompleted}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
   )
 }

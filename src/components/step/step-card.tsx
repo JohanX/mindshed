@@ -19,7 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { MoreHorizontal, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-react'
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { updateStepState, updateStep, deleteStep } from '@/actions/step'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Input } from '@/components/ui/input'
@@ -53,20 +53,12 @@ interface StepCardProps {
   step: StepCardData
   variant: 'current' | 'other'
   isProjectCompleted: boolean
-  index?: number
-  total?: number
-  onMoveUp?: (stepId: string) => void
-  onMoveDown?: (stepId: string) => void
 }
 
 export function StepCard({
   step,
   variant,
   isProjectCompleted,
-  index,
-  total,
-  onMoveUp,
-  onMoveDown,
 }: StepCardProps) {
   const [expanded, setExpanded] = useState(variant === 'current')
   const [isPending, startTransition] = useTransition()
@@ -145,30 +137,6 @@ export function StepCard({
               <span className="font-medium truncate">{step.name}</span>
               {!expanded && <StepThumbnailStrip images={step.images} />}
             </button>
-            {!isProjectCompleted && onMoveUp && onMoveDown && index !== undefined && total !== undefined && (
-              <div className="flex flex-col gap-0.5">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  disabled={index === 0}
-                  onClick={() => onMoveUp(step.id)}
-                  aria-label="Move step up"
-                >
-                  <ArrowUp className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  disabled={index === total - 1}
-                  onClick={() => onMoveDown(step.id)}
-                  aria-label="Move step down"
-                >
-                  <ArrowDown className="h-3 w-3" />
-                </Button>
-              </div>
-            )}
             <StepStatusSelect
               currentState={step.state}
               previousState={step.previousState}
