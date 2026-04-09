@@ -73,4 +73,46 @@ test.describe('Inventory Management', () => {
     await expect(page.getByText('Walnut Lumber').first()).toBeVisible()
     await expect(page.getByText('Router Table').first()).toBeVisible()
   })
+
+  test('can edit an inventory item', async ({ page }) => {
+    await page.goto('/inventory')
+    await page.waitForLoadState('networkidle')
+
+    // Click edit on the first item
+    await page.getByLabel('Edit item').first().click()
+    await page.waitForTimeout(500)
+
+    // Change the name
+    const nameInput = page.getByLabel('Name')
+    await nameInput.clear()
+    await nameInput.fill('Updated Lumber')
+    await page.getByRole('button', { name: 'Save' }).click()
+    await page.waitForTimeout(1000)
+
+    // Verify updated
+    await page.goto('/inventory')
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText('Updated Lumber').first()).toBeVisible()
+  })
+
+  test('can delete an inventory item with confirmation', async ({ page }) => {
+    await page.goto('/inventory')
+    await page.waitForLoadState('networkidle')
+
+    const itemCount = await page.locator('[data-slot="card"]').count()
+
+    // Click delete on the first item
+    await page.getByLabel('Delete item').first().click()
+    await page.waitForTimeout(500)
+
+    // Confirm deletion
+    await page.getByRole('button', { name: 'Delete' }).click()
+    await page.waitForTimeout(1000)
+
+    // Verify one fewer item
+    await page.goto('/inventory')
+    await page.waitForLoadState('networkidle')
+    const newCount = await page.locator('[data-slot="card"]').count()
+    expect(newCount).toBe(itemCount - 1)
+  })
 })

@@ -5,7 +5,10 @@ vi.mock('@/lib/db', () => ({
     inventoryItem: {
       create: vi.fn(),
       findMany: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
     },
+    $transaction: vi.fn(),
   },
 }))
 
@@ -13,11 +16,13 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { createInventoryItem, getInventoryItems } from '../inventory'
+import { createInventoryItem, getInventoryItems, updateInventoryItem, deleteInventoryItem } from '../inventory'
 import { prisma } from '@/lib/db'
 
 const mockCreate = vi.mocked(prisma.inventoryItem.create)
 const mockFindMany = vi.mocked(prisma.inventoryItem.findMany)
+const mockUpdate = vi.mocked(prisma.inventoryItem.update)
+const mockTransaction = vi.mocked(prisma.$transaction)
 
 describe('createInventoryItem', () => {
   beforeEach(() => vi.clearAllMocks())
@@ -73,5 +78,64 @@ describe('getInventoryItems', () => {
       where: { type: 'TOOL' },
       orderBy: { createdAt: 'desc' },
     })
+  })
+})
+
+describe('updateInventoryItem', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('updates item with correct fields', async () => {
+    mockUpdate.mockResolvedValue({ id: 'i1' } as never)
+    const result = await updateInventoryItem({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      name: 'Updated',
+      type: 'TOOL',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('validates required name', async () => {
+    const result = await updateInventoryItem({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      name: '',
+      type: 'MATERIAL',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('returns error for non-existent item', async () => {
+    mockUpdate.mockRejectedValue({ code: 'P2025' })
+    const result = await updateInventoryItem({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      name: 'Test',
+      type: 'MATERIAL',
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Item not found.')
+  })
+})
+
+describe('deleteInventoryItem', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('deletes item', async () => {
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = { inventoryItem: { delete: vi.fn() } }
+      return fn(tx as never)
+    })
+    const result = await deleteInventoryItem('550e8400-e29b-41d4-a716-446655440000')
+    expect(result.success).toBe(true)
+  })
+
+  it('validates UUID input', async () => {
+    const result = await deleteInventoryItem('bad-id')
+    expect(result.success).toBe(false)
+  })
+
+  it('returns error for non-existent item', async () => {
+    mockTransaction.mockRejectedValue({ code: 'P2025' })
+    const result = await deleteInventoryItem('550e8400-e29b-41d4-a716-446655440000')
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Item not found.')
   })
 })
