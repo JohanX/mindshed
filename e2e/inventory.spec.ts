@@ -27,7 +27,7 @@ test.describe('Inventory Management', () => {
     await page.goto('/inventory')
     await page.waitForLoadState('networkidle')
     await expect(page.getByText('Walnut Lumber').first()).toBeVisible()
-    await expect(page.getByText('Material', { exact: true })).toBeVisible()
+    await expect(page.getByText('Material', { exact: true }).first()).toBeVisible()
   })
 
   test('can create a Tool item', async ({ page }) => {
@@ -47,7 +47,7 @@ test.describe('Inventory Management', () => {
     await page.goto('/inventory')
     await page.waitForLoadState('networkidle')
     await expect(page.getByText('Router Table').first()).toBeVisible()
-    await expect(page.getByText('Tool', { exact: true })).toBeVisible()
+    await expect(page.getByText('Tool', { exact: true }).first()).toBeVisible()
   })
 
   test('filter tabs show correct items by type', async ({ page }) => {

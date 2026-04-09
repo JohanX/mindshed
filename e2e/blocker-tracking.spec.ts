@@ -51,8 +51,8 @@ test.describe('Blocker Tracking', () => {
     await page.getByText('Blocker Test Project').first().click()
     await page.waitForLoadState('networkidle')
 
-    // The current step should be expanded — click Add Blocker
-    const addBlockerBtn = page.getByRole('button', { name: 'Add Blocker' }).first()
+    // The current step should be expanded — click the blocker prompt
+    const addBlockerBtn = page.getByText('Add a blocker...').first()
     await expect(addBlockerBtn).toBeVisible({ timeout: 5000 })
     await addBlockerBtn.click()
 
