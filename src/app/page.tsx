@@ -39,7 +39,9 @@ export default async function DashboardPage() {
     <main className="max-w-5xl mx-auto p-4 space-y-8">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
       <DashboardContinueSection projects={recentProjects} />
+      {activeBlockers.length > 0 && <hr className="border-border" />}
       <DashboardBlockersSection blockers={activeBlockers} />
+      {idleProjects.length > 0 && <hr className="border-border" />}
       <DashboardIdleSection projects={idleProjects} />
     </main>
   )

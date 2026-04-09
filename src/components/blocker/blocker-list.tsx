@@ -1,14 +1,75 @@
 'use client'
 
+import { useTransition } from 'react'
 import Link from 'next/link'
 import type { BlockerWithContext } from '@/lib/schemas/blocker'
-import { BlockerCard } from '@/components/blocker/blocker-card'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
 import { hobbyColorWithAlpha } from '@/lib/hobby-color'
-import { renderHobbyIcon } from '@/lib/hobby-icons'
+import { resolveBlocker } from '@/actions/blocker'
+import { showSuccessToast, showErrorToast } from '@/lib/toast'
+import { Button } from '@/components/ui/button'
+import { AlertTriangle, Check } from 'lucide-react'
 
 interface BlockerListProps {
   blockers: BlockerWithContext[]
+}
+
+function DashboardBlockerItem({ blocker }: { blocker: BlockerWithContext }) {
+  const [isPending, startTransition] = useTransition()
+  const hobby = blocker.step.project.hobby
+
+  function handleResolve(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    startTransition(async () => {
+      const result = await resolveBlocker({ blockerId: blocker.id })
+      if (result.success) {
+        showSuccessToast('Blocker resolved')
+      } else {
+        showErrorToast(result.error)
+      }
+    })
+  }
+
+  return (
+    <li>
+      <Link
+        href={`/hobbies/${blocker.step.project.hobbyId}/projects/${blocker.step.project.id}`}
+        className="block"
+      >
+        <div
+          className="relative overflow-hidden flex items-center gap-3 rounded-lg p-3 transition-opacity hover:opacity-90"
+          style={{ backgroundColor: hobbyColorWithAlpha(hobby.color, 0.12) }}
+        >
+          <AlertTriangle
+            className="h-5 w-5 shrink-0"
+            style={{ color: hobby.color }}
+            aria-hidden="true"
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{blocker.description}</p>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+              <HobbyIdentity hobby={hobby} variant="dot" />
+              <span className="truncate">
+                {blocker.step.project.name} / {blocker.step.name}
+              </span>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 min-h-[44px] min-w-[44px]"
+            onClick={handleResolve}
+            disabled={isPending}
+            title="Resolve blocker"
+            aria-label="Resolve blocker"
+          >
+            <Check className="h-4 w-4" />
+          </Button>
+        </div>
+      </Link>
+    </li>
+  )
 }
 
 export function BlockerList({ blockers }: BlockerListProps) {
@@ -21,40 +82,10 @@ export function BlockerList({ blockers }: BlockerListProps) {
   }
 
   return (
-    <ul className="space-y-3">
-      {blockers.map((blocker) => {
-        const hobby = blocker.step.project.hobby
-        const watermarkIcon = renderHobbyIcon(hobby.icon, {
-          className: 'h-10 w-10',
-          style: { color: hobby.color, opacity: 0.08 },
-        })
-        return (
-          <li
-            key={blocker.id}
-            className="relative overflow-hidden space-y-1 rounded-lg p-3"
-            style={{ backgroundColor: hobbyColorWithAlpha(hobby.color, 0.12) }}
-          >
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <HobbyIdentity hobby={hobby} variant="badge" />
-              <span aria-hidden="true">/</span>
-              <Link
-                href={`/hobbies/${blocker.step.project.hobbyId}/projects/${blocker.step.project.id}`}
-                className="hover:underline"
-              >
-                {blocker.step.project.name}
-              </Link>
-              <span aria-hidden="true">/</span>
-              <span>{blocker.step.name}</span>
-            </div>
-            <BlockerCard id={blocker.id} description={blocker.description} />
-            {watermarkIcon && (
-              <div className="absolute bottom-2 right-2 z-10 pointer-events-none" aria-hidden="true">
-                {watermarkIcon}
-              </div>
-            )}
-          </li>
-        )
-      })}
+    <ul className="space-y-2">
+      {blockers.map((blocker) => (
+        <DashboardBlockerItem key={blocker.id} blocker={blocker} />
+      ))}
     </ul>
   )
 }
