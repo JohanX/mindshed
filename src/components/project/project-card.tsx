@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { StepStateBadge } from '@/components/step-state-badge'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
 import { hobbyColorWithAlpha } from '@/lib/hobby-color'
+import { renderHobbyIcon } from '@/lib/hobby-icons'
 import type { StepState } from '@/lib/step-states'
 
 export interface ProjectCardData {
@@ -23,26 +24,26 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project, hobby, showHobbyBadge }: ProjectCardProps) {
+  const watermarkIcon = hobby ? renderHobbyIcon(hobby.icon, {
+    className: 'h-10 w-10',
+    style: { color: hobby.color, opacity: 0.08 },
+  }) : null
+
   return (
     <Link href={`/hobbies/${project.hobbyId}/projects/${project.id}`} className="block">
-      {hobby ? (
-        <HobbyIdentity hobby={hobby} variant="accent">
-          <Card
-            className="border-0 ring-0 rounded-none min-h-[44px]"
-            style={{ backgroundColor: hobbyColorWithAlpha(hobby.color, 0.05) }}
-          >
-            <CardContent className="space-y-2">
-              <ProjectCardContent project={project} hobby={hobby} showHobbyBadge={showHobbyBadge} />
-            </CardContent>
-          </Card>
-        </HobbyIdentity>
-      ) : (
-        <Card className="min-h-[44px]">
-          <CardContent className="space-y-2">
-            <ProjectCardContent project={project} showHobbyBadge={false} />
-          </CardContent>
-        </Card>
-      )}
+      <Card
+        className="relative overflow-hidden min-h-[44px]"
+        style={hobby ? { backgroundColor: hobbyColorWithAlpha(hobby.color, 0.12) } : undefined}
+      >
+        <CardContent className="space-y-2">
+          <ProjectCardContent project={project} hobby={hobby} showHobbyBadge={showHobbyBadge} />
+        </CardContent>
+        {watermarkIcon && (
+          <div className="absolute bottom-2 right-2 z-10 pointer-events-none" aria-hidden="true">
+            {watermarkIcon}
+          </div>
+        )}
+      </Card>
     </Link>
   )
 }

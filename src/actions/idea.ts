@@ -59,13 +59,13 @@ export async function getIdeasByHobby(hobbyId: string): Promise<ActionResult<Ide
   }
 }
 
-export type IdeaWithHobby = Idea & { hobby: { id: string; name: string; color: string } }
+export type IdeaWithHobby = Idea & { hobby: { id: string; name: string; color: string; icon: string | null } }
 
 export async function getAllIdeas(): Promise<ActionResult<IdeaWithHobby[]>> {
   try {
     const ideas = await prisma.idea.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { hobby: { select: { id: true, name: true, color: true } } },
+      include: { hobby: { select: { id: true, name: true, color: true, icon: true } } },
     })
     return { success: true, data: ideas }
   } catch (error) {

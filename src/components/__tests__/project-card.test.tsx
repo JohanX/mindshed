@@ -42,9 +42,11 @@ describe('ProjectCard', () => {
     expect(link?.getAttribute('href')).toBe('/hobbies/456/projects/123')
   })
 
-  it('renders hobby color accent when hobby provided', () => {
+  it('renders hobby-tinted background when hobby provided', () => {
     const { container } = render(<ProjectCard project={mockProject} hobby={mockHobby} />)
-    const accent = container.querySelector('.border-l-4')
-    expect(accent).toBeInTheDocument()
+    const card = container.querySelector('[data-slot="card"]')
+    expect(card).toBeInTheDocument()
+    // Card should have an inline backgroundColor style (hobby tint)
+    expect(card).toHaveStyle({ backgroundColor: expect.stringContaining('hsla') })
   })
 })

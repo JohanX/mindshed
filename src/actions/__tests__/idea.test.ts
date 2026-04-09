@@ -170,13 +170,13 @@ describe('getAllIdeas', () => {
         id: '1',
         title: 'Newest idea',
         createdAt: new Date('2026-04-02'),
-        hobby: { id: 'h1', name: 'Woodworking', color: '#B87333' },
+        hobby: { id: 'h1', name: 'Woodworking', color: '#B87333', icon: 'hammer' },
       },
       {
         id: '2',
         title: 'Older idea',
         createdAt: new Date('2026-04-01'),
-        hobby: { id: 'h2', name: 'Painting', color: '#4A90D9' },
+        hobby: { id: 'h2', name: 'Painting', color: '#4A90D9', icon: 'paintbrush' },
       },
     ]
     mockIdeaFindMany.mockResolvedValue(mockIdeas as never)
@@ -191,7 +191,7 @@ describe('getAllIdeas', () => {
     }
     expect(mockIdeaFindMany).toHaveBeenCalledWith({
       orderBy: { createdAt: 'desc' },
-      include: { hobby: { select: { id: true, name: true, color: true } } },
+      include: { hobby: { select: { id: true, name: true, color: true, icon: true } } },
     })
   })
 

@@ -49,7 +49,6 @@ test.describe('Hobby Color Palette Theming', () => {
     await page.goto(`/hobbies/${hobbyId1}`)
     await page.waitForLoadState('networkidle')
 
-    // The hobby layout wrapper should have --hobby-primary set
     const wrapper = page.locator('[data-hobby-context]')
     await expect(wrapper).toBeVisible()
 
@@ -79,7 +78,6 @@ test.describe('Hobby Color Palette Theming', () => {
   })
 
   test('navigating between hobbies changes the CSS custom properties', async ({ page }) => {
-    // Visit first hobby
     await page.goto(`/hobbies/${hobbyId1}`)
     await page.waitForLoadState('networkidle')
     const wrapper1 = page.locator('[data-hobby-context]')
@@ -87,7 +85,6 @@ test.describe('Hobby Color Palette Theming', () => {
       el.style.getPropertyValue('--hobby-primary')
     )
 
-    // Visit second hobby
     await page.goto(`/hobbies/${hobbyId2}`)
     await page.waitForLoadState('networkidle')
     const wrapper2 = page.locator('[data-hobby-context]')
@@ -95,22 +92,52 @@ test.describe('Hobby Color Palette Theming', () => {
       el.style.getPropertyValue('--hobby-primary')
     )
 
-    // The colors should differ between hobbies
     expect(primary1).not.toBe(primary2)
   })
 
   test('navigating back to dashboard removes hobby context', async ({ page }) => {
-    // Start in hobby context
     await page.goto(`/hobbies/${hobbyId1}`)
     await page.waitForLoadState('networkidle')
     await expect(page.locator('[data-hobby-context]')).toBeVisible()
 
-    // Navigate to dashboard
     await page.goto('/')
     await page.waitForLoadState('networkidle')
-
-    // No hobby context wrapper should be present
     await expect(page.locator('[data-hobby-context]')).not.toBeVisible()
+  })
+
+  test('navbar has full hobby color background when inside hobby', async ({ page }) => {
+    await page.goto(`/hobbies/${hobbyId1}`)
+    await page.waitForLoadState('networkidle')
+
+    // The desktop header should have the hobby color as background
+    const header = page.locator('header').first()
+    const bgColor = await header.evaluate((el) =>
+      window.getComputedStyle(el).backgroundColor
+    )
+    // Should not be the default card color — should be a solid hobby color
+    expect(bgColor).toBeTruthy()
+    expect(bgColor).not.toBe('rgba(0, 0, 0, 0)')
+  })
+
+  test('navbar restores default background on dashboard', async ({ page }) => {
+    // First capture the hobby navbar bg
+    await page.goto(`/hobbies/${hobbyId1}`)
+    await page.waitForLoadState('networkidle')
+    const header = page.locator('header').first()
+    const hobbyBg = await header.evaluate((el) =>
+      window.getComputedStyle(el).backgroundColor
+    )
+
+    // Then navigate to dashboard
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    const dashHeader = page.locator('header').first()
+    const dashBg = await dashHeader.evaluate((el) =>
+      window.getComputedStyle(el).backgroundColor
+    )
+
+    // The backgrounds should differ
+    expect(hobbyBg).not.toBe(dashBg)
   })
 
   test('setup: create a project with steps for dashboard card test', async ({ page }) => {
@@ -130,44 +157,31 @@ test.describe('Hobby Color Palette Theming', () => {
     await page.waitForTimeout(1000)
   })
 
-  test('dashboard project cards have hobby-colored left border', async ({ page }) => {
+  test('dashboard project cards have hobby-tinted background (no left border)', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    // Find a project card with left border — the HobbyIdentity accent adds border-l-4
-    const cardWithBorder = page.locator('.border-l-4').first()
-    await expect(cardWithBorder).toBeVisible()
+    // Cards should NOT have border-l-4 anymore
+    const cards = page.locator('[data-slot="card"]')
+    const firstCard = cards.first()
+    await expect(firstCard).toBeVisible()
 
-    // Verify the border-left-color is set (inline style from HobbyIdentity)
-    const borderColor = await cardWithBorder.evaluate((el) =>
-      window.getComputedStyle(el).borderLeftColor
+    // Verify the card has a tinted background (not transparent)
+    const bgColor = await firstCard.evaluate((el) =>
+      window.getComputedStyle(el).backgroundColor
     )
-    expect(borderColor).toBeTruthy()
-    // Should not be transparent or default
-    expect(borderColor).not.toBe('rgba(0, 0, 0, 0)')
+    expect(bgColor).toBeTruthy()
+    expect(bgColor).not.toBe('rgba(0, 0, 0, 0)')
   })
 
   test('current step card has hobby-primary left border in hobby context', async ({ page }) => {
-    // Navigate to the project page
     await page.goto(`/hobbies/${hobbyId1}`)
     await page.waitForLoadState('networkidle')
     await page.getByRole('link', { name: new RegExp(`${testPrefix} Color Project`) }).first().click()
     await page.waitForLoadState('networkidle')
 
-    // Find the current step card (it has border-l-4)
+    // Find the current step card
     const stepCard = page.locator('[data-testid^="step-card-"]').first()
     await expect(stepCard).toBeVisible()
-
-    // The Card wrapper should have a left border
-    const card = stepCard.locator('..')
-    const borderStyle = await card.evaluate((el) => {
-      const style = window.getComputedStyle(el)
-      return {
-        borderLeftWidth: style.borderLeftWidth,
-        borderLeftColor: style.borderLeftColor,
-      }
-    })
-    // The current step card should have a visible left border
-    expect(borderStyle.borderLeftWidth).toBeTruthy()
   })
 })

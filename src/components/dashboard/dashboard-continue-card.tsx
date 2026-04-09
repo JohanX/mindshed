@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
 import { hobbyColorWithAlpha } from '@/lib/hobby-color'
+import { renderHobbyIcon } from '@/lib/hobby-icons'
 import type { RecentProject } from '@/lib/schemas/dashboard'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 
@@ -21,6 +22,19 @@ function resolvePhotoUrl(storageKey: string | null | undefined): string | null {
   }
 }
 
+function HobbyWatermark({ hobby }: { hobby: { icon: string | null; color: string } }) {
+  const icon = renderHobbyIcon(hobby.icon, {
+    className: 'h-10 w-10',
+    style: { color: hobby.color, opacity: 0.08 },
+  })
+  if (!icon) return null
+  return (
+    <div className="absolute bottom-2 right-2 z-10 pointer-events-none" aria-hidden="true">
+      {icon}
+    </div>
+  )
+}
+
 export function DashboardContinueCard({ project, variant }: DashboardContinueCardProps) {
   const photoUrl = resolvePhotoUrl(project.latestPhoto?.storageKey)
 
@@ -32,8 +46,8 @@ export function DashboardContinueCard({ project, variant }: DashboardContinueCar
       >
         <Card
           size="sm"
-          className="transition-colors hover:bg-accent/50 border-l-4"
-          style={{ borderLeftColor: project.hobby.color, backgroundColor: hobbyColorWithAlpha(project.hobby.color, 0.05) }}
+          className="relative overflow-hidden transition-opacity hover:opacity-90"
+          style={{ backgroundColor: hobbyColorWithAlpha(project.hobby.color, 0.12) }}
         >
           <CardContent className="flex items-center gap-3">
             <HobbyIdentity hobby={project.hobby} variant="dot" />
@@ -46,6 +60,7 @@ export function DashboardContinueCard({ project, variant }: DashboardContinueCar
               )}
             </div>
           </CardContent>
+          <HobbyWatermark hobby={project.hobby} />
         </Card>
       </Link>
     )
@@ -57,8 +72,8 @@ export function DashboardContinueCard({ project, variant }: DashboardContinueCar
       className="block min-h-[44px]"
     >
       <Card
-        className="transition-colors hover:bg-accent/50 border-l-4"
-        style={{ borderLeftColor: project.hobby.color, backgroundColor: hobbyColorWithAlpha(project.hobby.color, 0.05) }}
+        className="relative overflow-hidden transition-opacity hover:opacity-90"
+        style={{ backgroundColor: hobbyColorWithAlpha(project.hobby.color, 0.12) }}
       >
         <CardContent className="flex items-start gap-4">
           {photoUrl && (
@@ -79,6 +94,7 @@ export function DashboardContinueCard({ project, variant }: DashboardContinueCar
             )}
           </div>
         </CardContent>
+        <HobbyWatermark hobby={project.hobby} />
       </Card>
     </Link>
   )

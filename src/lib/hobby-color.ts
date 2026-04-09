@@ -81,6 +81,12 @@ export function hobbyColorWithAlpha(color: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
+/** Determine whether white or dark text provides better contrast on a hobby color background. */
+export function getContrastTextColor(color: string): 'white' | 'black' {
+  const { l } = parseColor(color)
+  return l < 0.5 ? 'white' : 'black'
+}
+
 export function generateHobbyStyleVars(color: string): Record<string, string> {
   const palette = generateHobbyPalette(color)
   return {
