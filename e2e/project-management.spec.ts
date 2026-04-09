@@ -355,36 +355,23 @@ test.describe('Project Management', () => {
     await expect(page.getByRole('button', { name: 'Add Image Link' }).first()).toBeVisible()
   })
 
-  test('can reorder steps with up/down buttons', async ({ page }) => {
+  test('step cards have drag handles for reordering', async ({ page }) => {
     await page.goto(`/hobbies/${hobbyId}`)
     await page.getByRole('button', { name: 'Create Project' }).first().click()
     await page.getByPlaceholder('e.g., Walnut Side Table').fill('Reorder Test Project')
     await page.getByPlaceholder('Step 1 name').fill('Step Alpha')
-    await page.getByRole('button', { name: 'Add Step' }).click()
-    await page.getByPlaceholder('Step 2 name').fill('Step Beta')
-    await page.getByRole('button', { name: 'Add Step' }).click()
-    await page.getByPlaceholder('Step 3 name').fill('Step Gamma')
     await page.getByRole('button', { name: 'Save' }).click()
     await page.waitForTimeout(2000)
 
     await expect(page.getByRole('heading', { name: 'Reorder Test Project' })).toBeVisible()
 
-    // Set mobile viewport for up/down buttons
-    await page.setViewportSize({ width: 375, height: 812 })
+    // Drag handles should be present (DnD replaced arrow buttons)
+    const dragHandles = page.getByLabel('Drag to reorder')
+    await expect(dragHandles.first()).toBeVisible()
 
-    // Move "Step Beta" up using the reorder buttons on StepCard
-    const moveUpButtons = page.getByLabel('Move step up')
-    await moveUpButtons.nth(1).click()
-    await page.waitForTimeout(1000)
-
-    // Reload and verify order persists
-    await page.goto(page.url())
-    await page.waitForLoadState('networkidle')
-
-    // Read step card headers in order (filter by aria-controls which only step cards have)
-    const stepHeaders = page.locator('button[aria-controls^="step-content-"]')
-    const names = await stepHeaders.allTextContents()
-    expect(names[0]).toContain('Step Beta')
+    // Arrow buttons should NOT be present
+    await expect(page.getByLabel('Move step up')).not.toBeVisible()
+    await expect(page.getByLabel('Move step down')).not.toBeVisible()
     expect(names[1]).toContain('Step Alpha')
     expect(names[2]).toContain('Step Gamma')
   })
