@@ -8,9 +8,8 @@ const mockProject: ProjectCardData = {
   hobbyId: '456',
   totalSteps: 5,
   completedSteps: 2,
+  derivedStatus: 'IN_PROGRESS',
   currentStepName: 'Assembly',
-  currentStepState: 'IN_PROGRESS',
-  hasBlockedSteps: false,
 }
 
 const mockHobby = {
@@ -30,10 +29,14 @@ describe('ProjectCard', () => {
     expect(screen.getByText('2/5 steps')).toBeInTheDocument()
   })
 
-  it('renders current step with badge', () => {
+  it('renders derived status badge', () => {
+    render(<ProjectCard project={mockProject} />)
+    expect(screen.getByText('In Progress')).toBeInTheDocument()
+  })
+
+  it('renders current step name', () => {
     render(<ProjectCard project={mockProject} />)
     expect(screen.getByText('Assembly')).toBeInTheDocument()
-    expect(screen.getByText('In Progress')).toBeInTheDocument()
   })
 
   it('links to correct project URL', () => {
@@ -46,7 +49,6 @@ describe('ProjectCard', () => {
     const { container } = render(<ProjectCard project={mockProject} hobby={mockHobby} />)
     const card = container.querySelector('[data-slot="card"]')
     expect(card).toBeInTheDocument()
-    // Card should have an inline backgroundColor style (hobby tint)
     expect(card).toHaveStyle({ backgroundColor: expect.stringContaining('hsla') })
   })
 })

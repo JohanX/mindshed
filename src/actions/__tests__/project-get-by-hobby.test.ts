@@ -81,8 +81,7 @@ describe('getProjectsByHobby', () => {
       expect(p.totalSteps).toBe(4)
       expect(p.completedSteps).toBe(1)
       expect(p.currentStepName).toBe('Doing')
-      expect(p.currentStepState).toBe('IN_PROGRESS')
-      expect(p.hasBlockedSteps).toBe(true)
+      expect(p.derivedStatus).toBe('BLOCKED')
     }
   })
 

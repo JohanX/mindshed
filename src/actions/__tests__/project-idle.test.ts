@@ -106,8 +106,7 @@ describe('getIdleProjects', () => {
       expect(project.totalSteps).toBe(3)
       expect(project.completedSteps).toBe(1)
       expect(project.currentStepName).toBe('Current Step')
-      expect(project.currentStepState).toBe('IN_PROGRESS')
-      expect(project.hasBlockedSteps).toBe(true)
+      expect(project.derivedStatus).toBe('BLOCKED')
       expect(project.hobby).toEqual({ name: 'Woodworking', color: '#8B4513', icon: null })
       expect(project.lastActivityAt).toBeInstanceOf(Date)
     }
@@ -135,7 +134,7 @@ describe('getIdleProjects', () => {
     expect(result.success).toBe(true)
     if (result.success) {
       expect(result.data[0].currentStepName).toBe('Next Up')
-      expect(result.data[0].currentStepState).toBe('NOT_STARTED')
+      expect(result.data[0].derivedStatus).toBe('IN_PROGRESS')
     }
   })
 

@@ -3,12 +3,12 @@
 import { prisma } from '@/lib/db'
 import { createProjectSchema, updateProjectSchema, type CreateProjectInput, type UpdateProjectInput } from '@/lib/schemas/project'
 import { z } from 'zod/v4'
-import { STEP_STATE_CONFIG, type StepState } from '@/lib/step-states'
 import type { ProjectCardData } from '@/components/project/project-card'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 import { IDLE_THRESHOLD_DAYS } from '@/lib/constants'
 import { getCurrentStep } from '@/lib/project-utils'
+import { deriveProjectStatus } from '@/lib/project-status'
 
 export async function createProject(input: CreateProjectInput): Promise<ActionResult<{ id: string; hobbyId: string }>> {
   const parsed = createProjectSchema.safeParse(input)
@@ -85,10 +85,8 @@ export async function getAllProjects(): Promise<ActionResult<ProjectWithHobby[]>
           hobbyId: p.hobbyId,
           totalSteps: p.steps.length,
           completedSteps: p.steps.filter(s => s.state === 'COMPLETED').length,
+          derivedStatus: deriveProjectStatus(p.steps),
           currentStepName: currentStep?.name ?? null,
-          currentStepState: currentStep?.state && currentStep.state in STEP_STATE_CONFIG
-            ? (currentStep.state as StepState) : null,
-          hasBlockedSteps: p.steps.some(s => s.state === 'BLOCKED'),
           hobby: p.hobby,
         }
       }),
@@ -101,7 +99,7 @@ export async function getAllProjects(): Promise<ActionResult<ProjectWithHobby[]>
 
 export interface ProjectWithProgress extends ProjectCardData {
   isArchived: boolean
-  isCompleted: boolean
+  isCompleted: boolean // DB field kept for query optimization
 }
 
 export async function getProjectsByHobby(hobbyId: string): Promise<ActionResult<ProjectWithProgress[]>> {
@@ -133,10 +131,8 @@ export async function getProjectsByHobby(hobbyId: string): Promise<ActionResult<
           hobbyId: p.hobbyId,
           totalSteps: p.steps.length,
           completedSteps: p.steps.filter(s => s.state === 'COMPLETED').length,
+          derivedStatus: deriveProjectStatus(p.steps),
           currentStepName: currentStep?.name ?? null,
-          currentStepState: currentStep?.state && currentStep.state in STEP_STATE_CONFIG
-            ? (currentStep.state as StepState) : null,
-          hasBlockedSteps: p.steps.some(s => s.state === 'BLOCKED'),
           isArchived: p.isArchived,
           isCompleted: p.isCompleted,
         }
@@ -227,6 +223,7 @@ export async function archiveProject(id: string): Promise<ActionResult<null>> {
   }
 }
 
+// @deprecated - project completion is now auto-derived from step states (Story 9.3)
 export async function completeProject(id: string): Promise<ActionResult<null>> {
   const parsed = z.uuid().safeParse(id)
   if (!parsed.success) {
@@ -270,7 +267,7 @@ export async function completeProject(id: string): Promise<ActionResult<null>> {
 
 export interface IdleProjectData extends ProjectCardData {
   hobby: { name: string; color: string; icon: string | null }
-  lastActivityAt: Date
+  lastActivityAt: Date // Needed for idle duration display
 }
 
 export async function getIdleProjects(): Promise<ActionResult<IdleProjectData[]>> {
@@ -301,9 +298,8 @@ export async function getIdleProjects(): Promise<ActionResult<IdleProjectData[]>
           hobbyId: p.hobbyId,
           totalSteps: p.steps.length,
           completedSteps: p.steps.filter(s => s.state === 'COMPLETED').length,
+          derivedStatus: deriveProjectStatus(p.steps),
           currentStepName: currentStep?.name ?? null,
-          currentStepState: currentStep?.state ?? null,
-          hasBlockedSteps: p.steps.some(s => s.state === 'BLOCKED'),
           hobby: p.hobby,
           lastActivityAt: p.lastActivityAt,
         }

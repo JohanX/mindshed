@@ -130,7 +130,7 @@ export async function updateStepState(input: UpdateStepStateInput): Promise<Acti
     const step = await prisma.$transaction(async (tx) => {
       const existing = await tx.step.findUniqueOrThrow({
         where: { id: parsed.data.id },
-        select: { state: true, previousState: true, project: { select: { isCompleted: true } } },
+        select: { state: true, previousState: true, projectId: true, project: { select: { isCompleted: true } } },
       })
       if (existing.project.isCompleted) throw new Error('PROJECT_COMPLETED')
 
@@ -141,28 +141,43 @@ export async function updateStepState(input: UpdateStepStateInput): Promise<Acti
         return tx.step.findUniqueOrThrow({ where: { id: parsed.data.id } })
       }
 
+      let updatedStep
+
       // Transitioning TO BLOCKED: save current state so it can be restored later
       if (newState === 'BLOCKED') {
-        return tx.step.update({
+        updatedStep = await tx.step.update({
           where: { id: parsed.data.id },
           data: { state: 'BLOCKED', previousState: existing.state },
         })
-      }
-
-      // Transitioning FROM BLOCKED: restore previousState if available
-      if (existing.state === 'BLOCKED') {
+      } else if (existing.state === 'BLOCKED') {
+        // Transitioning FROM BLOCKED: restore previousState if available
         const restoredState = existing.previousState ?? newState
-        return tx.step.update({
+        updatedStep = await tx.step.update({
           where: { id: parsed.data.id },
           data: { state: restoredState, previousState: null },
         })
+      } else {
+        // All other transitions: update state, clear previousState
+        updatedStep = await tx.step.update({
+          where: { id: parsed.data.id },
+          data: { state: newState, previousState: null },
+        })
       }
 
-      // All other transitions: update state, clear previousState
-      return tx.step.update({
-        where: { id: parsed.data.id },
-        data: { state: newState, previousState: null },
+      // Sync project.isCompleted for query optimization
+      const allSteps = await tx.step.findMany({
+        where: { projectId: existing.projectId },
+        select: { state: true },
       })
+      const allCompleted = allSteps.length > 0 && allSteps.every(s => s.state === 'COMPLETED')
+      if (allCompleted !== existing.project.isCompleted) {
+        await tx.project.update({
+          where: { id: existing.projectId },
+          data: { isCompleted: allCompleted },
+        })
+      }
+
+      return updatedStep
     })
 
     await updateProjectActivity(step.projectId)

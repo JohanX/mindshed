@@ -157,16 +157,26 @@ describe('updateStepState', () => {
     expect(result.success).toBe(false)
   })
 
-  it('updates step state and project lastActivityAt', async () => {
+  function makeStepStateTx(existing: { state: string; previousState: string | null; projectId?: string; project?: { isCompleted: boolean } }, siblingsAfter: { state: string }[] = [{ state: 'NOT_STARTED' }]) {
+    const mockStepUpdate = vi.fn().mockResolvedValue({ id: 's1', projectId: existing.projectId ?? 'p1' })
+    const mockStepFindMany = vi.fn().mockResolvedValue(siblingsAfter)
+    const mockProjectUpdateTx = vi.fn().mockResolvedValue({})
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         step: {
-          findUniqueOrThrow: vi.fn().mockResolvedValue({ state: 'NOT_STARTED', previousState: null, project: { isCompleted: false } }),
-          update: vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' }),
+          findUniqueOrThrow: vi.fn().mockResolvedValue({ ...existing, projectId: existing.projectId ?? 'p1', project: existing.project ?? { isCompleted: false } }),
+          update: mockStepUpdate,
+          findMany: mockStepFindMany,
         },
+        project: { update: mockProjectUpdateTx },
       }
       return fn(tx as never)
     })
+    return { mockStepUpdate, mockStepFindMany, mockProjectUpdateTx }
+  }
+
+  it('updates step state and project lastActivityAt', async () => {
+    makeStepStateTx({ state: 'NOT_STARTED', previousState: null })
 
     const result = await updateStepState({
       id: '550e8400-e29b-41d4-a716-446655440000',
@@ -177,16 +187,7 @@ describe('updateStepState', () => {
   })
 
   it('saves previousState when transitioning to BLOCKED', async () => {
-    const mockStepUpdate = vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' })
-    mockTransaction.mockImplementation(async (fn) => {
-      const tx = {
-        step: {
-          findUniqueOrThrow: vi.fn().mockResolvedValue({ state: 'IN_PROGRESS', previousState: null, project: { isCompleted: false } }),
-          update: mockStepUpdate,
-        },
-      }
-      return fn(tx as never)
-    })
+    const { mockStepUpdate } = makeStepStateTx({ state: 'IN_PROGRESS', previousState: null })
 
     const result = await updateStepState({
       id: '550e8400-e29b-41d4-a716-446655440000',
@@ -200,18 +201,8 @@ describe('updateStepState', () => {
   })
 
   it('restores previousState when transitioning from BLOCKED', async () => {
-    const mockStepUpdate = vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' })
-    mockTransaction.mockImplementation(async (fn) => {
-      const tx = {
-        step: {
-          findUniqueOrThrow: vi.fn().mockResolvedValue({ state: 'BLOCKED', previousState: 'IN_PROGRESS', project: { isCompleted: false } }),
-          update: mockStepUpdate,
-        },
-      }
-      return fn(tx as never)
-    })
+    const { mockStepUpdate } = makeStepStateTx({ state: 'BLOCKED', previousState: 'IN_PROGRESS' })
 
-    // The requested state is ignored when restoring from BLOCKED — previousState takes precedence
     const result = await updateStepState({
       id: '550e8400-e29b-41d4-a716-446655440000',
       state: 'NOT_STARTED',
@@ -224,16 +215,7 @@ describe('updateStepState', () => {
   })
 
   it('allows COMPLETED to NOT_STARTED revert', async () => {
-    const mockStepUpdate = vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' })
-    mockTransaction.mockImplementation(async (fn) => {
-      const tx = {
-        step: {
-          findUniqueOrThrow: vi.fn().mockResolvedValue({ state: 'COMPLETED', previousState: null, project: { isCompleted: false } }),
-          update: mockStepUpdate,
-        },
-      }
-      return fn(tx as never)
-    })
+    const { mockStepUpdate } = makeStepStateTx({ state: 'COMPLETED', previousState: null })
 
     const result = await updateStepState({
       id: '550e8400-e29b-41d4-a716-446655440000',
@@ -247,16 +229,7 @@ describe('updateStepState', () => {
   })
 
   it('clears previousState on normal transitions', async () => {
-    const mockStepUpdate = vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' })
-    mockTransaction.mockImplementation(async (fn) => {
-      const tx = {
-        step: {
-          findUniqueOrThrow: vi.fn().mockResolvedValue({ state: 'NOT_STARTED', previousState: null, project: { isCompleted: false } }),
-          update: mockStepUpdate,
-        },
-      }
-      return fn(tx as never)
-    })
+    const { mockStepUpdate } = makeStepStateTx({ state: 'NOT_STARTED', previousState: null })
 
     const result = await updateStepState({
       id: '550e8400-e29b-41d4-a716-446655440000',
@@ -266,6 +239,23 @@ describe('updateStepState', () => {
     expect(mockStepUpdate).toHaveBeenCalledWith({
       where: { id: '550e8400-e29b-41d4-a716-446655440000' },
       data: { state: 'COMPLETED', previousState: null },
+    })
+  })
+
+  it('syncs project.isCompleted when all steps become COMPLETED', async () => {
+    const { mockProjectUpdateTx } = makeStepStateTx(
+      { state: 'IN_PROGRESS', previousState: null },
+      [{ state: 'COMPLETED' }, { state: 'COMPLETED' }],
+    )
+
+    const result = await updateStepState({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      state: 'COMPLETED',
+    })
+    expect(result.success).toBe(true)
+    expect(mockProjectUpdateTx).toHaveBeenCalledWith({
+      where: { id: 'p1' },
+      data: { isCompleted: true },
     })
   })
 

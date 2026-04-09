@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
-import { StepStateBadge } from '@/components/step-state-badge'
+import { ProjectStatusBadge } from '@/components/project/project-status-badge'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
 import { hobbyColorWithAlpha } from '@/lib/hobby-color'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
-import type { StepState } from '@/lib/step-states'
+import type { DerivedProjectStatus } from '@/lib/project-status'
 
 export interface ProjectCardData {
   id: string
@@ -12,9 +12,8 @@ export interface ProjectCardData {
   hobbyId: string
   totalSteps: number
   completedSteps: number
+  derivedStatus: DerivedProjectStatus
   currentStepName: string | null
-  currentStepState: StepState | null
-  hasBlockedSteps: boolean
 }
 
 interface ProjectCardProps {
@@ -36,7 +35,21 @@ export function ProjectCard({ project, hobby, showHobbyBadge }: ProjectCardProps
         style={hobby ? { backgroundColor: hobbyColorWithAlpha(hobby.color, 0.12) } : undefined}
       >
         <CardContent className="space-y-2">
-          <ProjectCardContent project={project} hobby={hobby} showHobbyBadge={showHobbyBadge} />
+          <div className="flex items-center justify-between">
+            <span className="text-lg font-medium">{project.name}</span>
+            <span className="text-xs text-muted-foreground">
+              {project.completedSteps}/{project.totalSteps} steps
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <ProjectStatusBadge status={project.derivedStatus} size="sm" />
+            {project.currentStepName && (
+              <span className="text-sm text-muted-foreground truncate">{project.currentStepName}</span>
+            )}
+          </div>
+          {showHobbyBadge && hobby && (
+            <HobbyIdentity hobby={hobby} variant="badge" />
+          )}
         </CardContent>
         {watermarkIcon && (
           <div className="absolute bottom-2 right-2 z-10 pointer-events-none" aria-hidden="true">
@@ -45,50 +58,5 @@ export function ProjectCard({ project, hobby, showHobbyBadge }: ProjectCardProps
         )}
       </Card>
     </Link>
-  )
-}
-
-function ProjectCardContent({
-  project,
-  hobby,
-  showHobbyBadge,
-}: {
-  project: ProjectCardData
-  hobby?: { name: string; color: string; icon: string | null }
-  showHobbyBadge?: boolean
-}) {
-  return (
-    <>
-      <div className="flex items-center justify-between">
-        <span className="text-lg font-medium">{project.name}</span>
-        <span className="text-xs text-muted-foreground">
-          {project.completedSteps}/{project.totalSteps} steps
-        </span>
-      </div>
-      {project.currentStepName && project.currentStepState ? (
-        <div className="flex items-center gap-2">
-          <StepStateBadge state={project.currentStepState} size="sm" />
-          <span className="text-sm text-muted-foreground truncate">{project.currentStepName}</span>
-        </div>
-      ) : project.hasBlockedSteps ? (
-        <div className="flex items-center gap-2">
-          <StepStateBadge state="BLOCKED" size="sm" />
-          <span className="text-sm text-muted-foreground truncate">Has blocked steps</span>
-        </div>
-      ) : project.totalSteps > 0 && project.completedSteps === project.totalSteps ? (
-        <div className="flex items-center gap-2">
-          <StepStateBadge state="COMPLETED" size="sm" />
-          <span className="text-sm text-muted-foreground truncate">All steps completed</span>
-        </div>
-      ) : project.totalSteps > 0 ? (
-        <div className="flex items-center gap-2">
-          <StepStateBadge state="NOT_STARTED" size="sm" />
-          <span className="text-sm text-muted-foreground truncate">Not started</span>
-        </div>
-      ) : null}
-      {showHobbyBadge && hobby && (
-        <HobbyIdentity hobby={hobby} variant="badge" />
-      )}
-    </>
   )
 }

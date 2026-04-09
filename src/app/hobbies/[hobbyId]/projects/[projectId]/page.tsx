@@ -2,11 +2,13 @@ import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/page-header'
 import { ProjectActions } from '@/components/project/project-actions'
+import { ProjectStatusBadge } from '@/components/project/project-status-badge'
 import { type StepCardData } from '@/components/step/step-card'
 import { StepCardList } from '@/components/step/step-card-list'
 import { StepList } from '@/components/project/step-list'
 import { EmptyStateCard } from '@/components/empty-state-card'
 import type { StepState } from '@/lib/step-states'
+import { deriveProjectStatus } from '@/lib/project-status'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 
 interface ProjectDetailPageProps {
@@ -41,6 +43,9 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   })
 
   if (!project || project.hobbyId !== hobbyId) notFound()
+
+  const derivedStatus = deriveProjectStatus(project.steps)
+  const isCompleted = derivedStatus === 'COMPLETED'
 
   // Compute current step (first IN_PROGRESS or NOT_STARTED)
   const currentStepId = project.steps.find(s => s.state === 'IN_PROGRESS')?.id
@@ -86,12 +91,15 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           { label: project.name },
         ]}
       >
-        <ProjectActions project={{
-          id: project.id,
-          name: project.name,
-          description: project.description,
-          hobbyId: project.hobbyId,
-        }} />
+        <div className="flex items-center gap-2">
+          <ProjectStatusBadge status={derivedStatus} />
+          <ProjectActions project={{
+            id: project.id,
+            name: project.name,
+            description: project.description,
+            hobbyId: project.hobbyId,
+          }} />
+        </div>
       </PageHeader>
 
       {project.description && (
@@ -103,22 +111,22 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           key={stepKey}
           initialSteps={stepCards}
           currentStepId={currentStepId}
-          isProjectCompleted={project.isCompleted}
+          isProjectCompleted={isCompleted}
           projectId={project.id}
         />
       ) : null}
 
-      {!project.isCompleted && (
+      {!isCompleted && (
         <StepList
           key={flatSteps.map(s => s.id).join(',')}
           steps={flatSteps}
           projectId={project.id}
-          isCompleted={project.isCompleted}
+          isCompleted={isCompleted}
           hideStepDisplay
         />
       )}
 
-      {stepCards.length === 0 && project.isCompleted && (
+      {stepCards.length === 0 && isCompleted && (
         <EmptyStateCard message="Add steps to track your progress." />
       )}
     </div>
