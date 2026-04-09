@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Lightbulb, Settings } from 'lucide-react'
+import { LayoutDashboard, Lightbulb, Package, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
 import { getHobbyContext } from '@/lib/hobby-utils'
@@ -101,8 +101,23 @@ export function TopBar({ hobbies }: TopBarProps) {
           <HobbyFormDialog />
         </nav>
 
-        {/* Right: Ideas + Settings */}
+        {/* Right: Ideas + Inventory + Settings */}
         <div className="flex items-center gap-1 shrink-0">
+          <Link
+            href="/inventory"
+            className={cn(
+              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px]',
+              inHobby
+                ? 'opacity-80 hover:opacity-100'
+                : pathname.startsWith('/inventory')
+                  ? 'bg-accent text-foreground'
+                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+            )}
+            style={inHobby ? { color: textColor } : undefined}
+          >
+            <Package className="h-4 w-4" />
+            <span>Inventory</span>
+          </Link>
           <Link
             href="/ideas"
             className={cn(

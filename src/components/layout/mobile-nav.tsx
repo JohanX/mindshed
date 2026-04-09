@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Palette, Lightbulb, Settings, ArrowLeft, FolderOpen, MoreHorizontal } from 'lucide-react'
+import { LayoutDashboard, Palette, Lightbulb, Package, Settings, ArrowLeft, FolderOpen, MoreHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getHobbyContext } from '@/lib/hobby-utils'
 import { getContrastTextColor } from '@/lib/hobby-color'
@@ -12,6 +12,7 @@ const DEFAULT_NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/hobbies', label: 'Hobbies', icon: Palette },
   { href: '/ideas', label: 'Ideas', icon: Lightbulb },
+  { href: '/inventory', label: 'Inventory', icon: Package },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 

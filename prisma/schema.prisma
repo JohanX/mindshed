@@ -109,6 +109,25 @@ model Idea {
   @@map("idea")
 }
 
+enum InventoryItemType {
+  MATERIAL
+  CONSUMABLE
+  TOOL
+}
+
+model InventoryItem {
+  id        String            @id @default(uuid())
+  name      String
+  type      InventoryItemType
+  quantity  Float?
+  unit      String?
+  notes     String?
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+
+  @@map("inventory_item")
+}
+
 enum StepImageType {
   UPLOAD
   LINK
