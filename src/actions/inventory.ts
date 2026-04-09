@@ -171,3 +171,44 @@ export async function recordMaintenance(itemId: string): Promise<ActionResult<{ 
     return { success: false, error: 'Failed to record maintenance.' }
   }
 }
+
+export type MaintenanceDueItem = {
+  id: string
+  name: string
+  lastMaintenanceDate: Date
+  maintenanceIntervalDays: number
+  nextDueDate: Date
+  daysOverdue: number
+}
+
+export async function getOverdueMaintenanceItems(): Promise<ActionResult<MaintenanceDueItem[]>> {
+  try {
+    const tools = await prisma.inventoryItem.findMany({
+      where: {
+        type: 'TOOL',
+        lastMaintenanceDate: { not: null },
+        maintenanceIntervalDays: { not: null },
+      },
+      orderBy: { lastMaintenanceDate: 'asc' },
+    })
+
+    const { isMaintenanceOverdue, getNextMaintenanceDate, getDaysOverdue } = await import('@/lib/maintenance')
+
+    const overdue = tools
+      .filter(t => isMaintenanceOverdue(t.lastMaintenanceDate!, t.maintenanceIntervalDays!))
+      .map(t => ({
+        id: t.id,
+        name: t.name,
+        lastMaintenanceDate: t.lastMaintenanceDate!,
+        maintenanceIntervalDays: t.maintenanceIntervalDays!,
+        nextDueDate: getNextMaintenanceDate(t.lastMaintenanceDate!, t.maintenanceIntervalDays!),
+        daysOverdue: getDaysOverdue(t.lastMaintenanceDate!, t.maintenanceIntervalDays!),
+      }))
+      .sort((a, b) => b.daysOverdue - a.daysOverdue)
+
+    return { success: true, data: overdue }
+  } catch (error) {
+    console.error('getOverdueMaintenanceItems failed:', error)
+    return { success: false, error: 'Failed to load maintenance items.' }
+  }
+}
