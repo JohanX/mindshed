@@ -2,15 +2,15 @@
 
 import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Upload, Loader2 } from 'lucide-react'
+import { Camera, Loader2 } from 'lucide-react'
 import { uploadImageToStorage, ACCEPTED_TYPES } from '@/lib/upload-image'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
 
-interface ImageUploadButtonProps {
+interface CameraCaptureButtonProps {
   stepId: string
 }
 
-export function ImageUploadButton({ stepId }: ImageUploadButtonProps) {
+export function CameraCaptureButton({ stepId }: CameraCaptureButtonProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = useState(false)
 
@@ -19,12 +19,12 @@ export function ImageUploadButton({ stepId }: ImageUploadButtonProps) {
     try {
       const result = await uploadImageToStorage({ stepId, file })
       if (result.success) {
-        showSuccessToast('Photo added')
+        showSuccessToast('Photo captured')
       } else {
         showErrorToast(result.error)
       }
     } catch {
-      showErrorToast('Upload failed — try again')
+      showErrorToast('Capture failed — try again')
     } finally {
       setIsUploading(false)
       if (inputRef.current) inputRef.current.value = ''
@@ -37,6 +37,7 @@ export function ImageUploadButton({ stepId }: ImageUploadButtonProps) {
         ref={inputRef}
         type="file"
         accept={ACCEPTED_TYPES.join(',')}
+        capture="environment"
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0]
@@ -54,9 +55,9 @@ export function ImageUploadButton({ stepId }: ImageUploadButtonProps) {
         {isUploading ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
-          <Upload className="mr-2 h-4 w-4" />
+          <Camera className="mr-2 h-4 w-4" />
         )}
-        Upload Photo
+        Take Photo
       </Button>
     </>
   )
