@@ -53,15 +53,13 @@ export function InlineBlockerInput({ stepId }: InlineBlockerInputProps) {
 
   if (!isOpen) {
     return (
-      <Button
-        variant="outline"
-        size="sm"
-        className="min-h-[44px]"
-        style={{ borderColor: 'hsl(220, 15%, 55%)', color: 'hsl(220, 15%, 55%)' }}
+      <button
+        type="button"
+        className="flex w-full items-center min-h-[44px] px-3 py-2 rounded-lg border border-dashed border-border text-sm text-muted-foreground hover:border-ring hover:text-foreground transition-colors cursor-pointer"
         onClick={handleOpen}
       >
-        Add Blocker
-      </Button>
+        Add a blocker...
+      </button>
     )
   }
 
@@ -79,7 +77,6 @@ export function InlineBlockerInput({ stepId }: InlineBlockerInputProps) {
         aria-invalid={!!validationError}
         aria-describedby={validationError ? `blocker-error-${stepId}` : undefined}
         disabled={isPending}
-        style={{ borderColor: validationError ? undefined : 'hsl(220, 15%, 55%)' }}
       />
       {validationError && (
         <p id={`blocker-error-${stepId}`} className="text-sm text-destructive">
@@ -90,7 +87,6 @@ export function InlineBlockerInput({ stepId }: InlineBlockerInputProps) {
         <Button
           size="sm"
           className="min-h-[44px]"
-          style={{ backgroundColor: 'hsl(220, 15%, 55%)' }}
           onClick={handleSave}
           disabled={isPending}
         >
