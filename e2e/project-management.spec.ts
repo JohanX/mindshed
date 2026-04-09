@@ -208,10 +208,10 @@ test.describe('Project Management', () => {
       await page.waitForTimeout(500)
       await page.getByRole('option', { name: /In Progress/ }).click()
       // Verify state badge updates without page reload
-      await expect(page.getByText('In Progress')).toBeVisible({ timeout: 5000 })
+      await expect(page.getByText('In Progress').first()).toBeVisible({ timeout: 5000 })
       // Also verify it persists after reload
       await page.goto(page.url())
-      await expect(page.getByText('In Progress')).toBeVisible()
+      await expect(page.getByText('In Progress').first()).toBeVisible()
     }
   })
 

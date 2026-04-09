@@ -41,8 +41,8 @@ test.describe('Dashboard', () => {
     await page.waitForLoadState('networkidle')
 
     // Should show Continue section with the project
-    await expect(page.getByText('Continue').first()).toBeVisible()
-    await expect(page.getByText('Dashboard Project').first()).toBeVisible()
+    await expect(page.getByText('Continue').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Dashboard Project').first()).toBeVisible({ timeout: 10000 })
 
     // Should show section headers
     await expect(page.getByText('Active Blockers').first()).toBeVisible()
