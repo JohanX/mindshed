@@ -9,6 +9,9 @@ import { AddStepForm } from '@/components/step/add-step-form'
 import { EmptyStateCard } from '@/components/empty-state-card'
 import type { StepState } from '@/lib/step-states'
 import { deriveProjectStatus } from '@/lib/project-status'
+import { getRemindersForTarget } from '@/actions/reminder'
+import { ReminderBadge } from '@/components/reminder/reminder-badge'
+import { ReminderDatePicker } from '@/components/reminder/reminder-date-picker'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 
 interface ProjectDetailPageProps {
@@ -47,6 +50,9 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   const derivedStatus = deriveProjectStatus(project.steps)
   const isCompleted = derivedStatus === 'COMPLETED'
 
+  const remindersResult = await getRemindersForTarget('PROJECT', projectId)
+  const projectReminder = remindersResult.success ? remindersResult.data[0] ?? null : null
+
   // Compute current step (first IN_PROGRESS or NOT_STARTED)
   const currentStepId = project.steps.find(s => s.state === 'IN_PROGRESS')?.id
     ?? project.steps.find(s => s.state === 'NOT_STARTED')?.id
@@ -84,6 +90,10 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       >
         <div className="flex items-center gap-2">
           <ProjectStatusBadge status={derivedStatus} />
+          {projectReminder && <ReminderBadge reminder={projectReminder} />}
+          {!isCompleted && (
+            <ReminderDatePicker targetType="PROJECT" targetId={projectId} existingReminder={projectReminder} />
+          )}
           <ProjectActions project={{
             id: project.id,
             name: project.name,
