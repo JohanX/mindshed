@@ -6,14 +6,16 @@ import { Input } from '@/components/ui/input'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { resolveBlocker, updateBlocker, deleteBlocker } from '@/actions/blocker'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
+import { Badge } from '@/components/ui/badge'
 import { Pencil, Trash2, Check } from 'lucide-react'
 
 interface BlockerCardProps {
   id: string
   description: string
+  inventoryItem?: { name: string; type: string } | null
 }
 
-export function BlockerCard({ id, description }: BlockerCardProps) {
+export function BlockerCard({ id, description, inventoryItem }: BlockerCardProps) {
   const [isPending, startTransition] = useTransition()
   const [editing, setEditing] = useState(false)
   const [editText, setEditText] = useState(description)
@@ -78,7 +80,12 @@ export function BlockerCard({ id, description }: BlockerCardProps) {
   return (
     <>
       <div className="flex items-center gap-2 rounded-lg border border-border p-2 mb-2">
-        <p className="text-sm flex-1 min-w-0 truncate">{description}</p>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm truncate">{description}</p>
+          {inventoryItem && (
+            <Badge variant="outline" className="mt-1 text-xs">{inventoryItem.name}</Badge>
+          )}
+        </div>
         <div className="flex items-center shrink-0">
           <Button
             variant="ghost"

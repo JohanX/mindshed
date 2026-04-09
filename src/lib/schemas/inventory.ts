@@ -23,6 +23,12 @@ export const updateInventoryItemSchema = z.object({
 
 export type UpdateInventoryItemInput = z.infer<typeof updateInventoryItemSchema>
 
+export type InventoryItemOption = {
+  id: string
+  name: string
+  type: 'MATERIAL' | 'CONSUMABLE' | 'TOOL'
+}
+
 export type InventoryItemData = {
   id: string
   name: string
@@ -30,6 +36,7 @@ export type InventoryItemData = {
   quantity: number | null
   unit: string | null
   notes: string | null
+  activeBlockerCount: number
   createdAt: Date
   updatedAt: Date
 }

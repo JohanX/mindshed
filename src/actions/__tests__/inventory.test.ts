@@ -65,10 +65,13 @@ describe('getInventoryItems', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('returns all items when no filter', async () => {
-    mockFindMany.mockResolvedValue([{ id: 'i1', name: 'Item' }] as never)
+    mockFindMany.mockResolvedValue([{ id: 'i1', name: 'Item', _count: { blockers: 0 } }] as never)
     const result = await getInventoryItems()
     expect(result.success).toBe(true)
-    if (result.success) expect(result.data).toHaveLength(1)
+    if (result.success) {
+      expect(result.data).toHaveLength(1)
+      expect(result.data[0].activeBlockerCount).toBe(0)
+    }
   })
 
   it('filters by type', async () => {
@@ -77,6 +80,7 @@ describe('getInventoryItems', () => {
     expect(mockFindMany).toHaveBeenCalledWith({
       where: { type: 'TOOL' },
       orderBy: { createdAt: 'desc' },
+      include: { _count: { select: { blockers: { where: { isResolved: false } } } } },
     })
   })
 })
@@ -120,7 +124,7 @@ describe('deleteInventoryItem', () => {
 
   it('deletes item', async () => {
     mockTransaction.mockImplementation(async (fn) => {
-      const tx = { inventoryItem: { delete: vi.fn() } }
+      const tx = { inventoryItem: { delete: vi.fn() }, blocker: { updateMany: vi.fn() } }
       return fn(tx as never)
     })
     const result = await deleteInventoryItem('550e8400-e29b-41d4-a716-446655440000')

@@ -68,6 +68,11 @@ export function InventoryItemCard({ item }: InventoryItemCardProps) {
           {item.notes && (
             <p className="text-sm text-muted-foreground line-clamp-2">{item.notes}</p>
           )}
+          {item.activeBlockerCount > 0 && (
+            <Badge variant="outline" className="text-xs text-step-blocked border-step-blocked">
+              {item.activeBlockerCount} blocker{item.activeBlockerCount > 1 ? 's' : ''}
+            </Badge>
+          )}
         </CardContent>
       </Card>
 

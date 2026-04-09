@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { z } from 'zod/v4'
-import { createInventoryItemSchema, updateInventoryItemSchema, type CreateInventoryItemInput, type UpdateInventoryItemInput, type InventoryItemData } from '@/lib/schemas/inventory'
+import { createInventoryItemSchema, updateInventoryItemSchema, type CreateInventoryItemInput, type UpdateInventoryItemInput, type InventoryItemData, type InventoryItemOption } from '@/lib/schemas/inventory'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -38,9 +38,16 @@ export async function getInventoryItems(
     const items = await prisma.inventoryItem.findMany({
       where: typeFilter ? { type: typeFilter } : undefined,
       orderBy: { createdAt: 'desc' },
+      include: { _count: { select: { blockers: { where: { isResolved: false } } } } },
     })
 
-    return { success: true, data: items }
+    return {
+      success: true,
+      data: items.map(i => ({
+        ...i,
+        activeBlockerCount: i._count.blockers,
+      })),
+    }
   } catch (error) {
     console.error('getInventoryItems failed:', error)
     return { success: false, error: 'Failed to load inventory.' }
@@ -84,8 +91,7 @@ export async function deleteInventoryItem(itemId: string): Promise<ActionResult<
 
   try {
     await prisma.$transaction(async (tx) => {
-      // TODO: When Story 11.3 adds inventoryItemId to Blocker, clear those links here:
-      // await tx.blocker.updateMany({ where: { inventoryItemId: parsed.data }, data: { inventoryItemId: null } })
+      await tx.blocker.updateMany({ where: { inventoryItemId: parsed.data }, data: { inventoryItemId: null } })
       await tx.inventoryItem.delete({ where: { id: parsed.data } })
     })
 
@@ -97,5 +103,18 @@ export async function deleteInventoryItem(itemId: string): Promise<ActionResult<
       return { success: false, error: 'Item not found.' }
     }
     return { success: false, error: 'Failed to delete item.' }
+  }
+}
+
+export async function getInventoryItemOptions(): Promise<ActionResult<InventoryItemOption[]>> {
+  try {
+    const items = await prisma.inventoryItem.findMany({
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, type: true },
+    })
+    return { success: true, data: items }
+  } catch (error) {
+    console.error('getInventoryItemOptions failed:', error)
+    return { success: false, error: 'Failed to load inventory items.' }
   }
 }

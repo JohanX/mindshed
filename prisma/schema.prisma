@@ -82,14 +82,16 @@ model StepNote {
 }
 
 model Blocker {
-  id          String   @id @default(uuid())
-  stepId      String   @map("step_id")
-  description String
-  isResolved  Boolean  @default(false) @map("is_resolved")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id              String         @id @default(uuid())
+  stepId          String         @map("step_id")
+  description     String
+  isResolved      Boolean        @default(false) @map("is_resolved")
+  inventoryItemId String?        @map("inventory_item_id")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
 
-  step Step @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  step          Step           @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
 
   @@map("blocker")
 }
@@ -124,6 +126,8 @@ model InventoryItem {
   notes     String?
   createdAt DateTime          @default(now()) @map("created_at")
   updatedAt DateTime          @updatedAt @map("updated_at")
+
+  blockers Blocker[]
 
   @@map("inventory_item")
 }

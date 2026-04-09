@@ -24,10 +24,17 @@ export async function createBlocker(
       if (step.project.isCompleted) throw new Error('PROJECT_COMPLETED')
       if (step.state === 'COMPLETED') throw new Error('STEP_COMPLETED')
 
+      // Validate optional inventory item link
+      if (parsed.data.inventoryItemId) {
+        const item = await tx.inventoryItem.findUnique({ where: { id: parsed.data.inventoryItemId } })
+        if (!item) throw new Error('INVENTORY_ITEM_NOT_FOUND')
+      }
+
       const blocker = await tx.blocker.create({
         data: {
           stepId: parsed.data.stepId,
           description: parsed.data.description,
+          inventoryItemId: parsed.data.inventoryItemId ?? null,
         },
       })
 
@@ -72,6 +79,7 @@ export async function createBlocker(
       if (error.message === 'STEP_NOT_FOUND') return { success: false, error: 'Step not found.' }
       if (error.message === 'PROJECT_COMPLETED') return { success: false, error: 'Cannot add blockers to a completed project.' }
       if (error.message === 'STEP_COMPLETED') return { success: false, error: 'Cannot block a completed step.' }
+      if (error.message === 'INVENTORY_ITEM_NOT_FOUND') return { success: false, error: 'Linked inventory item not found.' }
     }
     return { success: false, error: 'Failed to add blocker.' }
   }
@@ -173,9 +181,15 @@ export async function updateBlocker(input: UpdateBlockerInput): Promise<ActionRe
 
   try {
     const result = await prisma.$transaction(async (tx) => {
+      const updateData: { description: string; inventoryItemId?: string | null } = {
+        description: parsed.data.description,
+      }
+      if (parsed.data.inventoryItemId !== undefined) {
+        updateData.inventoryItemId = parsed.data.inventoryItemId
+      }
       const blocker = await tx.blocker.update({
         where: { id: parsed.data.id },
-        data: { description: parsed.data.description },
+        data: updateData,
         select: { id: true, step: { select: { projectId: true, project: { select: { hobbyId: true } } } } },
       })
 
