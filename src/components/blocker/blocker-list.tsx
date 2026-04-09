@@ -8,7 +8,7 @@ import { hobbyColorWithAlpha } from '@/lib/hobby-color'
 import { resolveBlocker } from '@/actions/blocker'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
-import { AlertTriangle, Check } from 'lucide-react'
+import { CircleAlert, Check } from 'lucide-react'
 
 interface BlockerListProps {
   blockers: BlockerWithContext[]
@@ -41,7 +41,7 @@ function DashboardBlockerItem({ blocker }: { blocker: BlockerWithContext }) {
           className="relative overflow-hidden flex items-center gap-3 rounded-lg p-3 transition-opacity hover:opacity-90"
           style={{ backgroundColor: hobbyColorWithAlpha(hobby.color, 0.12) }}
         >
-          <AlertTriangle
+          <CircleAlert
             className="h-5 w-5 shrink-0"
             style={{ color: hobby.color }}
             aria-hidden="true"
