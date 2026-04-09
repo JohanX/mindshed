@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { StepStateBadge } from '@/components/step-state-badge'
-import { STEP_STATES, STEP_STATE_CONFIG, type StepState } from '@/lib/step-states'
+import { STEP_STATES, type StepState } from '@/lib/step-states'
 
 interface StepStatusSelectProps {
   currentState: StepState
@@ -37,7 +37,7 @@ export function StepStatusSelect({
       disabled={disabled}
     >
       <SelectTrigger
-        className="min-h-[44px] w-auto shrink-0"
+        className="min-h-[44px] w-auto shrink-0 border-0 bg-transparent p-1 shadow-none ring-0 focus-visible:ring-0 focus-visible:border-0"
         aria-label="Step status"
       >
         <SelectValue>
@@ -46,9 +46,12 @@ export function StepStatusSelect({
       </SelectTrigger>
       <SelectContent>
         {STATE_ORDER.map((state) => (
-          <SelectItem key={state} value={state} className="min-h-[44px]">
+          <SelectItem
+            key={state}
+            value={state}
+            className="min-h-[44px] rounded-none focus:bg-muted/50 focus:text-foreground"
+          >
             <StepStateBadge state={state} size="sm" />
-            <span className="ml-1">{STEP_STATE_CONFIG[state].label}</span>
             {state !== 'BLOCKED' && currentState === 'BLOCKED' && previousState && state === previousState && (
               <span className="text-xs text-muted-foreground ml-1">(restore)</span>
             )}
