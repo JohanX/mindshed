@@ -63,7 +63,7 @@ function DashboardBlockerItem({ blocker }: { blocker: BlockerWithContext }) {
           </Button>
           <span
             className="absolute bottom-1 right-2 z-10 pointer-events-none text-4xl font-bold leading-none select-none"
-            style={{ color: hobby.color, opacity: 0.08 }}
+            style={{ color: 'hsl(0, 55%, 55%)', opacity: 0.08 }}
             aria-hidden="true"
           >
             !
