@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { StepStateBadge } from '@/components/step-state-badge'
-import { STEP_STATES, type StepState } from '@/lib/step-states'
+import { STEP_STATES, STEP_STATE_CONFIG, type StepState } from '@/lib/step-states'
 
 interface StepStatusSelectProps {
   currentState: StepState
@@ -37,7 +37,7 @@ export function StepStatusSelect({
       disabled={disabled}
     >
       <SelectTrigger
-        className="min-h-[44px] w-auto shrink-0 border-0 bg-transparent p-0.5 shadow-none ring-0 focus-visible:ring-0 focus-visible:border-0 [&>svg:last-child]:hidden"
+        className="min-h-[44px] w-auto shrink-0 border-none! bg-transparent! p-0! shadow-none! ring-0! rounded-none! gap-0! focus-visible:ring-0! focus-visible:border-0! hover:bg-transparent! [&>svg:last-child]:hidden"
         aria-label="Step status"
       >
         <SelectValue>
