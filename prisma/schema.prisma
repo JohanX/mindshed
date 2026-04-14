@@ -39,8 +39,15 @@ model Project {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  hobby Hobby  @relation(fields: [hobbyId], references: [id], onDelete: Cascade)
-  steps Step[]
+  // Gallery fields
+  journeyGalleryEnabled Boolean  @default(false) @map("journey_gallery_enabled")
+  resultGalleryEnabled  Boolean  @default(false) @map("result_gallery_enabled")
+  gallerySlug           String?  @unique @map("gallery_slug")
+  resultStepId          String?  @unique @map("result_step_id")
+
+  hobby      Hobby  @relation(fields: [hobbyId], references: [id], onDelete: Cascade)
+  steps      Step[]
+  resultStep Step?  @relation("ResultStep", fields: [resultStepId], references: [id], onDelete: SetNull)
 
   @@map("project")
 }
@@ -62,10 +69,13 @@ model Step {
   createdAt     DateTime   @default(now()) @map("created_at")
   updatedAt     DateTime   @updatedAt @map("updated_at")
 
-  project  Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  notes    StepNote[]
-  blockers Blocker[]
-  images   StepImage[]
+  excludeFromGallery Boolean @default(false) @map("exclude_from_gallery")
+
+  project          Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  resultForProject Project?    @relation("ResultStep")
+  notes            StepNote[]
+  blockers         Blocker[]
+  images           StepImage[]
 
   @@map("step")
 }
