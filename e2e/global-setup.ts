@@ -19,7 +19,7 @@ export default async function globalSetup() {
 
   // 1. Push Prisma schema to the test database (idempotent — safe to run every time)
   console.log('[e2e] Pushing Prisma schema to test database...')
-  execSync('pnpm exec prisma db push', {
+  execSync('pnpm exec prisma db push --accept-data-loss', {
     cwd: process.cwd(),
     env: { ...process.env, DATABASE_URL },
     stdio: 'pipe',

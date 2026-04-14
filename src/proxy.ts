@@ -7,6 +7,11 @@ export function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Gallery routes are public — no auth required
+  if (request.nextUrl.pathname.startsWith('/gallery')) {
+    return NextResponse.next()
+  }
+
   // Allow requests with a valid auth cookie
   if (hasValidCookie(request)) {
     return NextResponse.next()
