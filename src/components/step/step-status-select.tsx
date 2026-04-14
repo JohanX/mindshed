@@ -37,7 +37,7 @@ export function StepStatusSelect({
       disabled={disabled}
     >
       <SelectTrigger
-        className="min-h-[44px] w-auto shrink-0 border-none! bg-transparent! p-0! shadow-none! ring-0! rounded-none! gap-0! focus-visible:ring-0! focus-visible:border-0! hover:bg-transparent! [&>svg:last-child]:hidden"
+        className="min-h-[44px] w-auto shrink-0 border-none! bg-transparent! px-0! py-0! shadow-none! ring-0! rounded-none! gap-0! focus-visible:ring-0! focus-visible:border-0! hover:bg-transparent! [&>svg:last-child]:hidden"
         aria-label="Step status"
       >
         <SelectValue>
