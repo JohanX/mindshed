@@ -5,6 +5,7 @@ import { Camera, ImageIcon } from 'lucide-react'
 import { ImageUploadButton } from '@/components/image/image-upload-button'
 import { ImageLinkInput } from '@/components/image/image-link-input'
 import { ImageLightbox } from '@/components/image/image-lightbox'
+import { ImageDeleteButton } from '@/components/image/image-delete-button'
 import { cn } from '@/lib/utils'
 
 export interface GalleryImage {
@@ -67,30 +68,37 @@ export function ImageGallery({ images, stepId }: ImageGalleryProps) {
         data-testid="image-gallery"
       >
         {images.map((image, index) => (
-          <button
-            key={image.id}
-            type="button"
-            className={cn(
-              'relative aspect-square overflow-hidden rounded-xl',
-              'cursor-pointer ring-ring transition-shadow',
-              'hover:ring-2 focus-visible:outline-none focus-visible:ring-2',
-            )}
-            onClick={() => openLightbox(index)}
-            aria-label={`View ${image.originalFilename ?? `image ${index + 1}`}`}
-          >
-            {brokenImages.has(image.id) ? (
-              <BrokenImagePlaceholder />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={image.displayUrl}
-                alt={image.originalFilename ?? ''}
-                loading="lazy"
-                className="h-full w-full object-cover"
-                onError={() => handleImageError(image.id)}
+          <div key={image.id} className="group relative aspect-square">
+            <button
+              type="button"
+              className={cn(
+                'relative h-full w-full overflow-hidden rounded-xl',
+                'cursor-pointer ring-ring transition-shadow',
+                'hover:ring-2 focus-visible:outline-none focus-visible:ring-2',
+              )}
+              onClick={() => openLightbox(index)}
+              aria-label={`View ${image.originalFilename ?? `image ${index + 1}`}`}
+            >
+              {brokenImages.has(image.id) ? (
+                <BrokenImagePlaceholder />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={image.displayUrl}
+                  alt={image.originalFilename ?? ''}
+                  loading="lazy"
+                  className="h-full w-full object-cover"
+                  onError={() => handleImageError(image.id)}
+                />
+              )}
+            </button>
+            <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <ImageDeleteButton
+                imageId={image.id}
+                className="h-8 w-8 rounded-full bg-black/60 hover:bg-destructive text-white shadow-sm"
               />
-            )}
-          </button>
+            </div>
+          </div>
         ))}
       </div>
 

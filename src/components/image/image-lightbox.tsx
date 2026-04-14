@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, X, ImageIcon } from 'lucide-react'
 import { VisuallyHidden } from 'radix-ui'
+import { ImageDeleteButton } from '@/components/image/image-delete-button'
 import type { GalleryImage } from '@/components/image/image-gallery'
 
 interface ImageLightboxProps {
@@ -60,17 +61,23 @@ export function ImageLightbox({ images, initialIndex, onClose }: ImageLightboxPr
           </DialogTitle>
         </VisuallyHidden.Root>
 
-        {/* Close button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute right-3 top-3 z-10 h-11 w-11 text-white hover:bg-white/20"
-          onClick={onClose}
-          aria-label="Close lightbox"
-          data-testid="lightbox-close"
-        >
-          <X className="h-6 w-6" />
-        </Button>
+        {/* Top-right controls: delete + close */}
+        <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
+          <ImageDeleteButton
+            imageId={current.id}
+            className="h-11 w-11 rounded-full bg-white/10 hover:bg-destructive text-white"
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-11 w-11 text-white hover:bg-white/20"
+            onClick={onClose}
+            aria-label="Close lightbox"
+            data-testid="lightbox-close"
+          >
+            <X className="h-6 w-6" />
+          </Button>
+        </div>
 
         {/* Image counter */}
         <div
