@@ -13,6 +13,7 @@ import { getRemindersForTarget } from '@/actions/reminder'
 import { ReminderBadge } from '@/components/reminder/reminder-badge'
 import { ReminderDatePicker } from '@/components/reminder/reminder-date-picker'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
+import { GallerySection } from '@/components/gallery/gallery-section'
 
 interface ProjectDetailPageProps {
   params: Promise<{ hobbyId: string; projectId: string }>
@@ -76,6 +77,15 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     blockers: s.blockers.map(b => ({ id: b.id, description: b.description })),
   }))
 
+  // Gallery data
+  const gallerySteps = project.steps.map(s => ({
+    id: s.id,
+    name: s.name,
+    state: s.state as string,
+    hasImages: s.images.length > 0,
+    excludeFromGallery: s.excludeFromGallery,
+  }))
+
   const stepKey = stepCards.map(s => `${s.id}:${s.state}:${s.notes.length}:${s.images.length}:${s.blockers.length}`).join(',')
 
   return (
@@ -119,6 +129,18 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
 
       {!isCompleted && (
         <AddStepForm projectId={project.id} />
+      )}
+
+      {!project.isArchived && (
+        <GallerySection
+          projectId={project.id}
+          projectName={project.name}
+          journeyEnabled={project.journeyGalleryEnabled}
+          resultEnabled={project.resultGalleryEnabled}
+          gallerySlug={project.gallerySlug}
+          resultStepId={project.resultStepId}
+          steps={gallerySteps}
+        />
       )}
 
       {stepCards.length === 0 && isCompleted && (
