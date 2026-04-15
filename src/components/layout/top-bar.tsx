@@ -1,41 +1,53 @@
 'use client'
 
+import { useMemo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, Lightbulb, Package, Settings } from 'lucide-react'
+import { BrainIcon } from '@/components/icons/brain-icon'
 import { cn } from '@/lib/utils'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
 import { getHobbyContext } from '@/lib/hobby-utils'
 import { getContrastTextColor } from '@/lib/hobby-color'
 import { HobbyFormDialog } from '@/components/hobby/hobby-form'
+import { ThemeToggle } from '@/components/theme-toggle'
 import type { HobbyWithCounts } from '@/lib/schemas/hobby'
 
 interface TopBarProps {
   hobbies: HobbyWithCounts[]
 }
 
+const TAGLINES = [
+  'keep track of the chaos',
+  'organise passion',
+  'chaos organised',
+  'where was I?',
+]
+
 export function TopBar({ hobbies }: TopBarProps) {
   const pathname = usePathname()
   const activeHobby = getHobbyContext(pathname, hobbies)
-  const inHobby = !!activeHobby
-  const textColor = activeHobby ? getContrastTextColor(activeHobby.color) : undefined
+  const bgColor = activeHobby ? activeHobby.color : 'var(--navbar)'
+  const textColor = activeHobby ? getContrastTextColor(activeHobby.color) : 'var(--navbar-foreground)'
+  const tagline = useMemo(() => TAGLINES[Math.floor(Math.random() * TAGLINES.length)], [])
 
   return (
     <header
-      className={cn(
-        'hidden lg:flex fixed top-0 left-0 right-0 z-50 h-16 items-center border-b',
-        inHobby ? 'border-transparent' : 'border-border bg-card',
-      )}
-      style={inHobby ? { backgroundColor: activeHobby!.color, color: textColor } : undefined}
+      className="hidden lg:flex fixed top-0 left-0 right-0 z-50 h-16 items-center border-b border-transparent"
+      style={{ backgroundColor: bgColor, color: textColor }}
     >
       <div className="relative flex items-center justify-between w-full px-6">
         {/* Left: Logo */}
         <Link
           href="/"
-          className={cn('text-lg font-semibold shrink-0', inHobby ? '' : 'text-foreground')}
-          style={inHobby ? { color: textColor } : undefined}
+          className="flex items-center gap-2 shrink-0"
+          style={{ color: textColor }}
         >
-          MindShed
+          <BrainIcon className="h-7 w-7 shrink-0" />
+          <div className="flex flex-col leading-none">
+            <span className="text-lg font-bold tracking-tight">MindShed</span>
+            <span className="text-[10px] font-normal opacity-70 tracking-wide">{tagline}</span>
+          </div>
         </Link>
 
         {/* Center: Dashboard + Hobby links */}
@@ -43,14 +55,10 @@ export function TopBar({ hobbies }: TopBarProps) {
           <Link
             href="/"
             className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px] shrink-0',
-              inHobby
-                ? 'opacity-80 hover:opacity-100'
-                : pathname === '/'
-                  ? 'bg-accent text-foreground'
-                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-opacity min-h-[44px] shrink-0',
+              pathname === '/' && !activeHobby ? 'bg-white/20 opacity-100' : 'opacity-80 hover:opacity-100',
             )}
-            style={inHobby ? { color: textColor } : undefined}
+            style={{ color: textColor }}
           >
             <LayoutDashboard className="h-4 w-4" />
             <span>Dashboard</span>
@@ -62,7 +70,9 @@ export function TopBar({ hobbies }: TopBarProps) {
             const compact = hobbies.length >= 7
             const iconElement = renderHobbyIcon(hobby.icon, {
               className: 'h-4 w-4',
-              style: inHobby ? { color: textColor } : { color: hobby.color },
+              style: activeHobby
+                ? { color: textColor }
+                : { color: 'white', opacity: isActive ? 1 : 0.7 },
             })
 
             return (
@@ -71,25 +81,19 @@ export function TopBar({ hobbies }: TopBarProps) {
                 href={`/hobbies/${hobby.id}`}
                 title={hobby.name}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-lg transition-colors min-h-[44px] shrink-0',
+                  'flex items-center gap-1.5 rounded-lg transition-opacity min-h-[44px] shrink-0',
                   compact ? 'px-2 py-2 min-w-[44px] justify-center' : 'px-3 py-2 text-sm font-medium',
-                  inHobby
-                    ? isActive
-                      ? 'bg-white/20 font-semibold'
-                      : 'opacity-70 hover:opacity-100'
-                    : isActive
-                      ? 'bg-accent text-foreground ring-1 ring-foreground/10'
-                      : 'text-muted-foreground hover:bg-accent/50',
+                  isActive ? 'bg-white/20 font-semibold opacity-100' : 'opacity-70 hover:opacity-100',
                 )}
-                style={inHobby ? { color: textColor } : undefined}
+                style={{ color: textColor }}
               >
                 {iconElement || (
                   <span
                     className="inline-block w-3 h-3 rounded-full shrink-0"
-                    style={inHobby
-                      ? { backgroundColor: textColor, opacity: isActive ? 1 : 0.6 }
-                      : { backgroundColor: hobby.color }
-                    }
+                    style={{
+                      backgroundColor: activeHobby ? textColor : hobby.color,
+                      opacity: isActive ? 1 : 0.6,
+                    }}
                   />
                 )}
                 {!compact && <span className="truncate max-w-[120px]">{hobby.name}</span>}
@@ -106,14 +110,10 @@ export function TopBar({ hobbies }: TopBarProps) {
           <Link
             href="/inventory"
             className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px]',
-              inHobby
-                ? 'opacity-80 hover:opacity-100'
-                : pathname.startsWith('/inventory')
-                  ? 'bg-accent text-foreground'
-                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-opacity min-h-[44px]',
+              pathname.startsWith('/inventory') && !activeHobby ? 'bg-white/20 opacity-100' : 'opacity-80 hover:opacity-100',
             )}
-            style={inHobby ? { color: textColor } : undefined}
+            style={{ color: textColor }}
           >
             <Package className="h-4 w-4" />
             <span>Inventory</span>
@@ -121,29 +121,24 @@ export function TopBar({ hobbies }: TopBarProps) {
           <Link
             href="/ideas"
             className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px]',
-              inHobby
-                ? 'opacity-80 hover:opacity-100'
-                : pathname.startsWith('/ideas')
-                  ? 'bg-accent text-foreground'
-                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-opacity min-h-[44px]',
+              pathname.startsWith('/ideas') && !activeHobby ? 'bg-white/20 opacity-100' : 'opacity-80 hover:opacity-100',
             )}
-            style={inHobby ? { color: textColor } : undefined}
+            style={{ color: textColor }}
           >
             <Lightbulb className="h-4 w-4" />
             <span>Ideas</span>
           </Link>
+          <div className="opacity-80 hover:opacity-100 transition-opacity" style={{ color: textColor }}>
+            <ThemeToggle />
+          </div>
           <Link
             href="/settings"
             className={cn(
-              'flex items-center px-2 py-2 rounded-lg transition-colors min-h-[44px] min-w-[44px] justify-center',
-              inHobby
-                ? 'opacity-80 hover:opacity-100'
-                : pathname.startsWith('/settings')
-                  ? 'bg-accent text-foreground'
-                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+              'flex items-center px-2 py-2 rounded-lg transition-opacity min-h-[44px] min-w-[44px] justify-center',
+              pathname.startsWith('/settings') && !activeHobby ? 'bg-white/20 opacity-100' : 'opacity-80 hover:opacity-100',
             )}
-            style={inHobby ? { color: textColor } : undefined}
+            style={{ color: textColor }}
             title="Settings"
           >
             <Settings className="h-4 w-4" />

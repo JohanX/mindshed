@@ -40,8 +40,8 @@ export default async function GalleryIndexPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {projects.map((project) => {
           const watermarkIcon = renderHobbyIcon(project.hobby.icon, {
-            className: 'h-10 w-10',
-            style: { color: project.hobby.color, opacity: 0.08 },
+            className: 'h-10 w-10 watermark-icon',
+            style: { color: project.hobby.color },
           })
           return (
             <Card

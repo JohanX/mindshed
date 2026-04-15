@@ -9,6 +9,7 @@ import { DashboardMaintenanceCard } from '@/components/dashboard/dashboard-maint
 import { DashboardGalleriesSection } from '@/components/dashboard/dashboard-galleries-section'
 import { EmptyStateCard } from '@/components/empty-state-card'
 import { HobbyFormDialog } from '@/components/hobby/hobby-form'
+import { Bell, Wrench } from 'lucide-react'
 
 export default async function DashboardPage() {
   const [result, remindersResult, maintenanceResult] = await Promise.all([
@@ -20,7 +21,7 @@ export default async function DashboardPage() {
   if (!result.success) {
     return (
       <main className="max-w-5xl mx-auto p-4 space-y-8">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-center">
           <p className="text-sm text-destructive">
             Something went wrong loading the dashboard. Please try again later.
@@ -38,7 +39,7 @@ export default async function DashboardPage() {
   if (totalHobbies === 0) {
     return (
       <main className="max-w-5xl mx-auto p-4 space-y-8">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <EmptyStateCard message="Welcome to MindShed! Add your first hobby to get started.">
           <HobbyFormDialog />
         </EmptyStateCard>
@@ -48,13 +49,16 @@ export default async function DashboardPage() {
 
   return (
     <main className="max-w-5xl mx-auto p-4 space-y-8">
-      <h1 className="text-2xl font-semibold">Dashboard</h1>
+      <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
       <DashboardContinueSection projects={recentProjects} />
       {reminders.length > 0 && (
         <>
           <hr className="border-border" />
           <section className="space-y-3">
-            <h2 className="text-xl font-semibold">Reminders</h2>
+            <h2 className="flex items-center gap-2 text-lg font-semibold border-b border-primary/20 pb-2">
+              <Bell className="h-5 w-5 text-primary" />
+              Reminders
+            </h2>
             <div className="space-y-2">
               {reminders.map((r) => (
                 <DashboardReminderCard key={r.id} reminder={r} />
@@ -71,7 +75,10 @@ export default async function DashboardPage() {
         <>
           <hr className="border-border" />
           <section className="space-y-3">
-            <h2 className="text-xl font-semibold">Maintenance Due</h2>
+            <h2 className="flex items-center gap-2 text-lg font-semibold border-b border-primary/20 pb-2">
+              <Wrench className="h-5 w-5 text-primary" />
+              Maintenance Due
+            </h2>
             <div className="space-y-2">
               {maintenanceDue.map((item) => (
                 <DashboardMaintenanceCard key={item.id} item={item} />

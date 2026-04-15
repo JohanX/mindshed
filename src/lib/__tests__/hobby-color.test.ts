@@ -31,18 +31,29 @@ describe('generateHobbyPalette', () => {
 
   it('works with all curated hobby colors', () => {
     const curatedColors = [
-      'hsl(15, 55%, 55%)',   // Terracotta
+      // Rich band
       'hsl(25, 45%, 40%)',   // Walnut
-      'hsl(215, 40%, 50%)',  // Denim
-      'hsl(140, 25%, 45%)',  // Sage
-      'hsl(25, 70%, 55%)',   // Copper
-      'hsl(210, 15%, 50%)',  // Slate
-      'hsl(280, 30%, 50%)',  // Plum
-      'hsl(175, 35%, 45%)',  // Teal
-      'hsl(45, 60%, 50%)',   // Ochre
+      'hsl(150, 40%, 35%)',  // Forest
+      'hsl(225, 45%, 38%)',  // Navy
       'hsl(100, 25%, 40%)',  // Moss
-      'hsl(5, 50%, 60%)',    // Coral
       'hsl(220, 25%, 45%)',  // Storm
+      'hsl(140, 25%, 45%)',  // Sage
+      'hsl(175, 35%, 45%)',  // Teal
+      // Vibrant band
+      'hsl(15, 55%, 55%)',   // Terracotta
+      'hsl(25, 70%, 55%)',   // Copper
+      'hsl(215, 40%, 50%)',  // Denim
+      'hsl(280, 30%, 50%)',  // Plum
+      'hsl(45, 60%, 50%)',   // Ochre
+      'hsl(210, 15%, 50%)',  // Slate
+      // Fresh band
+      'hsl(5, 50%, 60%)',    // Coral
+      'hsl(340, 45%, 60%)',  // Rose
+      'hsl(200, 55%, 65%)',  // Sky
+      'hsl(265, 40%, 65%)',  // Lavender
+      'hsl(160, 45%, 60%)',  // Mint
+      'hsl(20, 65%, 68%)',   // Peach
+      'hsl(48, 70%, 62%)',   // Sunshine
     ]
 
     for (const color of curatedColors) {
@@ -130,6 +141,17 @@ describe('getContrastTextColor', () => {
 
   it('returns black for light hobby colors (lightness > 55%)', () => {
     expect(getContrastTextColor('hsl(5, 50%, 60%)')).toBe('black')    // Coral
+    expect(getContrastTextColor('hsl(340, 45%, 60%)')).toBe('black')  // Rose
+    expect(getContrastTextColor('hsl(200, 55%, 65%)')).toBe('black')  // Sky
+    expect(getContrastTextColor('hsl(265, 40%, 65%)')).toBe('black')  // Lavender
+    expect(getContrastTextColor('hsl(160, 45%, 60%)')).toBe('black')  // Mint
+    expect(getContrastTextColor('hsl(20, 65%, 68%)')).toBe('black')   // Peach
+    expect(getContrastTextColor('hsl(48, 70%, 62%)')).toBe('black')   // Sunshine
+  })
+
+  it('returns white for new dark hobby colors', () => {
+    expect(getContrastTextColor('hsl(150, 40%, 35%)')).toBe('white')  // Forest
+    expect(getContrastTextColor('hsl(225, 45%, 38%)')).toBe('white')  // Navy
   })
 
   it('returns white for hex black', () => {
@@ -142,12 +164,15 @@ describe('getContrastTextColor', () => {
 })
 
 describe('generateHobbyStyleVars', () => {
-  it('returns CSS custom property keys', () => {
+  it('returns CSS custom property keys for light and dark palettes', () => {
     const vars = generateHobbyStyleVars('hsl(215, 40%, 50%)')
     expect(vars).toHaveProperty('--hobby-primary')
     expect(vars).toHaveProperty('--hobby-accent')
     expect(vars).toHaveProperty('--hobby-card')
     expect(vars).toHaveProperty('--hobby-border')
+    expect(vars).toHaveProperty('--hobby-accent-dark')
+    expect(vars).toHaveProperty('--hobby-card-dark')
+    expect(vars).toHaveProperty('--hobby-border-dark')
   })
 
   it('maps palette values to CSS vars', () => {
@@ -158,8 +183,15 @@ describe('generateHobbyStyleVars', () => {
     expect(vars['--hobby-border']).toMatch(/^hsl\(215,/)
   })
 
-  it('returns exactly 4 properties', () => {
+  it('generates dark palette variants with lower lightness', () => {
+    const vars = generateHobbyStyleVars('hsl(215, 40%, 50%)')
+    expect(vars['--hobby-accent-dark']).toMatch(/^hsl\(215, \d+%, 22%\)$/)
+    expect(vars['--hobby-card-dark']).toMatch(/^hsl\(215, \d+%, 15%\)$/)
+    expect(vars['--hobby-border-dark']).toMatch(/^hsl\(215, \d+%, 28%\)$/)
+  })
+
+  it('returns exactly 7 properties (light + dark)', () => {
     const vars = generateHobbyStyleVars('hsl(140, 25%, 45%)')
-    expect(Object.keys(vars)).toHaveLength(4)
+    expect(Object.keys(vars)).toHaveLength(7)
   })
 })

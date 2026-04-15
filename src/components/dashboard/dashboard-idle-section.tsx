@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Clock } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
 import { hobbyColorWithAlpha } from '@/lib/hobby-color'
@@ -14,7 +15,10 @@ export function DashboardIdleSection({ projects }: DashboardIdleSectionProps) {
   if (projects.length === 0) {
     return (
       <section className="space-y-3">
-        <h2 className="text-xl font-semibold">Idle Projects</h2>
+        <h2 className="flex items-center gap-2 text-lg font-semibold border-b border-primary/20 pb-2">
+          <Clock className="h-5 w-5 text-primary" />
+          Idle Projects
+        </h2>
         <p className="text-muted-foreground py-4">
           No idle projects — everything is moving along!
         </p>
@@ -28,8 +32,8 @@ export function DashboardIdleSection({ projects }: DashboardIdleSectionProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {projects.map((p) => {
           const watermarkIcon = renderHobbyIcon(p.hobby.icon, {
-            className: 'h-10 w-10',
-            style: { color: p.hobby.color, opacity: 0.08 },
+            className: 'h-10 w-10 watermark-icon',
+            style: { color: p.hobby.color },
           })
           return (
             <Link

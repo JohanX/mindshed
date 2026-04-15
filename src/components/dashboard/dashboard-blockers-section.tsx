@@ -1,5 +1,6 @@
 'use client'
 
+import { OctagonAlert } from 'lucide-react'
 import type { ActiveBlocker } from '@/lib/schemas/dashboard'
 import { BlockerList } from '@/components/blocker/blocker-list'
 
@@ -27,7 +28,10 @@ export function DashboardBlockersSection({ blockers }: DashboardBlockersSectionP
 
   return (
     <section className="space-y-3">
-      <h2 className="text-xl font-semibold">Active Blockers</h2>
+      <h2 className="flex items-center gap-2 text-lg font-semibold border-b border-primary/20 pb-2">
+        <OctagonAlert className="h-5 w-5 text-primary" />
+        Active Blockers
+      </h2>
       <BlockerList blockers={mapped} />
     </section>
   )

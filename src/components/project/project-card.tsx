@@ -24,8 +24,8 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project, hobby, showHobbyBadge }: ProjectCardProps) {
   const watermarkIcon = hobby ? renderHobbyIcon(hobby.icon, {
-    className: 'h-10 w-10',
-    style: { color: hobby.color, opacity: 0.08 },
+    className: 'h-10 w-10 watermark-icon',
+    style: { color: hobby.color },
   }) : null
 
   return (

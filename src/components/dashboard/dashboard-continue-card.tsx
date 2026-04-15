@@ -24,8 +24,8 @@ function resolvePhotoUrl(storageKey: string | null | undefined): string | null {
 
 function HobbyWatermark({ hobby }: { hobby: { icon: string | null; color: string } }) {
   const icon = renderHobbyIcon(hobby.icon, {
-    className: 'h-10 w-10',
-    style: { color: hobby.color, opacity: 0.08 },
+    className: 'h-10 w-10 watermark-icon',
+    style: { color: hobby.color },
   })
   if (!icon) return null
   return (

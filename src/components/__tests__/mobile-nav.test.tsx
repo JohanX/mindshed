@@ -11,18 +11,19 @@ const mockHobbies = [
 ]
 
 describe('MobileNav — default state', () => {
-  it('renders 4 navigation items', () => {
+  it('renders 5 navigation items', () => {
     render(<MobileNav hobbies={[]} />)
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
     expect(screen.getByText('Hobbies')).toBeInTheDocument()
     expect(screen.getByText('Ideas')).toBeInTheDocument()
+    expect(screen.getByText('Inventory')).toBeInTheDocument()
     expect(screen.getByText('Settings')).toBeInTheDocument()
   })
 
   it('highlights active item for dashboard route', () => {
     render(<MobileNav hobbies={[]} />)
     const link = screen.getByText('Dashboard').closest('a')
-    expect(link?.className).toContain('text-primary')
+    expect(link?.className).toContain('opacity-100')
   })
 })
 

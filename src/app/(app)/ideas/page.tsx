@@ -33,8 +33,8 @@ export default async function IdeasPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {ideas.map((idea) => {
             const watermarkIcon = renderHobbyIcon(idea.hobby.icon, {
-              className: 'h-10 w-10',
-              style: { color: idea.hobby.color, opacity: 0.08 },
+              className: 'h-10 w-10 watermark-icon',
+              style: { color: idea.hobby.color },
             })
             return (
               <Card

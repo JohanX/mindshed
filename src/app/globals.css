@@ -2,7 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* No dark mode in MVP — .dark class is never applied */
+/* Dark mode via next-themes class strategy */
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
@@ -127,10 +128,68 @@
   --hobby-accent: var(--accent);
   --hobby-card: var(--card);
   --hobby-border: var(--border);
+  /* Dark hobby palette fallbacks */
+  --hobby-accent-dark: var(--accent);
+  --hobby-card-dark: var(--card);
+  --hobby-border-dark: var(--border);
+
+  /* Navbar — primary amber in light, elevated dark surface in dark */
+  --navbar: var(--primary);
+  --navbar-foreground: oklch(1 0 0);
 
   /* Font stacks */
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}
+
+/* Dark Workshop Theme
+ *
+ * The workshop at night — same warmth, ambient lighting.
+ * Deep warm charcoal, not pure black. Warm off-white text, not stark white.
+ */
+.dark {
+  --background: oklch(0.18 0.01 60);
+  --foreground: oklch(0.92 0.005 80);
+  --card: oklch(0.22 0.01 60);
+  --card-foreground: oklch(0.92 0.005 80);
+  --popover: oklch(0.22 0.01 60);
+  --popover-foreground: oklch(0.92 0.005 80);
+  --primary: oklch(0.75 0.15 70);
+  --primary-foreground: oklch(0.15 0.01 60);
+  --secondary: oklch(0.60 0.08 155);
+  --secondary-foreground: oklch(0.15 0.01 60);
+  --muted: oklch(0.25 0.005 60);
+  --muted-foreground: oklch(0.60 0.01 60);
+  --accent: oklch(0.25 0.03 70);
+  --accent-foreground: oklch(0.92 0.005 80);
+  --destructive: oklch(0.55 0.16 20);
+  --destructive-foreground: oklch(0.92 0.005 80);
+  --border: oklch(0.30 0.01 60);
+  --input: oklch(0.30 0.01 60);
+  --ring: oklch(0.75 0.15 70);
+
+  --sidebar: oklch(0.18 0.01 60);
+  --sidebar-foreground: oklch(0.92 0.005 80);
+  --sidebar-primary: oklch(0.75 0.15 70);
+  --sidebar-primary-foreground: oklch(0.15 0.01 60);
+  --sidebar-accent: oklch(0.25 0.03 70);
+  --sidebar-accent-foreground: oklch(0.92 0.005 80);
+  --sidebar-border: oklch(0.30 0.01 60);
+  --sidebar-ring: oklch(0.75 0.15 70);
+
+  --step-not-started: oklch(0.50 0.01 60);
+  --step-in-progress: oklch(0.75 0.15 70);
+  --step-completed: oklch(0.60 0.08 155);
+  --step-blocked: oklch(0.56 0.03 260);
+
+  /* Navbar: warm elevated surface in dark, with primary accent tint */
+  --navbar: oklch(0.24 0.02 70);
+  --navbar-foreground: oklch(0.92 0.005 80);
+
+  /* In dark mode, hobby context vars switch to their dark palette */
+  --hobby-accent: var(--hobby-accent-dark);
+  --hobby-card: var(--hobby-card-dark);
+  --hobby-border: var(--hobby-border-dark);
 }
 
 @layer base {
@@ -140,4 +199,12 @@
   body {
     @apply bg-background text-foreground font-sans;
   }
+}
+
+/* Watermark icon opacity — higher in dark mode for visibility */
+.watermark-icon {
+  opacity: 0.08;
+}
+.dark .watermark-icon {
+  opacity: 0.18;
 }

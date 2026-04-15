@@ -62,8 +62,8 @@ function DashboardBlockerItem({ blocker }: { blocker: BlockerWithContext }) {
             <Check className="h-4 w-4" />
           </Button>
           <span
-            className="absolute bottom-1 right-2 z-10 pointer-events-none text-4xl font-bold leading-none select-none"
-            style={{ color: 'hsl(0, 55%, 55%)', opacity: 0.08 }}
+            className="absolute bottom-1 right-2 z-10 pointer-events-none text-4xl font-bold leading-none select-none watermark-icon"
+            style={{ color: 'hsl(0, 55%, 55%)' }}
             aria-hidden="true"
           >
             !

@@ -65,9 +65,12 @@ export function MobileNav({ hobbies }: MobileNavProps) {
     )
   }
 
-  // Default navigation
+  // Default navigation — uses --navbar CSS variable (amber in light, dark surface in dark)
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card lg:hidden">
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 border-t-0 lg:hidden"
+      style={{ backgroundColor: 'var(--navbar)', color: 'var(--navbar-foreground)' }}
+    >
       <div className="flex items-center justify-around h-16">
         {DEFAULT_NAV_ITEMS.map((item) => {
           const isActive = item.href === '/'
@@ -78,11 +81,12 @@ export function MobileNav({ hobbies }: MobileNavProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex flex-col items-center justify-center gap-1 min-h-[44px] min-w-[44px] px-3 py-2 text-xs font-medium transition-colors',
-                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                'flex flex-col items-center justify-center gap-1 min-h-[44px] min-w-[44px] px-3 py-2 text-xs font-medium transition-opacity',
+                isActive ? 'opacity-100' : 'opacity-70 hover:opacity-100'
               )}
+              style={{ color: 'var(--navbar-foreground)' }}
             >
-              <item.icon className={cn('h-5 w-5', isActive && 'text-primary')} />
+              <item.icon className="h-5 w-5" />
               <span>{item.label}</span>
             </Link>
           )

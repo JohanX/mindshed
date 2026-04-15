@@ -1,3 +1,4 @@
+import { Play } from 'lucide-react'
 import type { RecentProject } from '@/lib/schemas/dashboard'
 import { DashboardContinueCard } from './dashboard-continue-card'
 
@@ -9,7 +10,10 @@ export function DashboardContinueSection({ projects }: DashboardContinueSectionP
   if (projects.length === 0) {
     return (
       <section className="space-y-3">
-        <h2 className="text-xl font-semibold">Continue</h2>
+        <h2 className="flex items-center gap-2 text-lg font-semibold border-b border-primary/20 pb-2">
+          <Play className="h-5 w-5 text-primary" />
+          Continue
+        </h2>
         <p className="text-muted-foreground py-4">
           No active projects yet. Create a hobby and start your first project!
         </p>
@@ -22,7 +26,10 @@ export function DashboardContinueSection({ projects }: DashboardContinueSectionP
 
   return (
     <section className="space-y-3">
-      <h2 className="text-xl font-semibold">Continue</h2>
+      <h2 className="flex items-center gap-2 text-lg font-semibold border-b border-primary/20 pb-2">
+        <Play className="h-5 w-5 text-primary" />
+        Continue
+      </h2>
       <DashboardContinueCard project={primary} variant="primary" />
       {secondary.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
 import { hobbyColorWithAlpha } from '@/lib/hobby-color'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
-import { Copy, Check } from 'lucide-react'
+import { Copy, Check, Globe } from 'lucide-react'
 import type { PublicGallery } from '@/lib/schemas/dashboard'
 
 interface DashboardGalleriesSectionProps {
@@ -45,8 +45,11 @@ export function DashboardGalleriesSection({ galleries }: DashboardGalleriesSecti
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Public Galleries</h2>
+      <div className="flex items-center justify-between border-b border-primary/20 pb-2">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          <Globe className="h-5 w-5 text-primary" />
+          Public Galleries
+        </h2>
         <Link href="/gallery" className="text-sm text-muted-foreground hover:text-foreground">
           View all
         </Link>
@@ -54,8 +57,8 @@ export function DashboardGalleriesSection({ galleries }: DashboardGalleriesSecti
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {galleries.map((gallery) => {
           const watermarkIcon = renderHobbyIcon(gallery.hobby.icon, {
-            className: 'h-10 w-10',
-            style: { color: gallery.hobby.color, opacity: 0.08 },
+            className: 'h-10 w-10 watermark-icon',
+            style: { color: gallery.hobby.color },
           })
           const thumbUrls = gallery.thumbnails
 

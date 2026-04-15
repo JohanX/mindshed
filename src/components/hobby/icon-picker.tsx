@@ -10,7 +10,7 @@ interface IconPickerProps {
 
 export function IconPicker({ value, onChange }: IconPickerProps) {
   return (
-    <div className="grid grid-cols-6 gap-2">
+    <div className="grid grid-cols-7 gap-2">
       <button
         type="button"
         title="No icon"

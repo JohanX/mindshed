@@ -67,6 +67,17 @@ export function generateHobbyPalette(color: string): HobbyPalette {
   }
 }
 
+function generateHobbyPaletteDark(color: string): HobbyPalette {
+  const { h, s } = parseColor(color)
+
+  return {
+    primary: color,
+    accent: hslString(h, Math.min(s, 0.20), 0.22),
+    card: hslString(h, Math.min(s, 0.15), 0.15),
+    border: hslString(h, Math.min(s, 0.15), 0.28),
+  }
+}
+
 /** Convert a hobby color to a version with alpha transparency (for subtle tints). */
 export function hobbyColorWithAlpha(color: string, alpha: number): string {
   const hslMatch = color.match(/hsl\(\s*(\d+),\s*(\d+)%,\s*(\d+)%\s*\)/)
@@ -87,12 +98,20 @@ export function getContrastTextColor(color: string): 'white' | 'black' {
   return l <= 0.55 ? 'white' : 'black'
 }
 
+/**
+ * Generate CSS custom property records for both light and dark hobby palettes.
+ * The hobby layout sets both sets of vars; .dark selector activates the right ones.
+ */
 export function generateHobbyStyleVars(color: string): Record<string, string> {
-  const palette = generateHobbyPalette(color)
+  const light = generateHobbyPalette(color)
+  const dark = generateHobbyPaletteDark(color)
   return {
-    '--hobby-primary': palette.primary,
-    '--hobby-accent': palette.accent,
-    '--hobby-card': palette.card,
-    '--hobby-border': palette.border,
+    '--hobby-primary': light.primary,
+    '--hobby-accent': light.accent,
+    '--hobby-card': light.card,
+    '--hobby-border': light.border,
+    '--hobby-accent-dark': dark.accent,
+    '--hobby-card-dark': dark.card,
+    '--hobby-border-dark': dark.border,
   }
 }
