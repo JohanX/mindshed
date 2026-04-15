@@ -39,7 +39,7 @@ describe('enableJourneyGallery', () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         project: {
-          findUnique: vi.fn().mockResolvedValue({ id: 'p1', name: 'Walnut Table', gallerySlug: null, hobbyId: 'h1' }),
+          findUnique: vi.fn().mockResolvedValue({ id: 'p1', name: 'Walnut Table', gallerySlug: null, hobbyId: 'h1', isArchived: false }),
           findMany: vi.fn().mockResolvedValue([]),
           update: vi.fn().mockResolvedValue({ id: 'p1', gallerySlug: 'walnut-table', hobbyId: 'h1' }),
         },
@@ -56,7 +56,7 @@ describe('enableJourneyGallery', () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         project: {
-          findUnique: vi.fn().mockResolvedValue({ id: 'p1', name: 'Walnut Table', gallerySlug: 'walnut-table', hobbyId: 'h1' }),
+          findUnique: vi.fn().mockResolvedValue({ id: 'p1', name: 'Walnut Table', gallerySlug: 'walnut-table', hobbyId: 'h1', isArchived: false }),
           update: vi.fn().mockResolvedValue({ id: 'p1', gallerySlug: 'walnut-table', hobbyId: 'h1' }),
         },
       }
@@ -106,7 +106,7 @@ describe('enableResultGallery', () => {
       const tx = {
         project: {
           findUnique: vi.fn().mockResolvedValue({
-            id: 'p1', name: 'Walnut Table', gallerySlug: 'walnut-table', hobbyId: 'h1',
+            id: 'p1', name: 'Walnut Table', gallerySlug: 'walnut-table', hobbyId: 'h1', isArchived: false,
             resultStepId: null,
             steps: [{ id: 's3' }],
           }),
@@ -121,18 +121,21 @@ describe('enableResultGallery', () => {
     expect(result.success).toBe(true)
   })
 
-  it('preserves existing resultStepId', async () => {
+  it('preserves existing resultStepId when step is still COMPLETED', async () => {
     const mockProjectUpdateTx = vi.fn().mockResolvedValue({ id: 'p1', gallerySlug: 'walnut-table', hobbyId: 'h1' })
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         project: {
           findUnique: vi.fn().mockResolvedValue({
             id: 'p1', name: 'Walnut Table', gallerySlug: 'walnut-table', hobbyId: 'h1',
-            resultStepId: 's2',
+            resultStepId: 's2', isArchived: false,
             steps: [{ id: 's3' }],
           }),
           findMany: vi.fn().mockResolvedValue([]),
           update: mockProjectUpdateTx,
+        },
+        step: {
+          findUnique: vi.fn().mockResolvedValue({ state: 'COMPLETED' }),
         },
       }
       return fn(tx as never)
@@ -176,7 +179,7 @@ describe('setResultStep', () => {
   })
 
   it('updates result step', async () => {
-    mockStepFindUnique.mockResolvedValue({ projectId: '550e8400-e29b-41d4-a716-446655440000' } as never)
+    mockStepFindUnique.mockResolvedValue({ projectId: '550e8400-e29b-41d4-a716-446655440000', state: 'COMPLETED' } as never)
     mockProjectUpdate.mockResolvedValue({ id: 'p1', hobbyId: 'h1' } as never)
 
     const result = await setResultStep(

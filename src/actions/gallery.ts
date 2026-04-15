@@ -6,22 +6,14 @@ import { revalidatePath } from 'next/cache'
 import { generateSlug, ensureUniqueSlug } from '@/lib/gallery-slug'
 import type { ActionResult } from '@/lib/action-result'
 
-async function generateUniqueSlug(projectName: string, excludeProjectId?: string): Promise<string> {
-  const baseSlug = generateSlug(projectName)
-  const existing = await prisma.project.findMany({
-    where: excludeProjectId
-      ? { gallerySlug: { not: null }, id: { not: excludeProjectId } }
-      : { gallerySlug: { not: null } },
-    select: { gallerySlug: true },
-  })
-  const existingSlugs = existing.map(p => p.gallerySlug).filter((s): s is string => s !== null)
-  return ensureUniqueSlug(baseSlug, existingSlugs)
-}
-
 function revalidateProject(hobbyId: string, projectId: string) {
   revalidatePath(`/hobbies/${hobbyId}/projects/${projectId}`)
   revalidatePath(`/hobbies/${hobbyId}`)
   revalidatePath('/')
+}
+
+function isSlugConflict(error: unknown): boolean {
+  return !!error && typeof error === 'object' && 'code' in error && error.code === 'P2002'
 }
 
 export async function enableJourneyGallery(projectId: string): Promise<ActionResult<{ slug: string }>> {
@@ -32,9 +24,10 @@ export async function enableJourneyGallery(projectId: string): Promise<ActionRes
     const project = await prisma.$transaction(async (tx) => {
       const existing = await tx.project.findUnique({
         where: { id: parsed.data },
-        select: { id: true, name: true, gallerySlug: true, hobbyId: true },
+        select: { id: true, name: true, gallerySlug: true, hobbyId: true, isArchived: true },
       })
       if (!existing) throw new Error('PROJECT_NOT_FOUND')
+      if (existing.isArchived) throw new Error('PROJECT_ARCHIVED')
 
       let slug = existing.gallerySlug
       if (!slug) {
@@ -60,6 +53,12 @@ export async function enableJourneyGallery(projectId: string): Promise<ActionRes
   } catch (error) {
     if (error instanceof Error && error.message === 'PROJECT_NOT_FOUND') {
       return { success: false, error: 'Project not found.' }
+    }
+    if (error instanceof Error && error.message === 'PROJECT_ARCHIVED') {
+      return { success: false, error: 'Cannot enable gallery on an archived project.' }
+    }
+    if (isSlugConflict(error)) {
+      return { success: false, error: 'Gallery URL conflict. Please try again.' }
     }
     console.error('enableJourneyGallery failed:', error)
     return { success: false, error: 'Failed to enable journey gallery.' }
@@ -92,7 +91,8 @@ export async function enableResultGallery(projectId: string): Promise<ActionResu
     const project = await prisma.$transaction(async (tx) => {
       const existing = await tx.project.findUnique({
         where: { id: parsed.data },
-        include: {
+        select: {
+          id: true, name: true, gallerySlug: true, hobbyId: true, resultStepId: true, isArchived: true,
           steps: {
             where: { state: 'COMPLETED' },
             orderBy: { sortOrder: 'desc' },
@@ -102,6 +102,7 @@ export async function enableResultGallery(projectId: string): Promise<ActionResu
         },
       })
       if (!existing) throw new Error('PROJECT_NOT_FOUND')
+      if (existing.isArchived) throw new Error('PROJECT_ARCHIVED')
 
       let slug = existing.gallerySlug
       if (!slug) {
@@ -115,7 +116,20 @@ export async function enableResultGallery(projectId: string): Promise<ActionResu
         )
       }
 
-      const resultStepId = existing.resultStepId ?? existing.steps[0]?.id ?? null
+      // Re-validate resultStepId: check the step is still COMPLETED
+      let resultStepId = existing.resultStepId
+      if (resultStepId) {
+        const resultStep = await tx.step.findUnique({
+          where: { id: resultStepId },
+          select: { state: true },
+        })
+        if (!resultStep || resultStep.state !== 'COMPLETED') {
+          resultStepId = null
+        }
+      }
+      if (!resultStepId) {
+        resultStepId = existing.steps[0]?.id ?? null
+      }
 
       return tx.project.update({
         where: { id: parsed.data },
@@ -129,6 +143,12 @@ export async function enableResultGallery(projectId: string): Promise<ActionResu
   } catch (error) {
     if (error instanceof Error && error.message === 'PROJECT_NOT_FOUND') {
       return { success: false, error: 'Project not found.' }
+    }
+    if (error instanceof Error && error.message === 'PROJECT_ARCHIVED') {
+      return { success: false, error: 'Cannot enable gallery on an archived project.' }
+    }
+    if (isSlugConflict(error)) {
+      return { success: false, error: 'Gallery URL conflict. Please try again.' }
     }
     console.error('enableResultGallery failed:', error)
     return { success: false, error: 'Failed to enable result gallery.' }
@@ -163,10 +183,13 @@ export async function setResultStep(projectId: string, stepId: string): Promise<
   try {
     const step = await prisma.step.findUnique({
       where: { id: parsedStep.data },
-      select: { projectId: true },
+      select: { projectId: true, state: true },
     })
     if (!step || step.projectId !== parsedProject.data) {
       return { success: false, error: 'Step not found in this project.' }
+    }
+    if (step.state !== 'COMPLETED') {
+      return { success: false, error: 'Only completed steps can be the result step.' }
     }
 
     const project = await prisma.project.update({

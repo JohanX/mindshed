@@ -11,7 +11,8 @@ interface ImageSlideshowProps {
 export function ImageSlideshow({ images }: ImageSlideshowProps) {
   const [current, setCurrent] = useState(0)
   const [paused, setPaused] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const resumeRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const total = images.length
 
@@ -26,14 +27,19 @@ export function ImageSlideshow({ images }: ImageSlideshowProps) {
   // Auto-advance every 5s, pause on interaction
   useEffect(() => {
     if (paused || total <= 1) return
-    timerRef.current = setInterval(goNext, 5000)
-    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+    intervalRef.current = setInterval(goNext, 5000)
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [paused, goNext, total])
+
+  // Cleanup resume timeout on unmount
+  useEffect(() => {
+    return () => { if (resumeRef.current) clearTimeout(resumeRef.current) }
+  }, [])
 
   function handleInteraction() {
     setPaused(true)
-    // Resume after 10s of no interaction
-    setTimeout(() => setPaused(false), 10000)
+    if (resumeRef.current) clearTimeout(resumeRef.current)
+    resumeRef.current = setTimeout(() => setPaused(false), 10000)
   }
 
   if (total === 0) return null

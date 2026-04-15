@@ -63,12 +63,15 @@ export function GallerySection({
 }: GallerySectionProps) {
   const [isPending, startTransition] = useTransition()
   const [slug, setSlug] = useState(gallerySlug)
+  const [journeyOn, setJourneyOn] = useState(journeyEnabled)
+  const [resultOn, setResultOn] = useState(resultEnabled)
 
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
   const journeyUrl = slug ? `${origin}/gallery/${slug}` : null
   const resultUrl = slug ? `${origin}/gallery/${slug}/result` : null
 
   function handleJourneyToggle(enabled: boolean) {
+    setJourneyOn(enabled)
     startTransition(async () => {
       if (enabled) {
         const result = await enableJourneyGallery(projectId)
@@ -76,6 +79,7 @@ export function GallerySection({
           setSlug(result.data.slug)
           showSuccessToast('Journey gallery enabled')
         } else {
+          setJourneyOn(false)
           showErrorToast(result.error)
         }
       } else {
@@ -83,6 +87,7 @@ export function GallerySection({
         if (result.success) {
           showSuccessToast('Journey gallery disabled')
         } else {
+          setJourneyOn(true)
           showErrorToast(result.error)
         }
       }
@@ -90,6 +95,7 @@ export function GallerySection({
   }
 
   function handleResultToggle(enabled: boolean) {
+    setResultOn(enabled)
     startTransition(async () => {
       if (enabled) {
         const result = await enableResultGallery(projectId)
@@ -97,6 +103,7 @@ export function GallerySection({
           setSlug(result.data.slug)
           showSuccessToast('Result gallery enabled')
         } else {
+          setResultOn(false)
           showErrorToast(result.error)
         }
       } else {
@@ -104,6 +111,7 @@ export function GallerySection({
         if (result.success) {
           showSuccessToast('Result gallery disabled')
         } else {
+          setResultOn(true)
           showErrorToast(result.error)
         }
       }
@@ -123,13 +131,13 @@ export function GallerySection({
             <label htmlFor="journey-toggle" className="text-sm font-medium">Journey Gallery</label>
             <Switch
               id="journey-toggle"
-              checked={journeyEnabled}
+              checked={journeyOn}
               onCheckedChange={handleJourneyToggle}
               disabled={isPending}
               className="min-h-[44px]"
             />
           </div>
-          {journeyEnabled && journeyUrl && (
+          {journeyOn && journeyUrl && (
             <div className="space-y-3">
               <CopyLinkButton url={journeyUrl} />
               <StepInclusionList steps={steps} />
@@ -143,13 +151,13 @@ export function GallerySection({
             <label htmlFor="result-toggle" className="text-sm font-medium">Result Gallery</label>
             <Switch
               id="result-toggle"
-              checked={resultEnabled}
+              checked={resultOn}
               onCheckedChange={handleResultToggle}
               disabled={isPending}
               className="min-h-[44px]"
             />
           </div>
-          {resultEnabled && resultUrl && (
+          {resultOn && resultUrl && (
             <div className="space-y-3">
               <CopyLinkButton url={resultUrl} />
               {completedSteps.length > 0 && (
