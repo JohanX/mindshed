@@ -11,6 +11,7 @@ export interface PublicGallery {
     color: string
     icon: string | null
   }
+  thumbnails: string[]
 }
 
 export interface DashboardData {

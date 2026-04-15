@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { IDLE_THRESHOLD_DAYS } from '@/lib/constants'
 import type { ActionResult } from '@/lib/action-result'
 import type { DashboardData, RecentProject, ActiveBlocker, IdleProject, PublicGallery } from '@/lib/schemas/dashboard'
+import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 
 export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
   try {
@@ -89,6 +90,17 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
         journeyGalleryEnabled: true,
         resultGalleryEnabled: true,
         hobby: { select: { id: true, name: true, color: true, icon: true } },
+        steps: {
+          where: { excludeFromGallery: false },
+          orderBy: { sortOrder: 'asc' },
+          select: {
+            images: {
+              take: 6,
+              orderBy: { createdAt: 'desc' },
+              select: { storageKey: true, url: true, type: true },
+            },
+          },
+        },
       },
     })
 
@@ -100,6 +112,15 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
       journeyGalleryEnabled: g.journeyGalleryEnabled,
       resultGalleryEnabled: g.resultGalleryEnabled,
       hobby: g.hobby,
+      thumbnails: g.steps.flatMap(s => s.images).slice(0, 6).map(img => {
+        if (img.type === 'UPLOAD' && img.storageKey) {
+          const adapter = getImageStorageAdapter()
+          if (adapter) {
+            try { return adapter.getPublicUrl(img.storageKey) } catch { /* fall through */ }
+          }
+        }
+        return img.url ?? ''
+      }).filter(Boolean),
     }))
 
     // Batch fetch latest photo per project (avoids N+1)

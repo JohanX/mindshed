@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
 import { hobbyColorWithAlpha } from '@/lib/hobby-color'
@@ -58,6 +57,8 @@ export function DashboardGalleriesSection({ galleries }: DashboardGalleriesSecti
             className: 'h-10 w-10',
             style: { color: gallery.hobby.color, opacity: 0.08 },
           })
+          const thumbUrls = gallery.thumbnails
+
           return (
             <Card
               key={gallery.id}
@@ -69,26 +70,54 @@ export function DashboardGalleriesSection({ galleries }: DashboardGalleriesSecti
                   <HobbyIdentity hobby={gallery.hobby} variant="dot" />
                   <span className="text-sm font-medium truncate">{gallery.name}</span>
                 </div>
-                <div className="flex items-center gap-1.5">
+
+                {/* Thumbnails */}
+                {thumbUrls.length > 0 && (
+                  <div className="flex gap-1">
+                    {thumbUrls.map((url, i) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={i}
+                        src={url}
+                        alt=""
+                        className="h-10 w-10 rounded object-cover"
+                        loading="lazy"
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Gallery type links — hobby colored, open in new tab */}
+                <div className="flex items-center gap-3">
                   {gallery.journeyGalleryEnabled && (
-                    <Badge variant="outline" className="text-xs">Journey</Badge>
+                    <div className="flex items-center gap-1">
+                      <a
+                        href={`${origin}/gallery/${gallery.gallerySlug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium hover:underline"
+                        style={{ color: gallery.hobby.color }}
+                      >
+                        Journey
+                      </a>
+                      <CopyButton url={`${origin}/gallery/${gallery.gallerySlug}`} />
+                    </div>
                   )}
                   {gallery.resultGalleryEnabled && (
-                    <Badge variant="outline" className="text-xs">Result</Badge>
+                    <div className="flex items-center gap-1">
+                      <a
+                        href={`${origin}/gallery/${gallery.gallerySlug}/result`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium hover:underline"
+                        style={{ color: gallery.hobby.color }}
+                      >
+                        Result
+                      </a>
+                      <CopyButton url={`${origin}/gallery/${gallery.gallerySlug}/result`} />
+                    </div>
                   )}
                 </div>
-                {gallery.journeyGalleryEnabled && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <span className="truncate font-mono">/gallery/{gallery.gallerySlug}</span>
-                    <CopyButton url={`${origin}/gallery/${gallery.gallerySlug}`} />
-                  </div>
-                )}
-                {gallery.resultGalleryEnabled && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <span className="truncate font-mono">/gallery/{gallery.gallerySlug}/result</span>
-                    <CopyButton url={`${origin}/gallery/${gallery.gallerySlug}/result`} />
-                  </div>
-                )}
               </CardContent>
               {watermarkIcon && (
                 <div className="absolute bottom-2 right-2 z-10 pointer-events-none" aria-hidden="true">
