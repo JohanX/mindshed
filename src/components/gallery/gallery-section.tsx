@@ -134,7 +134,7 @@ export function GallerySection({
               checked={journeyOn}
               onCheckedChange={handleJourneyToggle}
               disabled={isPending}
-              className="min-h-[44px]"
+              className=""
             />
           </div>
           {journeyOn && journeyUrl && (
@@ -154,7 +154,7 @@ export function GallerySection({
               checked={resultOn}
               onCheckedChange={handleResultToggle}
               disabled={isPending}
-              className="min-h-[44px]"
+              className=""
             />
           </div>
           {resultOn && resultUrl && (
