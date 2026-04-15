@@ -6,6 +6,7 @@ import { DashboardBlockersSection } from '@/components/dashboard/dashboard-block
 import { DashboardIdleSection } from '@/components/dashboard/dashboard-idle-section'
 import { DashboardReminderCard } from '@/components/dashboard/dashboard-reminder-card'
 import { DashboardMaintenanceCard } from '@/components/dashboard/dashboard-maintenance-card'
+import { DashboardGalleriesSection } from '@/components/dashboard/dashboard-galleries-section'
 import { EmptyStateCard } from '@/components/empty-state-card'
 import { HobbyFormDialog } from '@/components/hobby/hobby-form'
 
@@ -29,7 +30,7 @@ export default async function DashboardPage() {
     )
   }
 
-  const { totalHobbies, recentProjects, activeBlockers, idleProjects } = result.data
+  const { totalHobbies, recentProjects, activeBlockers, idleProjects, publicGalleries } = result.data
   const reminders = remindersResult.success ? remindersResult.data : []
   const maintenanceDue = maintenanceResult.success ? maintenanceResult.data : []
 
@@ -79,6 +80,8 @@ export default async function DashboardPage() {
           </section>
         </>
       )}
+      {publicGalleries.length > 0 && <hr className="border-border" />}
+      <DashboardGalleriesSection galleries={publicGalleries} />
     </main>
   )
 }

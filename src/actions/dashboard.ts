@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/db'
 import { IDLE_THRESHOLD_DAYS } from '@/lib/constants'
 import type { ActionResult } from '@/lib/action-result'
-import type { DashboardData, RecentProject, ActiveBlocker, IdleProject } from '@/lib/schemas/dashboard'
+import type { DashboardData, RecentProject, ActiveBlocker, IdleProject, PublicGallery } from '@/lib/schemas/dashboard'
 
 export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
   try {
@@ -73,6 +73,35 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
       })(),
     ])
 
+    // Public galleries (up to 3 most recent)
+    const rawGalleries = await prisma.project.findMany({
+      where: {
+        OR: [{ journeyGalleryEnabled: true }, { resultGalleryEnabled: true }],
+        gallerySlug: { not: null },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 3,
+      select: {
+        id: true,
+        name: true,
+        hobbyId: true,
+        gallerySlug: true,
+        journeyGalleryEnabled: true,
+        resultGalleryEnabled: true,
+        hobby: { select: { id: true, name: true, color: true, icon: true } },
+      },
+    })
+
+    const publicGalleries: PublicGallery[] = rawGalleries.map(g => ({
+      id: g.id,
+      name: g.name,
+      hobbyId: g.hobbyId,
+      gallerySlug: g.gallerySlug!,
+      journeyGalleryEnabled: g.journeyGalleryEnabled,
+      resultGalleryEnabled: g.resultGalleryEnabled,
+      hobby: g.hobby,
+    }))
+
     // Batch fetch latest photo per project (avoids N+1)
     const projectIds = rawRecentProjects.map(p => p.id)
     const allPhotos = projectIds.length > 0
@@ -140,7 +169,7 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
 
     return {
       success: true,
-      data: { totalHobbies, recentProjects, activeBlockers, idleProjects },
+      data: { totalHobbies, recentProjects, activeBlockers, idleProjects, publicGalleries },
     }
   } catch (error) {
     console.error('getDashboardData failed:', error)

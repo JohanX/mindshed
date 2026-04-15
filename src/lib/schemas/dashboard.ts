@@ -1,8 +1,24 @@
+export interface PublicGallery {
+  id: string
+  name: string
+  hobbyId: string
+  gallerySlug: string
+  journeyGalleryEnabled: boolean
+  resultGalleryEnabled: boolean
+  hobby: {
+    id: string
+    name: string
+    color: string
+    icon: string | null
+  }
+}
+
 export interface DashboardData {
   totalHobbies: number
   recentProjects: RecentProject[]
   activeBlockers: ActiveBlocker[]
   idleProjects: IdleProject[]
+  publicGalleries: PublicGallery[]
 }
 
 export interface RecentProject {
