@@ -6,9 +6,10 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface ImageSlideshowProps {
   images: { displayUrl: string; originalFilename: string | null }[]
+  onImageClick?: (index: number) => void
 }
 
-export function ImageSlideshow({ images }: ImageSlideshowProps) {
+export function ImageSlideshow({ images, onImageClick }: ImageSlideshowProps) {
   const [current, setCurrent] = useState(0)
   const [paused, setPaused] = useState(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -49,7 +50,14 @@ export function ImageSlideshow({ images }: ImageSlideshowProps) {
   return (
     <div className="space-y-4" onPointerDown={handleInteraction}>
       {/* Main image */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-muted">
+      <div
+        className={`relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-muted${onImageClick ? ' cursor-pointer' : ''}`}
+        onClick={() => onImageClick?.(current)}
+        role={onImageClick ? 'button' : undefined}
+        tabIndex={onImageClick ? 0 : undefined}
+        aria-label={onImageClick ? `View ${img.originalFilename ?? `image ${current + 1}`} fullscreen` : undefined}
+        onKeyDown={onImageClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onImageClick(current) } } : undefined}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={img.displayUrl}

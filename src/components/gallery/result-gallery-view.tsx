@@ -1,5 +1,9 @@
+'use client'
+
+import { useState, useCallback } from 'react'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
 import { ImageSlideshow } from '@/components/gallery/image-slideshow'
+import { GalleryLightbox, type GalleryLightboxImage } from '@/components/gallery/gallery-lightbox'
 
 interface ResultGalleryViewProps {
   project: {
@@ -11,6 +15,23 @@ interface ResultGalleryViewProps {
 }
 
 export function ResultGalleryView({ project, images }: ResultGalleryViewProps) {
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+
+  const lightboxImages: GalleryLightboxImage[] = images.map((img) => ({
+    displayUrl: img.displayUrl,
+    originalFilename: img.originalFilename,
+    stepName: project.name,
+    description: project.description,
+  }))
+
+  const openLightbox = useCallback((index: number) => {
+    setLightboxIndex(index)
+  }, [])
+
+  const closeLightbox = useCallback(() => {
+    setLightboxIndex(null)
+  }, [])
+
   return (
     <article className="space-y-6">
       <header className="space-y-2 text-center">
@@ -24,7 +45,16 @@ export function ResultGalleryView({ project, images }: ResultGalleryViewProps) {
       </header>
 
       {images.length > 0 ? (
-        <ImageSlideshow images={images} />
+        <>
+          <ImageSlideshow images={images} onImageClick={openLightbox} />
+          {lightboxIndex !== null && (
+            <GalleryLightbox
+              images={lightboxImages}
+              initialIndex={lightboxIndex}
+              onClose={closeLightbox}
+            />
+          )}
+        </>
       ) : (
         <p className="text-center text-muted-foreground py-12">No images available</p>
       )}
