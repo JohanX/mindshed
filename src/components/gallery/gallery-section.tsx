@@ -37,8 +37,8 @@ function CopyLinkButton({ url }: { url: string }) {
   }
 
   return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-      <span className="truncate font-mono text-xs">{url}</span>
+    <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+      <span className="truncate font-mono text-xs min-w-0">{url}</span>
       <Button
         variant="ghost"
         size="icon"
