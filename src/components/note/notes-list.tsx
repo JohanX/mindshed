@@ -68,7 +68,7 @@ function NoteItem({ note, isProjectCompleted }: { note: NoteData; isProjectCompl
 
   if (editing) {
     return (
-      <div className="rounded-lg bg-muted/50 px-3 py-2 space-y-2" data-testid={`note-${note.id}`}>
+      <div className="rounded-lg bg-muted px-3 py-2 space-y-2" data-testid={`note-${note.id}`}>
         <Textarea
           value={editText}
           onChange={(e) => setEditText(e.target.value)}
@@ -91,7 +91,7 @@ function NoteItem({ note, isProjectCompleted }: { note: NoteData; isProjectCompl
   return (
     <>
       <div
-        className="group rounded-lg bg-muted/50 px-3 py-2 text-sm"
+        className="group rounded-lg bg-muted px-3 py-2 text-sm"
         data-testid={`note-${note.id}`}
       >
         <div className="flex items-start justify-between gap-2">

@@ -197,8 +197,8 @@ export function StepCard({
             <Separator className="my-3" />
 
             {/* Notes section */}
-            <section>
-              <h4 className="text-sm font-semibold text-muted-foreground mb-2">Notes</h4>
+            <section className="space-y-2">
+              <h4 className="text-sm font-semibold text-muted-foreground">Notes</h4>
               {!isProjectCompleted && <InlineNoteInput stepId={step.id} />}
               <NotesList notes={step.notes} isProjectCompleted={isProjectCompleted} />
             </section>
