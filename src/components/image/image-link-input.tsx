@@ -3,8 +3,10 @@
 import { useState, useRef, useTransition } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Loader2 } from 'lucide-react'
 import { addImageLinkSchema } from '@/lib/schemas/image'
 import { addStepImageLink } from '@/actions/image'
+import { uploadImageToStorage, ACCEPTED_TYPES } from '@/lib/upload-image'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
 
 interface ImageLinkInputProps {
@@ -16,7 +18,10 @@ export function ImageLinkInput({ stepId }: ImageLinkInputProps) {
   const [url, setUrl] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [isUploading, setIsUploading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const busy = isPending || isUploading
 
   function expand() {
     setExpanded(true)
@@ -51,6 +56,44 @@ export function ImageLinkInput({ stepId }: ImageLinkInputProps) {
     })
   }
 
+  async function handlePastedFile(file: File) {
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      setError('Only JPEG, PNG, and WebP images can be pasted.')
+      return
+    }
+    setError(null)
+    setIsUploading(true)
+    try {
+      const result = await uploadImageToStorage({ stepId, file })
+      if (result.success) {
+        showSuccessToast('Pasted image added')
+        collapse()
+      } else {
+        showErrorToast(result.error)
+        setError(result.error)
+      }
+    } catch {
+      showErrorToast('Upload failed — try again')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    const items = e.clipboardData?.items
+    if (!items) return
+
+    for (const item of items) {
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        e.preventDefault()
+        const file = item.getAsFile()
+        if (file) void handlePastedFile(file)
+        return
+      }
+    }
+    // Text paste — let the default handler populate the input
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') {
       e.preventDefault()
@@ -72,7 +115,7 @@ export function ImageLinkInput({ stepId }: ImageLinkInputProps) {
         onClick={expand}
         data-testid="add-image-link-prompt"
       >
-        Add Image Link
+        Paste Image / Link
       </Button>
     )
   }
@@ -85,8 +128,9 @@ export function ImageLinkInput({ stepId }: ImageLinkInputProps) {
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="https://example.com/image.jpg"
-        disabled={isPending}
+        onPaste={handlePaste}
+        placeholder={isUploading ? 'Uploading pasted image…' : 'Paste image or URL'}
+        disabled={busy}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? 'image-link-input-error' : undefined}
       />
@@ -104,16 +148,18 @@ export function ImageLinkInput({ stepId }: ImageLinkInputProps) {
           size="sm"
           className="min-h-[44px]"
           onClick={handleSave}
-          disabled={isPending}
+          disabled={busy}
         >
-          {isPending ? 'Saving...' : 'Save'}
+          {isUploading ? (
+            <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading…</>
+          ) : isPending ? 'Saving...' : 'Save'}
         </Button>
         <Button
           variant="outline"
           size="sm"
           className="min-h-[44px]"
           onClick={collapse}
-          disabled={isPending}
+          disabled={busy}
         >
           Cancel
         </Button>
