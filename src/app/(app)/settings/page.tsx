@@ -2,11 +2,13 @@ import { PageHeader } from '@/components/layout/page-header'
 import { HobbyFormDialog } from '@/components/hobby/hobby-form'
 import { SortableHobbyList } from '@/components/hobby/sortable-hobby-list'
 import { ThemeSelector } from '@/components/theme-selector'
+import { IdleThresholdSetting } from '@/components/settings/idle-threshold-setting'
 import { EmptyStateCard } from '@/components/empty-state-card'
 import { getHobbies } from '@/actions/hobby'
+import { getIdleThresholdDays } from '@/lib/settings'
 
 export default async function SettingsPage() {
-  const result = await getHobbies()
+  const [result, idleThresholdDays] = await Promise.all([getHobbies(), getIdleThresholdDays()])
   const hobbies = result.success ? result.data : []
 
   return (
@@ -21,6 +23,11 @@ export default async function SettingsPage() {
       <section className="space-y-4">
         <h2 className="text-xl font-semibold">Theme</h2>
         <ThemeSelector />
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold">Projects</h2>
+        <IdleThresholdSetting initialDays={idleThresholdDays} />
       </section>
 
       <section className="space-y-4">

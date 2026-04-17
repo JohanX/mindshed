@@ -1,13 +1,16 @@
 'use server'
 
 import { prisma } from '@/lib/db'
-import { IDLE_THRESHOLD_DAYS } from '@/lib/constants'
+import { getIdleThresholdDays } from '@/lib/settings'
 import type { ActionResult } from '@/lib/action-result'
 import type { DashboardData, RecentProject, ActiveBlocker, IdleProject, PublicGallery } from '@/lib/schemas/dashboard'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 
 export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
   try {
+    const idleThresholdDate = new Date()
+    idleThresholdDate.setDate(idleThresholdDate.getDate() - (await getIdleThresholdDays()))
+
     const [totalHobbies, rawRecentProjects, rawActiveBlockers, rawIdleProjects] = await Promise.all([
       // Total hobby count
       prisma.hobby.count(),
@@ -52,26 +55,22 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
       }),
 
       // Idle projects
-      (() => {
-        const thresholdDate = new Date()
-        thresholdDate.setDate(thresholdDate.getDate() - IDLE_THRESHOLD_DAYS)
-        return prisma.project.findMany({
-          where: {
-            isArchived: false,
-            isCompleted: false,
-            lastActivityAt: { lt: thresholdDate },
+      prisma.project.findMany({
+        where: {
+          isArchived: false,
+          isCompleted: false,
+          lastActivityAt: { lt: idleThresholdDate },
+        },
+        orderBy: { lastActivityAt: 'asc' },
+        take: 20,
+        include: {
+          hobby: { select: { id: true, name: true, color: true, icon: true } },
+          steps: {
+            select: { id: true, name: true, state: true, sortOrder: true },
+            orderBy: { sortOrder: 'asc' },
           },
-          orderBy: { lastActivityAt: 'asc' },
-          take: 20,
-          include: {
-            hobby: { select: { id: true, name: true, color: true, icon: true } },
-            steps: {
-              select: { id: true, name: true, state: true, sortOrder: true },
-              orderBy: { sortOrder: 'asc' },
-            },
-          },
-        })
-      })(),
+        },
+      }),
     ])
 
     // Public galleries (up to 3 most recent)

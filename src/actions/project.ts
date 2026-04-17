@@ -6,7 +6,7 @@ import { z } from 'zod/v4'
 import type { ProjectCardData } from '@/components/project/project-card'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
-import { IDLE_THRESHOLD_DAYS } from '@/lib/constants'
+import { getIdleThresholdDays } from '@/lib/settings'
 import { getCurrentStep } from '@/lib/project-utils'
 import { deriveProjectStatus } from '@/lib/project-status'
 
@@ -273,7 +273,7 @@ export interface IdleProjectData extends ProjectCardData {
 export async function getIdleProjects(): Promise<ActionResult<IdleProjectData[]>> {
   try {
     const threshold = new Date()
-    threshold.setDate(threshold.getDate() - IDLE_THRESHOLD_DAYS)
+    threshold.setDate(threshold.getDate() - (await getIdleThresholdDays()))
 
     const projects = await prisma.project.findMany({
       where: {

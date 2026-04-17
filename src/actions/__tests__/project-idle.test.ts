@@ -14,9 +14,16 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
+// Mock settings to return the default threshold
+vi.mock('@/lib/settings', () => ({
+  getIdleThresholdDays: vi.fn(async () => 30),
+}))
+
 import { getIdleProjects } from '../project'
 import { prisma } from '@/lib/db'
-import { IDLE_THRESHOLD_DAYS } from '@/lib/constants'
+import { DEFAULT_IDLE_THRESHOLD_DAYS } from '@/lib/schemas/settings'
+
+const IDLE_THRESHOLD_DAYS = DEFAULT_IDLE_THRESHOLD_DAYS
 
 const mockFindMany = vi.mocked(prisma.project.findMany)
 

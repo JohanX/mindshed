@@ -5,6 +5,7 @@ import { z } from 'zod/v4'
 import { createHobbySchema, updateHobbySchema, reorderHobbiesSchema, type CreateHobbyInput, type UpdateHobbyInput, type ReorderHobbiesInput, type HobbyWithCounts } from '@/lib/schemas/hobby'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
+import { getIdleThresholdDays } from '@/lib/settings'
 
 export async function createHobby(input: CreateHobbyInput): Promise<ActionResult<{ id: string }>> {
   const parsed = createHobbySchema.safeParse(input)
@@ -54,8 +55,9 @@ export async function getHobbies(): Promise<ActionResult<HobbyWithCounts[]>> {
       },
     })
 
+    const idleThresholdDays = await getIdleThresholdDays()
     const idleThreshold = new Date()
-    idleThreshold.setDate(idleThreshold.getDate() - 30)
+    idleThreshold.setDate(idleThreshold.getDate() - idleThresholdDays)
 
     return {
       success: true,

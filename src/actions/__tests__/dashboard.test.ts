@@ -13,6 +13,10 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
+vi.mock('@/lib/settings', () => ({
+  getIdleThresholdDays: vi.fn(async () => 30),
+}))
+
 import { getDashboardData } from '../dashboard'
 import { prisma } from '@/lib/db'
 

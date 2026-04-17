@@ -18,8 +18,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, ArrowUp, ArrowDown } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { GripVertical } from 'lucide-react'
 import { HobbyCard } from './hobby-card'
 import { reorderHobbies } from '@/actions/hobby'
 import { showErrorToast } from '@/lib/toast'
@@ -29,7 +28,7 @@ interface SortableHobbyListProps {
   hobbies: HobbyWithCounts[]
 }
 
-function SortableItem({ hobby, index, total, onMoveUp, onMoveDown }: { hobby: HobbyWithCounts; index: number; total: number; onMoveUp: (id: string) => void; onMoveDown: (id: string) => void }) {
+function SortableItem({ hobby }: { hobby: HobbyWithCounts }) {
   const {
     attributes,
     listeners,
@@ -47,38 +46,15 @@ function SortableItem({ hobby, index, total, onMoveUp, onMoveDown }: { hobby: Ho
 
   return (
     <div ref={setNodeRef} style={style} className="flex items-center gap-2">
-      {/* Desktop drag handle */}
       <button
-        className="hidden lg:flex items-center justify-center min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing"
+        className="hidden sm:flex items-center justify-center min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing shrink-0"
+        aria-label="Drag to reorder"
         {...attributes}
         {...listeners}
       >
         <GripVertical className="h-5 w-5" />
       </button>
-
-      {/* Mobile up/down buttons */}
-      <div className="flex flex-col gap-0.5 lg:hidden">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="min-h-[44px] min-w-[44px]"
-          disabled={index === 0}
-          onClick={() => onMoveUp(hobby.id)}
-        >
-          <ArrowUp className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="min-h-[44px] min-w-[44px]"
-          disabled={index === total - 1}
-          onClick={() => onMoveDown(hobby.id)}
-        >
-          <ArrowDown className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <HobbyCard hobby={hobby} />
       </div>
     </div>
@@ -91,10 +67,8 @@ export function SortableHobbyList({ hobbies: initialHobbies }: SortableHobbyList
   const [, startTransition] = useTransition()
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
   function persistOrder(newHobbies: HobbyWithCounts[]) {
@@ -122,22 +96,6 @@ export function SortableHobbyList({ hobbies: initialHobbies }: SortableHobbyList
     persistOrder(newHobbies)
   }
 
-  function handleMoveUp(hobbyId: string) {
-    const index = hobbies.findIndex(h => h.id === hobbyId)
-    if (index <= 0) return
-    const newHobbies = arrayMove(hobbies, index, index - 1)
-    setHobbies(newHobbies)
-    persistOrder(newHobbies)
-  }
-
-  function handleMoveDown(hobbyId: string) {
-    const index = hobbies.findIndex(h => h.id === hobbyId)
-    if (index >= hobbies.length - 1) return
-    const newHobbies = arrayMove(hobbies, index, index + 1)
-    setHobbies(newHobbies)
-    persistOrder(newHobbies)
-  }
-
   return (
     <DndContext
       sensors={sensors}
@@ -146,15 +104,8 @@ export function SortableHobbyList({ hobbies: initialHobbies }: SortableHobbyList
     >
       <SortableContext items={hobbies.map(h => h.id)} strategy={verticalListSortingStrategy}>
         <div className="space-y-3">
-          {hobbies.map((hobby, index) => (
-            <SortableItem
-              key={hobby.id}
-              hobby={hobby}
-              index={index}
-              total={hobbies.length}
-              onMoveUp={handleMoveUp}
-              onMoveDown={handleMoveDown}
-            />
+          {hobbies.map((hobby) => (
+            <SortableItem key={hobby.id} hobby={hobby} />
           ))}
         </div>
       </SortableContext>
