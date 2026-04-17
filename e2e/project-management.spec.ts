@@ -352,7 +352,7 @@ test.describe('Project Management', () => {
     await page.waitForLoadState('networkidle')
 
     await expect(page.getByRole('button', { name: 'Upload Photo' }).first()).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Add Image Link' }).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Paste Image / Link' }).first()).toBeVisible()
   })
 
   test('step cards have drag handles for reordering', async ({ page }) => {

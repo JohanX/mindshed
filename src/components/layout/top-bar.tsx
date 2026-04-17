@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, Lightbulb, Package, Settings } from 'lucide-react'
@@ -29,7 +29,12 @@ export function TopBar({ hobbies }: TopBarProps) {
   const activeHobby = getHobbyContext(pathname, hobbies)
   const bgColor = activeHobby ? activeHobby.color : 'var(--navbar)'
   const textColor = activeHobby ? getContrastTextColor(activeHobby.color) : 'var(--navbar-foreground)'
-  const tagline = useMemo(() => TAGLINES[Math.floor(Math.random() * TAGLINES.length)], [])
+  const [tagline, setTagline] = useState(TAGLINES[0])
+  useEffect(() => {
+    // Pick a random tagline once on mount; SSR + first client render both use TAGLINES[0] to avoid hydration mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTagline(TAGLINES[Math.floor(Math.random() * TAGLINES.length)])
+  }, [])
 
   return (
     <header

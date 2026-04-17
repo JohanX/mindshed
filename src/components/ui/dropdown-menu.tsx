@@ -6,10 +6,38 @@ import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
 import { CheckIcon, ChevronRightIcon } from "lucide-react"
 
+const DropdownMenuSetOpenContext = React.createContext<((open: boolean) => void) | null>(null)
+
 function DropdownMenu({
+  open: openProp,
+  defaultOpen,
+  onOpenChange,
+  children,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
-  return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />
+  const [internalOpen, setInternalOpen] = React.useState(defaultOpen ?? false)
+  const isControlled = openProp !== undefined
+  const open = isControlled ? openProp : internalOpen
+  const setOpen = React.useCallback(
+    (next: boolean) => {
+      if (!isControlled) setInternalOpen(next)
+      onOpenChange?.(next)
+    },
+    [isControlled, onOpenChange],
+  )
+
+  return (
+    <DropdownMenuSetOpenContext.Provider value={setOpen}>
+      <DropdownMenuPrimitive.Root
+        data-slot="dropdown-menu"
+        open={open}
+        onOpenChange={setOpen}
+        {...props}
+      >
+        {children}
+      </DropdownMenuPrimitive.Root>
+    </DropdownMenuSetOpenContext.Provider>
+  )
 }
 
 function DropdownMenuPortal({
@@ -20,12 +48,57 @@ function DropdownMenuPortal({
   )
 }
 
+const TOUCH_DRAG_THRESHOLD_PX = 8
+
 function DropdownMenuTrigger({
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerCancel,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
+  const setOpen = React.useContext(DropdownMenuSetOpenContext)
+  const startRef = React.useRef<{ x: number; y: number } | null>(null)
+  const draggedRef = React.useRef(false)
+
   return (
     <DropdownMenuPrimitive.Trigger
       data-slot="dropdown-menu-trigger"
+      onPointerDown={(e) => {
+        if (e.pointerType === "touch") {
+          // Block Radix's auto-open on touch pointerdown so that starting a
+          // scroll gesture on the trigger doesn't activate the menu. We open
+          // on pointerup if the pointer stayed within a small threshold.
+          e.preventDefault()
+          startRef.current = { x: e.clientX, y: e.clientY }
+          draggedRef.current = false
+        }
+        onPointerDown?.(e)
+      }}
+      onPointerMove={(e) => {
+        const s = startRef.current
+        if (
+          s &&
+          (Math.abs(e.clientX - s.x) > TOUCH_DRAG_THRESHOLD_PX ||
+            Math.abs(e.clientY - s.y) > TOUCH_DRAG_THRESHOLD_PX)
+        ) {
+          draggedRef.current = true
+        }
+        onPointerMove?.(e)
+      }}
+      onPointerUp={(e) => {
+        if (startRef.current && !draggedRef.current && setOpen) {
+          setOpen(true)
+        }
+        startRef.current = null
+        draggedRef.current = false
+        onPointerUp?.(e)
+      }}
+      onPointerCancel={(e) => {
+        startRef.current = null
+        draggedRef.current = false
+        onPointerCancel?.(e)
+      }}
       {...props}
     />
   )
