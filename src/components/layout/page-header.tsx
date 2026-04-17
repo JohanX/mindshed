@@ -62,7 +62,7 @@ export function PageHeader({ title, breadcrumbs, children }: PageHeaderProps) {
           </BreadcrumbList>
         </Breadcrumb>
       )}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold">{title}</h1>
         {children}
       </div>

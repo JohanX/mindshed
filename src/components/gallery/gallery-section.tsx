@@ -126,7 +126,7 @@ export function GallerySection({
 
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Journey Gallery */}
-        <div className="space-y-3 rounded-lg border border-border p-4">
+        <div className="space-y-3 rounded-lg border border-border p-4 min-w-0">
           <div className="flex items-center justify-between">
             <label htmlFor="journey-toggle" className="text-sm font-medium">Journey Gallery</label>
             <Switch
@@ -146,7 +146,7 @@ export function GallerySection({
         </div>
 
         {/* Result Gallery */}
-        <div className="space-y-3 rounded-lg border border-border p-4">
+        <div className="space-y-3 rounded-lg border border-border p-4 min-w-0">
           <div className="flex items-center justify-between">
             <label htmlFor="result-toggle" className="text-sm font-medium">Result Gallery</label>
             <Switch
