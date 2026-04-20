@@ -19,6 +19,13 @@ export async function uploadImageToStorage(params: {
     return { success: false, error: 'Image must be under 10 MB.' }
   }
 
+  const provider = process.env.NEXT_PUBLIC_IMAGE_PROVIDER
+
+  // Cloudinary has no presign flow — skip the round-trip that would 404.
+  if (provider === 'cloudinary') {
+    return uploadViaCloudinary(stepId, file)
+  }
+
   // Try S3/R2 presigned upload first
   try {
     const presignRes = await fetch('/api/upload/presign', {
@@ -64,6 +71,13 @@ export async function uploadImageToStorage(params: {
   }
 
   // Fallback: Cloudinary
+  return uploadViaCloudinary(stepId, file)
+}
+
+async function uploadViaCloudinary(
+  stepId: string,
+  file: File,
+): Promise<{ success: true; key: string } | { success: false; error: string }> {
   try {
     const formData = new FormData()
     formData.append('stepId', stepId)

@@ -16,6 +16,7 @@ describe('uploadImageToStorage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     global.fetch = vi.fn()
+    delete process.env.NEXT_PUBLIC_IMAGE_PROVIDER
   })
 
   it('rejects files over 10MB', async () => {
@@ -62,5 +63,17 @@ describe('uploadImageToStorage', () => {
     const result = await uploadImageToStorage({ stepId: 's1', file })
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toContain('storage failed')
+  })
+
+  it('skips presign call when NEXT_PUBLIC_IMAGE_PROVIDER=cloudinary', async () => {
+    process.env.NEXT_PUBLIC_IMAGE_PROVIDER = 'cloudinary'
+    const mockFetch = vi.mocked(global.fetch)
+
+    const file = makeFile('photo.jpg', 'image/jpeg', 5000)
+    const result = await uploadImageToStorage({ stepId: 's1', file })
+
+    expect(mockFetch).not.toHaveBeenCalled()
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.key).toBe('cloudinary')
   })
 })

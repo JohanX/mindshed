@@ -2,6 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  experimental: {
+    serverActions: {
+      // Phone photos routinely exceed Next.js's 1MB default; match the 10MB
+      // client-side cap in lib/upload-image.ts plus ~10% FormData overhead.
+      bodySizeLimit: "11mb",
+    },
+  },
   images: {
     remotePatterns: [
       {

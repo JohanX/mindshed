@@ -10,6 +10,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="toaster group"
       position="bottom-center"
       offset={80}
+      richColors
       style={
         {
           "--normal-bg": "var(--popover)",
