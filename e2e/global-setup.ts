@@ -31,6 +31,18 @@ export default async function globalSetup() {
   await client.connect()
 
   try {
+    // Ensure the partial unique index on inventory_item(lower(name)) exists.
+    // Prisma cannot express partial indexes in schema.prisma, so it is applied
+    // here out-of-band. Drop-then-create guarantees the predicate always
+    // matches the current definition — `IF NOT EXISTS` alone would silently
+    // keep a stale index if the clause ever changes.
+    await client.query('DROP INDEX IF EXISTS "inventory_item_name_lower_unique"')
+    await client.query(`
+      CREATE UNIQUE INDEX "inventory_item_name_lower_unique"
+        ON "inventory_item" (lower("name"))
+        WHERE "is_deleted" = false
+    `)
+
     await client.query(`
       TRUNCATE TABLE setting, reminder, inventory_item, step_image, step_note, blocker, idea, step, project, hobby RESTART IDENTITY CASCADE
     `)

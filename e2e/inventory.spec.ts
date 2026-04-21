@@ -115,4 +115,61 @@ test.describe('Inventory Management', () => {
     const newCount = await page.locator('[data-slot="card"]').count()
     expect(newCount).toBe(itemCount - 1)
   })
+
+  test('auto-renames case-insensitive collisions and soft-deletes items', async ({ page }, testInfo) => {
+    // Use a browser-unique base name so parallel browser suites don't collide.
+    const base = `Kaolin-${testInfo.project.name}`
+    const baseLower = base.toLowerCase()
+
+    async function addItem(name: string) {
+      await page.goto('/inventory')
+      await page.waitForLoadState('networkidle')
+      await page.getByRole('button', { name: 'Add Item' }).first().click()
+      await page.getByLabel('Name').fill(name)
+      // Type defaults to Material — acceptable for this story
+      await page.getByRole('button', { name: 'Add Item' }).last().click()
+      await page.waitForTimeout(1000)
+    }
+
+    // 1. First add — no collision, name is preserved
+    await addItem(base)
+    await page.goto('/inventory')
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText(base, { exact: true }).first()).toBeVisible()
+
+    // 2. Case-insensitive collision — auto-renames to "(1)"
+    await addItem(baseLower)
+    await page.goto('/inventory')
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText(`${baseLower} (1)`, { exact: true }).first()).toBeVisible()
+
+    // 3. Third collision — auto-renames to "(2)"
+    await addItem(baseLower)
+    await page.goto('/inventory')
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText(`${baseLower} (2)`, { exact: true }).first()).toBeVisible()
+
+    // 4. Soft-delete the original — disappears from visible list
+    const baseCard = page
+      .locator('[data-slot="card"]')
+      .filter({ has: page.getByText(base, { exact: true }) })
+    await expect(baseCard).toHaveCount(1)
+    await baseCard.getByLabel('Delete item').click()
+    await page.getByRole('button', { name: 'Delete' }).click()
+    await page.waitForTimeout(1000)
+
+    // 5. Reload — soft-deleted item stays absent; other two remain
+    await page.goto('/inventory')
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText(base, { exact: true })).toHaveCount(0)
+    await expect(page.getByText(`${baseLower} (1)`, { exact: true }).first()).toBeVisible()
+    await expect(page.getByText(`${baseLower} (2)`, { exact: true }).first()).toBeVisible()
+
+    // 6. Because the unique index is partial on is_deleted=false, we can now
+    //    re-add "Kaolin-<browser>" as a fresh item — no collision, no suffix.
+    await addItem(base)
+    await page.goto('/inventory')
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText(base, { exact: true }).first()).toBeVisible()
+  })
 })

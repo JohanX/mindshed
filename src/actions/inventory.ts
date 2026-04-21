@@ -5,6 +5,15 @@ import { z } from 'zod/v4'
 import { createInventoryItemSchema, updateInventoryItemSchema, updateMaintenanceSchema, type CreateInventoryItemInput, type UpdateInventoryItemInput, type UpdateMaintenanceInput, type InventoryItemData, type InventoryItemOption } from '@/lib/schemas/inventory'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
+import { nextUniqueInventoryName } from '@/lib/inventory-name'
+
+function isP2002(error: unknown): boolean {
+  return !!error && typeof error === 'object' && 'code' in error && (error as { code: string }).code === 'P2002'
+}
+
+function isP2025(error: unknown): boolean {
+  return !!error && typeof error === 'object' && 'code' in error && (error as { code: string }).code === 'P2025'
+}
 
 export async function createInventoryItem(input: CreateInventoryItemInput): Promise<ActionResult<{ id: string }>> {
   const parsed = createInventoryItemSchema.safeParse(input)
@@ -13,19 +22,32 @@ export async function createInventoryItem(input: CreateInventoryItemInput): Prom
   }
 
   try {
-    const item = await prisma.inventoryItem.create({
-      data: {
-        name: parsed.data.name,
-        type: parsed.data.type,
-        quantity: parsed.data.quantity ?? null,
-        unit: parsed.data.unit ?? null,
-        notes: parsed.data.notes ?? null,
-      },
+    const item = await prisma.$transaction(async (tx) => {
+      const existing = await tx.inventoryItem.findMany({
+        where: { isDeleted: false },
+        select: { name: true },
+      })
+      const finalName = nextUniqueInventoryName(
+        parsed.data.name,
+        existing.map((e) => e.name),
+      )
+      return tx.inventoryItem.create({
+        data: {
+          name: finalName,
+          type: parsed.data.type,
+          quantity: parsed.data.quantity ?? null,
+          unit: parsed.data.unit ?? null,
+          notes: parsed.data.notes ?? null,
+        },
+      })
     })
 
     revalidatePath('/inventory')
     return { success: true, data: { id: item.id } }
   } catch (error) {
+    if (isP2002(error)) {
+      return { success: false, error: 'Item name collided — please retry.' }
+    }
     console.error('createInventoryItem failed:', error)
     return { success: false, error: 'Failed to add item.' }
   }
@@ -36,7 +58,7 @@ export async function getInventoryItems(
 ): Promise<ActionResult<InventoryItemData[]>> {
   try {
     const items = await prisma.inventoryItem.findMany({
-      where: typeFilter ? { type: typeFilter } : undefined,
+      where: { isDeleted: false, ...(typeFilter ? { type: typeFilter } : {}) },
       orderBy: { createdAt: 'desc' },
       include: { _count: { select: { blockers: { where: { isResolved: false } } } } },
     })
@@ -61,24 +83,47 @@ export async function updateInventoryItem(input: UpdateInventoryItemInput): Prom
   }
 
   try {
-    const item = await prisma.inventoryItem.update({
-      where: { id: parsed.data.id },
-      data: {
-        name: parsed.data.name,
-        type: parsed.data.type,
-        quantity: parsed.data.quantity ?? null,
-        unit: parsed.data.unit ?? null,
-        notes: parsed.data.notes ?? null,
-      },
+    const item = await prisma.$transaction(async (tx) => {
+      const current = await tx.inventoryItem.findUnique({
+        where: { id: parsed.data.id },
+        select: { name: true },
+      })
+      if (!current) throw Object.assign(new Error('NOT_FOUND'), { code: 'P2025' })
+
+      let finalName = parsed.data.name
+      if (current.name.toLowerCase() !== parsed.data.name.toLowerCase()) {
+        const siblings = await tx.inventoryItem.findMany({
+          where: { isDeleted: false, id: { not: parsed.data.id } },
+          select: { name: true },
+        })
+        finalName = nextUniqueInventoryName(
+          parsed.data.name,
+          siblings.map((s) => s.name),
+        )
+      }
+
+      return tx.inventoryItem.update({
+        where: { id: parsed.data.id },
+        data: {
+          name: finalName,
+          type: parsed.data.type,
+          quantity: parsed.data.quantity ?? null,
+          unit: parsed.data.unit ?? null,
+          notes: parsed.data.notes ?? null,
+        },
+      })
     })
 
     revalidatePath('/inventory')
     return { success: true, data: { id: item.id } }
   } catch (error: unknown) {
-    console.error('updateInventoryItem failed:', error)
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+    if (isP2002(error)) {
+      return { success: false, error: 'Item name collided — please retry.' }
+    }
+    if (isP2025(error)) {
       return { success: false, error: 'Item not found.' }
     }
+    console.error('updateInventoryItem failed:', error)
     return { success: false, error: 'Failed to update item.' }
   }
 }
@@ -91,17 +136,19 @@ export async function deleteInventoryItem(itemId: string): Promise<ActionResult<
 
   try {
     await prisma.$transaction(async (tx) => {
-      await tx.blocker.updateMany({ where: { inventoryItemId: parsed.data }, data: { inventoryItemId: null } })
-      await tx.inventoryItem.delete({ where: { id: parsed.data } })
+      await tx.inventoryItem.update({
+        where: { id: parsed.data },
+        data: { isDeleted: true, deletedAt: new Date() },
+      })
     })
 
     revalidatePath('/inventory')
     return { success: true, data: null }
   } catch (error: unknown) {
-    console.error('deleteInventoryItem failed:', error)
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+    if (isP2025(error)) {
       return { success: false, error: 'Item not found.' }
     }
+    console.error('deleteInventoryItem failed:', error)
     return { success: false, error: 'Failed to delete item.' }
   }
 }
@@ -109,6 +156,7 @@ export async function deleteInventoryItem(itemId: string): Promise<ActionResult<
 export async function getInventoryItemOptions(): Promise<ActionResult<InventoryItemOption[]>> {
   try {
     const items = await prisma.inventoryItem.findMany({
+      where: { isDeleted: false },
       orderBy: { name: 'asc' },
       select: { id: true, name: true, type: true },
     })
@@ -124,8 +172,11 @@ export async function updateMaintenanceData(input: UpdateMaintenanceInput): Prom
   if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
 
   try {
-    const item = await prisma.inventoryItem.findUnique({ where: { id: parsed.data.id }, select: { type: true } })
-    if (!item) return { success: false, error: 'Item not found.' }
+    const item = await prisma.inventoryItem.findUnique({
+      where: { id: parsed.data.id },
+      select: { type: true, isDeleted: true },
+    })
+    if (!item || item.isDeleted) return { success: false, error: 'Item not found.' }
     if (item.type !== 'TOOL') return { success: false, error: 'Maintenance only applies to tools.' }
 
     const updated = await prisma.inventoryItem.update({
@@ -152,9 +203,9 @@ export async function recordMaintenance(itemId: string): Promise<ActionResult<{ 
   try {
     const item = await prisma.inventoryItem.findUnique({
       where: { id: parsed.data },
-      select: { type: true, maintenanceIntervalDays: true },
+      select: { type: true, maintenanceIntervalDays: true, isDeleted: true },
     })
-    if (!item) return { success: false, error: 'Item not found.' }
+    if (!item || item.isDeleted) return { success: false, error: 'Item not found.' }
     if (item.type !== 'TOOL') return { success: false, error: 'Maintenance only applies to tools.' }
     if (!item.maintenanceIntervalDays) return { success: false, error: 'No maintenance interval configured.' }
 
@@ -185,6 +236,7 @@ export async function getOverdueMaintenanceItems(): Promise<ActionResult<Mainten
   try {
     const tools = await prisma.inventoryItem.findMany({
       where: {
+        isDeleted: false,
         type: 'TOOL',
         lastMaintenanceDate: { not: null },
         maintenanceIntervalDays: { not: null },

@@ -134,12 +134,17 @@ model InventoryItem {
   quantity  Float?
   unit      String?
   notes     String?
+  isDeleted Boolean           @default(false) @map("is_deleted")
+  deletedAt DateTime?         @map("deleted_at")
   lastMaintenanceDate     DateTime? @map("last_maintenance_date")
   maintenanceIntervalDays Int?      @map("maintenance_interval_days")
   createdAt DateTime          @default(now()) @map("created_at")
   updatedAt DateTime          @updatedAt @map("updated_at")
 
   blockers Blocker[]
+
+  // Unique index UNIQUE(lower(name)) WHERE is_deleted = false enforced via raw SQL in migration
+  // (Prisma cannot express partial/functional unique indexes natively).
 
   @@map("inventory_item")
 }
