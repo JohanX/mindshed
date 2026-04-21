@@ -27,6 +27,17 @@ try {
       WHERE "is_deleted" = false
   `)
   console.log('[post-push] inventory_item_name_lower_unique partial index applied.')
+
+  // Partial unique index preventing duplicate inventory-linked BOM rows per
+  // project. Free-form rows (inventory_item_id IS NULL) are unconstrained.
+  // Story 16.2 (Epic 16).
+  await client.query('DROP INDEX IF EXISTS "bom_item_project_inventory_unique"')
+  await client.query(`
+    CREATE UNIQUE INDEX "bom_item_project_inventory_unique"
+      ON "bom_item" ("project_id", "inventory_item_id")
+      WHERE "inventory_item_id" IS NOT NULL
+  `)
+  console.log('[post-push] bom_item_project_inventory_unique partial index applied.')
 } finally {
   await client.end()
 }

@@ -14,6 +14,8 @@ import { ReminderBadge } from '@/components/reminder/reminder-badge'
 import { ReminderDatePicker } from '@/components/reminder/reminder-date-picker'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 import { GallerySection } from '@/components/gallery/gallery-section'
+import { BomSection } from '@/components/bom/bom-section'
+import type { BomItemData } from '@/lib/bom'
 
 interface ProjectDetailPageProps {
   params: Promise<{ hobbyId: string; projectId: string }>
@@ -41,6 +43,14 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           notes: { orderBy: { createdAt: 'desc' } },
           images: { orderBy: { createdAt: 'desc' } },
           blockers: { where: { isResolved: false }, orderBy: { createdAt: 'desc' } },
+        },
+      },
+      bomItems: {
+        orderBy: { sortOrder: 'asc' },
+        include: {
+          inventoryItem: {
+            select: { id: true, name: true, type: true, quantity: true, isDeleted: true },
+          },
         },
       },
     },
@@ -88,6 +98,16 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
 
   const stepKey = stepCards.map(s => `${s.id}:${s.state}:${s.notes.length}:${s.images.length}:${s.blockers.length}`).join(',')
 
+  const bomRows: BomItemData[] = project.bomItems.map(b => ({
+    id: b.id,
+    label: b.label,
+    requiredQuantity: b.requiredQuantity,
+    unit: b.unit,
+    sortOrder: b.sortOrder,
+    consumptionState: b.consumptionState,
+    inventoryItem: b.inventoryItem,
+  }))
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -130,6 +150,8 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       {!isCompleted && (
         <AddStepForm projectId={project.id} />
       )}
+
+      <BomSection projectId={project.id} initialRows={bomRows} />
 
       {!project.isArchived && (
         <GallerySection

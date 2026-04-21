@@ -1,0 +1,413 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+vi.mock('@/lib/db', () => ({
+  prisma: {
+    bomItem: { findMany: vi.fn() },
+    $transaction: vi.fn(),
+  },
+}))
+
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
+}))
+
+import {
+  addBomItem,
+  updateBomItem,
+  deleteBomItem,
+  getBomItemsByProject,
+} from '../bom'
+import { prisma } from '@/lib/db'
+
+const mockTransaction = vi.mocked(prisma.$transaction)
+const mockFindMany = vi.mocked(prisma.bomItem.findMany)
+
+const PROJECT_ID = '550e8400-e29b-41d4-a716-446655440000'
+const INVENTORY_ID = '550e8400-e29b-41d4-a716-446655440001'
+const BOM_ITEM_ID = '550e8400-e29b-41d4-a716-446655440002'
+const HOBBY_ID = '550e8400-e29b-41d4-a716-446655440003'
+
+type TxMock = {
+  project: {
+    findUnique: ReturnType<typeof vi.fn>
+    update: ReturnType<typeof vi.fn>
+  }
+  inventoryItem: { findUnique: ReturnType<typeof vi.fn> }
+  bomItem: {
+    aggregate: ReturnType<typeof vi.fn>
+    create: ReturnType<typeof vi.fn>
+    findUnique: ReturnType<typeof vi.fn>
+    update: ReturnType<typeof vi.fn>
+    delete: ReturnType<typeof vi.fn>
+  }
+}
+
+function buildTx(opts: {
+  project?: { hobbyId: string } | null
+  inventoryItem?: { isDeleted: boolean } | null
+  maxSortOrder?: number | null
+  createResult?: { id: string }
+  createError?: Error | { code: string }
+  existing?: { projectId: string; inventoryItemId: string | null; project: { hobbyId: string } } | null
+  updateError?: Error | { code: string }
+  deleteError?: Error | { code: string }
+}): TxMock {
+  return {
+    project: {
+      findUnique: vi.fn(async () =>
+        opts.project !== undefined ? opts.project : { hobbyId: HOBBY_ID },
+      ),
+      update: vi.fn(async () => ({ id: PROJECT_ID })),
+    },
+    inventoryItem: {
+      findUnique: vi.fn(async () =>
+        opts.inventoryItem !== undefined ? opts.inventoryItem : { isDeleted: false },
+      ),
+    },
+    bomItem: {
+      aggregate: vi.fn(async () => ({
+        _max: { sortOrder: opts.maxSortOrder ?? null },
+      })),
+      create: vi.fn(async () => {
+        if (opts.createError) throw opts.createError
+        return opts.createResult ?? { id: BOM_ITEM_ID }
+      }),
+      findUnique: vi.fn(async () =>
+        opts.existing !== undefined
+          ? opts.existing
+          : {
+              projectId: PROJECT_ID,
+              inventoryItemId: null,
+              project: { hobbyId: HOBBY_ID },
+            },
+      ),
+      update: vi.fn(async () => {
+        if (opts.updateError) throw opts.updateError
+        return { id: BOM_ITEM_ID }
+      }),
+      delete: vi.fn(async () => {
+        if (opts.deleteError) throw opts.deleteError
+        return { id: BOM_ITEM_ID }
+      }),
+    },
+  }
+}
+
+describe('addBomItem', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('rejects when neither label nor inventoryItemId is provided', async () => {
+    const result = await addBomItem({
+      projectId: PROJECT_ID,
+      requiredQuantity: 100,
+    } as never)
+    expect(result.success).toBe(false)
+    expect(mockTransaction).not.toHaveBeenCalled()
+  })
+
+  it('rejects when both label and inventoryItemId are provided', async () => {
+    const result = await addBomItem({
+      projectId: PROJECT_ID,
+      label: 'Kaolin',
+      inventoryItemId: INVENTORY_ID,
+      requiredQuantity: 100,
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects zero or negative requiredQuantity', async () => {
+    let r = await addBomItem({ projectId: PROJECT_ID, label: 'X', requiredQuantity: 0 })
+    expect(r.success).toBe(false)
+    r = await addBomItem({ projectId: PROJECT_ID, label: 'X', requiredQuantity: -5 })
+    expect(r.success).toBe(false)
+  })
+
+  it('creates a free-form BOM row with label and bumps lastActivityAt', async () => {
+    const tx = buildTx({ maxSortOrder: 3 })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await addBomItem({
+      projectId: PROJECT_ID,
+      label: 'Clay',
+      requiredQuantity: 500,
+      unit: 'g',
+    })
+
+    expect(result.success).toBe(true)
+    const payload = tx.bomItem.create.mock.calls[0][0] as { data: Record<string, unknown> }
+    expect(payload.data).toEqual({
+      projectId: PROJECT_ID,
+      inventoryItemId: null,
+      label: 'Clay',
+      requiredQuantity: 500,
+      unit: 'g',
+      sortOrder: 4,
+    })
+    // Inventory lookup should NOT run for free-form rows
+    expect(tx.inventoryItem.findUnique).not.toHaveBeenCalled()
+    // CLAUDE.md: every project-scoped mutation must bump lastActivityAt
+    expect(tx.project.update).toHaveBeenCalledOnce()
+    const projectPayload = tx.project.update.mock.calls[0][0] as {
+      where: { id: string }
+      data: { lastActivityAt: Date }
+    }
+    expect(projectPayload.where).toEqual({ id: PROJECT_ID })
+    expect(projectPayload.data.lastActivityAt).toBeInstanceOf(Date)
+  })
+
+  it('creates an inventory-linked BOM row with sortOrder=0 when none exist', async () => {
+    const tx = buildTx({ maxSortOrder: null })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await addBomItem({
+      projectId: PROJECT_ID,
+      inventoryItemId: INVENTORY_ID,
+      requiredQuantity: 100,
+    })
+
+    expect(result.success).toBe(true)
+    const payload = tx.bomItem.create.mock.calls[0][0] as { data: Record<string, unknown> }
+    expect(payload.data).toEqual({
+      projectId: PROJECT_ID,
+      inventoryItemId: INVENTORY_ID,
+      label: null,
+      requiredQuantity: 100,
+      unit: null,
+      sortOrder: 0,
+    })
+    expect(tx.inventoryItem.findUnique).toHaveBeenCalledOnce()
+  })
+
+  it('rejects when the referenced inventory item is soft-deleted', async () => {
+    const tx = buildTx({ inventoryItem: { isDeleted: true } })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await addBomItem({
+      projectId: PROJECT_ID,
+      inventoryItemId: INVENTORY_ID,
+      requiredQuantity: 100,
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Inventory item not available.')
+    expect(tx.bomItem.create).not.toHaveBeenCalled()
+  })
+
+  it('rejects when project does not exist', async () => {
+    const tx = buildTx({ project: null })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await addBomItem({
+      projectId: PROJECT_ID,
+      label: 'Clay',
+      requiredQuantity: 100,
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Project not found.')
+  })
+
+  it('returns "already in this project" on P2002 partial-index collision', async () => {
+    const tx = buildTx({ createError: { code: 'P2002' } })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await addBomItem({
+      projectId: PROJECT_ID,
+      inventoryItemId: INVENTORY_ID,
+      requiredQuantity: 100,
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success)
+      expect(result.error).toBe('This inventory item is already in this project.')
+  })
+
+  it('returns generic error on unexpected failure', async () => {
+    mockTransaction.mockRejectedValue(new Error('boom'))
+    const result = await addBomItem({
+      projectId: PROJECT_ID,
+      label: 'Clay',
+      requiredQuantity: 1,
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Failed to add BOM item.')
+  })
+})
+
+describe('updateBomItem', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('rejects when no editable fields are provided', async () => {
+    const result = await updateBomItem({ id: BOM_ITEM_ID } as never)
+    expect(result.success).toBe(false)
+    expect(mockTransaction).not.toHaveBeenCalled()
+  })
+
+  it('rejects zero or negative requiredQuantity', async () => {
+    const result = await updateBomItem({ id: BOM_ITEM_ID, requiredQuantity: 0 })
+    expect(result.success).toBe(false)
+  })
+
+  it('persists only the provided fields and bumps lastActivityAt on success', async () => {
+    const tx = buildTx({})
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    await updateBomItem({ id: BOM_ITEM_ID, requiredQuantity: 250 })
+
+    const payload = tx.bomItem.update.mock.calls[0][0] as {
+      where: { id: string }
+      data: Record<string, unknown>
+    }
+    expect(payload.where).toEqual({ id: BOM_ITEM_ID })
+    expect(payload.data.requiredQuantity).toBe(250)
+    expect(Object.keys(payload.data)).not.toContain('unit')
+    expect(Object.keys(payload.data)).not.toContain('label')
+
+    // lastActivityAt must be refreshed — project.update called with now() date
+    expect(tx.project.update).toHaveBeenCalledOnce()
+    const projectPayload = tx.project.update.mock.calls[0][0] as {
+      where: { id: string }
+      data: { lastActivityAt: Date }
+    }
+    expect(projectPayload.where).toEqual({ id: PROJECT_ID })
+    expect(projectPayload.data.lastActivityAt).toBeInstanceOf(Date)
+  })
+
+  it('drops label writes on inventory-linked rows to prevent dead writes', async () => {
+    const tx = buildTx({
+      existing: {
+        projectId: PROJECT_ID,
+        inventoryItemId: INVENTORY_ID,
+        project: { hobbyId: HOBBY_ID },
+      },
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    await updateBomItem({ id: BOM_ITEM_ID, label: 'Should not stick' })
+
+    const payload = tx.bomItem.update.mock.calls[0][0] as { data: Record<string, unknown> }
+    expect(payload.data).not.toHaveProperty('label')
+  })
+
+  it('keeps label writes on free-form rows', async () => {
+    const tx = buildTx({
+      existing: {
+        projectId: PROJECT_ID,
+        inventoryItemId: null,
+        project: { hobbyId: HOBBY_ID },
+      },
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    await updateBomItem({ id: BOM_ITEM_ID, label: 'Renamed' })
+
+    const payload = tx.bomItem.update.mock.calls[0][0] as { data: Record<string, unknown> }
+    expect(payload.data.label).toBe('Renamed')
+  })
+
+  it('accepts null unit to clear the column', async () => {
+    const tx = buildTx({})
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    await updateBomItem({ id: BOM_ITEM_ID, unit: null })
+
+    const payload = tx.bomItem.update.mock.calls[0][0] as { data: Record<string, unknown> }
+    expect(payload.data).toEqual({ unit: null })
+  })
+
+  it('returns "BOM item not found." when target does not exist', async () => {
+    const tx = buildTx({ existing: null })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await updateBomItem({ id: BOM_ITEM_ID, requiredQuantity: 1 })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('BOM item not found.')
+  })
+})
+
+describe('deleteBomItem', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('rejects an invalid UUID before entering the transaction', async () => {
+    const result = await deleteBomItem('not-a-uuid')
+    expect(result.success).toBe(false)
+    expect(mockTransaction).not.toHaveBeenCalled()
+  })
+
+  it('deletes the BOM row, bumps lastActivityAt, and leaves inventory untouched', async () => {
+    const tx = buildTx({})
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await deleteBomItem(BOM_ITEM_ID)
+    expect(result.success).toBe(true)
+    expect(tx.bomItem.delete).toHaveBeenCalledWith({ where: { id: BOM_ITEM_ID } })
+    // Inventory is NEVER modified by deleteBomItem
+    expect(tx.inventoryItem.findUnique).not.toHaveBeenCalled()
+    // lastActivityAt must be refreshed
+    expect(tx.project.update).toHaveBeenCalledOnce()
+  })
+
+  it('returns "BOM item not found." when target is missing', async () => {
+    const tx = buildTx({ existing: null })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await deleteBomItem(BOM_ITEM_ID)
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('BOM item not found.')
+  })
+})
+
+describe('getBomItemsByProject', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('rejects an invalid UUID', async () => {
+    const result = await getBomItemsByProject('bad')
+    expect(result.success).toBe(false)
+    expect(mockFindMany).not.toHaveBeenCalled()
+  })
+
+  it('queries with the correct where + orderBy + include shape', async () => {
+    mockFindMany.mockResolvedValue([] as never)
+    await getBomItemsByProject(PROJECT_ID)
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { projectId: PROJECT_ID },
+        orderBy: { sortOrder: 'asc' },
+        include: {
+          inventoryItem: {
+            select: { id: true, name: true, type: true, quantity: true, isDeleted: true },
+          },
+        },
+      }),
+    )
+  })
+
+  it('maps rows to BomItemData shape', async () => {
+    mockFindMany.mockResolvedValue([
+      {
+        id: 'b1',
+        label: 'Clay',
+        requiredQuantity: 500,
+        unit: 'g',
+        sortOrder: 0,
+        consumptionState: 'NOT_CONSUMED',
+        inventoryItem: null,
+      },
+    ] as never)
+
+    const result = await getBomItemsByProject(PROJECT_ID)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data[0]).toEqual({
+        id: 'b1',
+        label: 'Clay',
+        requiredQuantity: 500,
+        unit: 'g',
+        sortOrder: 0,
+        consumptionState: 'NOT_CONSUMED',
+        inventoryItem: null,
+      })
+    }
+  })
+})

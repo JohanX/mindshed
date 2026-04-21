@@ -43,8 +43,17 @@ export default async function globalSetup() {
         WHERE "is_deleted" = false
     `)
 
+    // Partial unique index for bom_item (Story 16.2). Drop-then-create so the
+    // predicate always matches the current definition.
+    await client.query('DROP INDEX IF EXISTS "bom_item_project_inventory_unique"')
     await client.query(`
-      TRUNCATE TABLE setting, reminder, inventory_item, step_image, step_note, blocker, idea, step, project, hobby RESTART IDENTITY CASCADE
+      CREATE UNIQUE INDEX "bom_item_project_inventory_unique"
+        ON "bom_item" ("project_id", "inventory_item_id")
+        WHERE "inventory_item_id" IS NOT NULL
+    `)
+
+    await client.query(`
+      TRUNCATE TABLE setting, reminder, bom_item, inventory_item, step_image, step_note, blocker, idea, step, project, hobby RESTART IDENTITY CASCADE
     `)
     console.log('[e2e] Test database ready — all tables truncated.')
   } finally {
