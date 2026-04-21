@@ -9,6 +9,7 @@ import type { ActionResult } from '@/lib/action-result'
 import { getIdleThresholdDays } from '@/lib/settings'
 import { getCurrentStep } from '@/lib/project-utils'
 import { deriveProjectStatus } from '@/lib/project-status'
+import { nextCloneName } from '@/lib/project-clone'
 
 export async function createProject(input: CreateProjectInput): Promise<ActionResult<{ id: string; hobbyId: string }>> {
   const parsed = createProjectSchema.safeParse(input)
@@ -171,6 +172,65 @@ export async function updateProject(input: UpdateProjectInput): Promise<ActionRe
       return { success: false, error: 'Project not found.' }
     }
     return { success: false, error: 'Failed to update project. Please try again.' }
+  }
+}
+
+export async function cloneProject(id: string): Promise<ActionResult<{ id: string; hobbyId: string }>> {
+  const parsed = z.uuid().safeParse(id)
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid project ID.' }
+  }
+
+  try {
+    const clone = await prisma.$transaction(async (tx) => {
+      const source = await tx.project.findUnique({
+        where: { id: parsed.data },
+        include: { steps: { orderBy: { sortOrder: 'asc' } } },
+      })
+      if (!source) throw new Error('PROJECT_NOT_FOUND')
+
+      const siblings = await tx.project.findMany({
+        where: { hobbyId: source.hobbyId, name: { startsWith: source.name } },
+        select: { name: true },
+      })
+      const cloneName = nextCloneName(source.name, siblings.map((p) => p.name))
+
+      const maxSort = await tx.project.aggregate({
+        where: { hobbyId: source.hobbyId },
+        _max: { sortOrder: true },
+      })
+      const sortOrder = (maxSort._max.sortOrder ?? -1) + 1
+
+      return tx.project.create({
+        data: {
+          name: cloneName,
+          description: source.description,
+          hobbyId: source.hobbyId,
+          sortOrder,
+          lastActivityAt: new Date(),
+          steps: {
+            create: source.steps.map((s) => ({
+              name: s.name,
+              sortOrder: s.sortOrder,
+              state: 'NOT_STARTED' as const,
+              previousState: null,
+              excludeFromGallery: false,
+            })),
+          },
+        },
+      })
+    })
+
+    revalidatePath(`/hobbies/${clone.hobbyId}`)
+    revalidatePath('/projects')
+    revalidatePath('/')
+    return { success: true, data: { id: clone.id, hobbyId: clone.hobbyId } }
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'PROJECT_NOT_FOUND') {
+      return { success: false, error: 'Project not found.' }
+    }
+    console.error('cloneProject failed:', error)
+    return { success: false, error: 'Clone failed — try again' }
   }
 }
 

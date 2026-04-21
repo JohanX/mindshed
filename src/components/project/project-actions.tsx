@@ -19,9 +19,9 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { updateProject, deleteProject, archiveProject } from '@/actions/project'
+import { updateProject, deleteProject, archiveProject, cloneProject } from '@/actions/project'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
-import { MoreHorizontal, Pencil, Trash2, Archive, Loader2 } from 'lucide-react'
+import { MoreHorizontal, Pencil, Trash2, Archive, Copy, Loader2 } from 'lucide-react'
 
 interface ProjectActionsProps {
   project: {
@@ -92,6 +92,18 @@ export function ProjectActions({ project }: ProjectActionsProps) {
     })
   }
 
+  function handleClone() {
+    startTransition(async () => {
+      const result = await cloneProject(project.id)
+      if (result.success) {
+        showSuccessToast('Project cloned')
+        router.push(`/hobbies/${result.data.hobbyId}/projects/${result.data.id}`)
+      } else {
+        showErrorToast(result.error)
+      }
+    })
+  }
+
   return (
     <>
       <DropdownMenu>
@@ -109,6 +121,10 @@ export function ProjectActions({ project }: ProjectActionsProps) {
           <DropdownMenuItem className="min-h-[44px]" onClick={(e) => { e.stopPropagation(); handleArchive() }}>
             <Archive className="h-4 w-4 mr-2" />
             Archive
+          </DropdownMenuItem>
+          <DropdownMenuItem className="min-h-[44px]" onClick={(e) => { e.stopPropagation(); handleClone() }}>
+            <Copy className="h-4 w-4 mr-2" />
+            Clone
           </DropdownMenuItem>
           <DropdownMenuItem
             className="min-h-[44px] text-destructive focus:text-destructive"
