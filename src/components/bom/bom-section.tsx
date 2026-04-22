@@ -74,7 +74,14 @@ export function BomSection({
 
   function handleRowUpdate(
     id: string,
-    patch: { requiredQuantity?: number; unit?: string | null; label?: string },
+    patch: {
+      requiredQuantity?: number
+      unit?: string | null
+      label?: string
+      consumptionState?: BomConsumptionState
+      consumedAt?: Date | null
+      unconsumedAt?: Date | null
+    },
   ) {
     setRows((prev) =>
       prev.map((r) =>
@@ -84,6 +91,7 @@ export function BomSection({
               requiredQuantity: patch.requiredQuantity ?? r.requiredQuantity,
               unit: patch.unit === undefined ? r.unit : patch.unit,
               label: patch.label ?? r.label,
+              consumptionState: patch.consumptionState ?? r.consumptionState,
             }
           : r,
       ),
@@ -156,7 +164,7 @@ export function BomSection({
               <tbody>
                 {rows.map((row) => (
                   <BomRow
-                    key={`${row.id}:${row.requiredQuantity}:${row.unit ?? ''}`}
+                    key={`${row.id}:${row.requiredQuantity}:${row.unit ?? ''}:${row.consumptionState}`}
                     row={row}
                     variant="desktop"
                     onUpdate={handleRowUpdate}
@@ -172,7 +180,7 @@ export function BomSection({
           <div className="space-y-2 md:hidden">
             {rows.map((row) => (
               <BomRow
-                key={`${row.id}:${row.requiredQuantity}:${row.unit ?? ''}`}
+                key={`${row.id}:${row.requiredQuantity}:${row.unit ?? ''}:${row.consumptionState}`}
                 row={row}
                 variant="mobile"
                 onUpdate={handleRowUpdate}

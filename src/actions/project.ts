@@ -185,7 +185,10 @@ export async function cloneProject(id: string): Promise<ActionResult<{ id: strin
     const clone = await prisma.$transaction(async (tx) => {
       const source = await tx.project.findUnique({
         where: { id: parsed.data },
-        include: { steps: { orderBy: { sortOrder: 'asc' } } },
+        include: {
+          steps: { orderBy: { sortOrder: 'asc' } },
+          bomItems: { orderBy: { sortOrder: 'asc' } },
+        },
       })
       if (!source) throw new Error('PROJECT_NOT_FOUND')
 
@@ -201,7 +204,7 @@ export async function cloneProject(id: string): Promise<ActionResult<{ id: strin
       })
       const sortOrder = (maxSort._max.sortOrder ?? -1) + 1
 
-      return tx.project.create({
+      const created = await tx.project.create({
         data: {
           name: cloneName,
           description: source.description,
@@ -217,8 +220,20 @@ export async function cloneProject(id: string): Promise<ActionResult<{ id: strin
               excludeFromGallery: false,
             })),
           },
+          bomItems: {
+            create: source.bomItems.map((b) => ({
+              inventoryItemId: b.inventoryItemId,
+              label: b.label,
+              requiredQuantity: b.requiredQuantity,
+              unit: b.unit,
+              sortOrder: b.sortOrder,
+              consumptionState: 'NOT_CONSUMED' as const,
+            })),
+          },
         },
       })
+
+      return created
     })
 
     revalidatePath(`/hobbies/${clone.hobbyId}`)

@@ -52,3 +52,13 @@ export const createShortageBlockersSchema = z.object({
 })
 
 export type CreateShortageBlockersInput = z.infer<typeof createShortageBlockersSchema>
+
+export const markBomItemConsumedSchema = z.object({
+  id: z.uuid(),
+})
+export type MarkBomItemConsumedInput = z.infer<typeof markBomItemConsumedSchema>
+
+export const undoBomItemConsumptionSchema = z.object({
+  id: z.uuid(),
+})
+export type UndoBomItemConsumptionInput = z.infer<typeof undoBomItemConsumptionSchema>

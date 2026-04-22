@@ -38,6 +38,14 @@ type SourceMock = {
   gallerySlug?: string | null
   resultStepId?: string | null
   steps: StepMock[]
+  bomItems?: Array<{
+    inventoryItemId: string | null
+    label: string | null
+    requiredQuantity: number
+    unit: string | null
+    sortOrder: number
+    consumptionState: 'NOT_CONSUMED' | 'CONSUMED' | 'UNDONE'
+  }>
 }
 
 function buildTx(opts: {
@@ -52,9 +60,15 @@ function buildTx(opts: {
     return { id: opts.createdId ?? 'new-project-id', ...args.data }
   })
 
+  // Default bomItems to empty array so existing tests exercise the new
+  // include path without per-test wiring.
+  const sourceWithBom = opts.source
+    ? { bomItems: [], ...opts.source }
+    : opts.source
+
   return {
     project: {
-      findUnique: vi.fn().mockResolvedValue(opts.source),
+      findUnique: vi.fn().mockResolvedValue(sourceWithBom),
       findMany: vi.fn().mockResolvedValue(
         (opts.existingNames ?? []).map((name) => ({ name })),
       ),
@@ -66,6 +80,7 @@ function buildTx(opts: {
     stepNote: { create: vi.fn() },
     blocker: { create: vi.fn() },
     stepImage: { create: vi.fn() },
+    bomItem: { create: vi.fn(), createMany: vi.fn() },
   }
 }
 
@@ -295,5 +310,97 @@ describe('cloneProject', () => {
 
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toBe('Clone failed — try again')
+  })
+
+  it('clones BOM rows with consumptionState reset and timestamps cleared (Story 16.5)', async () => {
+    const tx = buildTx({
+      source: {
+        id: validProjectId,
+        name: 'Knife',
+        description: null,
+        hobbyId: 'hobby-1',
+        isCompleted: false,
+        isArchived: false,
+        steps: [],
+        bomItems: [
+          {
+            inventoryItemId: 'inv-a',
+            label: null,
+            requiredQuantity: 100,
+            unit: 'g',
+            sortOrder: 0,
+            consumptionState: 'NOT_CONSUMED',
+          },
+          {
+            inventoryItemId: 'inv-b',
+            label: null,
+            requiredQuantity: 50,
+            unit: 'g',
+            sortOrder: 1,
+            consumptionState: 'CONSUMED',
+          },
+          {
+            inventoryItemId: null,
+            label: 'Free-form clay',
+            requiredQuantity: 5,
+            unit: 'kg',
+            sortOrder: 2,
+            consumptionState: 'UNDONE',
+          },
+        ],
+      },
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    await cloneProject(validProjectId)
+
+    const projectPayload = (tx.project.create.mock.calls[0][0] as {
+      data: { bomItems: { create: Array<Record<string, unknown>> } }
+    }).data
+
+    expect(projectPayload.bomItems.create).toHaveLength(3)
+    for (const cloned of projectPayload.bomItems.create) {
+      expect(cloned.consumptionState).toBe('NOT_CONSUMED')
+      // Consumption timestamps must NOT appear on the clone payload
+      expect(cloned).not.toHaveProperty('consumedAt')
+      expect(cloned).not.toHaveProperty('unconsumedAt')
+    }
+    // Preserved fields pass through
+    expect(projectPayload.bomItems.create[0]).toMatchObject({
+      inventoryItemId: 'inv-a',
+      requiredQuantity: 100,
+      unit: 'g',
+      sortOrder: 0,
+    })
+    expect(projectPayload.bomItems.create[2]).toMatchObject({
+      inventoryItemId: null,
+      label: 'Free-form clay',
+      requiredQuantity: 5,
+      unit: 'kg',
+      sortOrder: 2,
+    })
+  })
+
+  it('clones a project with zero BOM rows without error', async () => {
+    const tx = buildTx({
+      source: {
+        id: validProjectId,
+        name: 'Knife',
+        description: null,
+        hobbyId: 'hobby-1',
+        isCompleted: false,
+        isArchived: false,
+        steps: [],
+        bomItems: [],
+      },
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await cloneProject(validProjectId)
+    expect(result.success).toBe(true)
+    const projectPayload = (tx.project.create.mock.calls[0][0] as {
+      data: { bomItems: { create: Array<unknown> } }
+    }).data
+    expect(projectPayload.bomItems.create).toEqual([])
   })
 })

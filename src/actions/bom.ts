@@ -7,10 +7,14 @@ import {
   updateBomItemSchema,
   addBomItemWithNewInventorySchema,
   createShortageBlockersSchema,
+  markBomItemConsumedSchema,
+  undoBomItemConsumptionSchema,
   type AddBomItemInput,
   type UpdateBomItemInput,
   type AddBomItemWithNewInventoryInput,
   type CreateShortageBlockersInput,
+  type MarkBomItemConsumedInput,
+  type UndoBomItemConsumptionInput,
 } from '@/lib/schemas/bom'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
@@ -438,5 +442,164 @@ export async function createShortageBlockers(
     }
     console.error('createShortageBlockers failed:', error)
     return { success: false, error: 'Failed to create shortage blockers.' }
+  }
+}
+
+export async function markBomItemConsumed(
+  input: MarkBomItemConsumedInput,
+): Promise<ActionResult<{ id: string }>> {
+  const parsed = markBomItemConsumedSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid BOM item ID.' }
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const row = await tx.bomItem.findUnique({
+        where: { id: parsed.data.id },
+        select: {
+          requiredQuantity: true,
+          consumptionState: true,
+          projectId: true,
+          inventoryItem: {
+            select: {
+              id: true,
+              name: true,
+              quantity: true,
+              isDeleted: true,
+              type: true,
+            },
+          },
+          project: { select: { hobbyId: true } },
+        },
+      })
+      if (!row) throw Object.assign(new Error('BOM_ITEM_NOT_FOUND'), { code: 'P2025' })
+      if (row.consumptionState !== 'NOT_CONSUMED') throw new Error('ALREADY_CONSUMED')
+      const inv = row.inventoryItem
+      if (!inv || inv.isDeleted || inv.type !== 'MATERIAL') {
+        throw new Error('NOT_MATERIAL_LINKED')
+      }
+      if (inv.quantity === null || inv.quantity < row.requiredQuantity) {
+        const err = new Error('INSUFFICIENT_INVENTORY')
+        ;(err as Error & { itemName?: string }).itemName = inv.name
+        throw err
+      }
+
+      await tx.inventoryItem.update({
+        where: { id: inv.id },
+        data: { quantity: { decrement: row.requiredQuantity } },
+      })
+
+      await tx.bomItem.update({
+        where: { id: parsed.data.id },
+        data: { consumptionState: 'CONSUMED', consumedAt: new Date() },
+      })
+
+      await tx.project.update({
+        where: { id: row.projectId },
+        data: { lastActivityAt: new Date() },
+      })
+
+      return {
+        id: parsed.data.id,
+        projectId: row.projectId,
+        hobbyId: row.project.hobbyId,
+        inventoryName: inv.name,
+      }
+    })
+
+    revalidatePath(`/hobbies/${result.hobbyId}/projects/${result.projectId}`)
+    revalidatePath('/inventory')
+    return { success: true, data: { id: result.id } }
+  } catch (error) {
+    if (isP2025(error)) {
+      return { success: false, error: 'BOM item not found.' }
+    }
+    if (error instanceof Error) {
+      if (error.message === 'INSUFFICIENT_INVENTORY') {
+        const name = (error as Error & { itemName?: string }).itemName ?? 'item'
+        return {
+          success: false,
+          error: `Not enough ${name} in inventory. Create shortage blockers first.`,
+        }
+      }
+      if (error.message === 'ALREADY_CONSUMED') {
+        return { success: false, error: 'Row already consumed or reverted.' }
+      }
+      if (error.message === 'NOT_MATERIAL_LINKED') {
+        return { success: false, error: 'Cannot mark this row as consumed.' }
+      }
+    }
+    console.error('markBomItemConsumed failed:', error)
+    return { success: false, error: 'Failed to mark as consumed.' }
+  }
+}
+
+export async function undoBomItemConsumption(
+  input: UndoBomItemConsumptionInput,
+): Promise<ActionResult<{ id: string }>> {
+  const parsed = undoBomItemConsumptionSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid BOM item ID.' }
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const row = await tx.bomItem.findUnique({
+        where: { id: parsed.data.id },
+        select: {
+          requiredQuantity: true,
+          consumptionState: true,
+          projectId: true,
+          inventoryItem: { select: { id: true, name: true } },
+          project: { select: { hobbyId: true } },
+        },
+      })
+      if (!row) throw Object.assign(new Error('BOM_ITEM_NOT_FOUND'), { code: 'P2025' })
+      if (row.consumptionState !== 'CONSUMED') throw new Error('NOT_CONSUMED_STATE')
+      if (!row.inventoryItem) throw new Error('NO_INVENTORY_LINK')
+
+      // Credit inventory back — even if soft-deleted (AC #7): accounting integrity
+      // wins over hiding the row from lists.
+      await tx.inventoryItem.update({
+        where: { id: row.inventoryItem.id },
+        data: { quantity: { increment: row.requiredQuantity } },
+      })
+
+      await tx.bomItem.update({
+        where: { id: parsed.data.id },
+        data: { consumptionState: 'UNDONE', unconsumedAt: new Date() },
+      })
+
+      await tx.project.update({
+        where: { id: row.projectId },
+        data: { lastActivityAt: new Date() },
+      })
+
+      return {
+        id: parsed.data.id,
+        projectId: row.projectId,
+        hobbyId: row.project.hobbyId,
+        inventoryName: row.inventoryItem.name,
+      }
+    })
+
+    revalidatePath(`/hobbies/${result.hobbyId}/projects/${result.projectId}`)
+    revalidatePath('/inventory')
+    return { success: true, data: { id: result.id } }
+  } catch (error) {
+    if (isP2025(error)) {
+      return { success: false, error: 'BOM item not found.' }
+    }
+    if (error instanceof Error) {
+      if (error.message === 'NOT_CONSUMED_STATE') {
+        return { success: false, error: 'Row is not in a consumed state.' }
+      }
+      if (error.message === 'NO_INVENTORY_LINK') {
+        return { success: false, error: 'Cannot undo a row without an inventory link.' }
+      }
+    }
+    console.error('undoBomItemConsumption failed:', error)
+    return { success: false, error: 'Failed to undo consumption.' }
   }
 }

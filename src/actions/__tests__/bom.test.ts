@@ -6,6 +6,7 @@ vi.mock('@/lib/db', () => ({
     $transaction: vi.fn(),
     blocker: { findFirst: vi.fn(), create: vi.fn() },
     step: { findFirst: vi.fn(), update: vi.fn() },
+    inventoryItem: { update: vi.fn() },
   },
 }))
 
@@ -20,6 +21,8 @@ import {
   getBomItemsByProject,
   addBomItemWithNewInventory,
   createShortageBlockers,
+  markBomItemConsumed,
+  undoBomItemConsumption,
 } from '../bom'
 import { prisma } from '@/lib/db'
 import { revalidatePath } from 'next/cache'
@@ -870,5 +873,274 @@ describe('createShortageBlockers', () => {
     expect(mockRevalidatePath).toHaveBeenCalledWith('/')
   })
 })
+
+// ========================================================================
+// markBomItemConsumed / undoBomItemConsumption — Story 16.5
+// ========================================================================
+
+type ConsumptionTxMock = {
+  bomItem: {
+    findUnique: ReturnType<typeof vi.fn>
+    update: ReturnType<typeof vi.fn>
+  }
+  inventoryItem: {
+    update: ReturnType<typeof vi.fn>
+  }
+  project: {
+    update: ReturnType<typeof vi.fn>
+  }
+}
+
+function buildConsumptionTx(opts: {
+  row?: {
+    requiredQuantity: number
+    consumptionState: 'NOT_CONSUMED' | 'CONSUMED' | 'UNDONE'
+    projectId: string
+    inventoryItem: {
+      id: string
+      name: string
+      quantity: number | null
+      isDeleted: boolean
+      type: 'MATERIAL' | 'CONSUMABLE' | 'TOOL'
+    } | null
+    project: { hobbyId: string }
+  } | null
+}): ConsumptionTxMock {
+  return {
+    bomItem: {
+      findUnique: vi.fn(async () => (opts.row !== undefined ? opts.row : null)),
+      update: vi.fn(async () => ({ id: BOM_ITEM_ID })),
+    },
+    inventoryItem: {
+      update: vi.fn(async () => ({ id: INVENTORY_ID })),
+    },
+    project: {
+      update: vi.fn(async () => ({ id: PROJECT_ID })),
+    },
+  }
+}
+
+function materialRow(overrides: {
+  required?: number
+  available?: number | null
+  state?: 'NOT_CONSUMED' | 'CONSUMED' | 'UNDONE'
+  isDeleted?: boolean
+  type?: 'MATERIAL' | 'CONSUMABLE' | 'TOOL'
+  name?: string
+} = {}) {
+  return {
+    requiredQuantity: overrides.required ?? 100,
+    consumptionState: overrides.state ?? ('NOT_CONSUMED' as const),
+    projectId: PROJECT_ID,
+    inventoryItem: {
+      id: INVENTORY_ID,
+      name: overrides.name ?? 'Kaolin',
+      // Honor explicit null via `in` check — `??` would coerce null to the fallback
+      quantity: 'available' in overrides ? (overrides.available as number | null) : 500,
+      isDeleted: overrides.isDeleted ?? false,
+      type: overrides.type ?? ('MATERIAL' as const),
+    },
+    project: { hobbyId: HOBBY_ID },
+  }
+}
+
+describe('markBomItemConsumed', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('rejects invalid UUID before the transaction', async () => {
+    const result = await markBomItemConsumed({ id: 'nope' } as never)
+    expect(result.success).toBe(false)
+    expect(mockTransaction).not.toHaveBeenCalled()
+  })
+
+  it('happy path: decrements inventory, flips to CONSUMED, bumps lastActivityAt', async () => {
+    const tx = buildConsumptionTx({
+      row: materialRow({ required: 100, available: 500 }),
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await markBomItemConsumed({ id: BOM_ITEM_ID })
+    expect(result.success).toBe(true)
+
+    const invCall = tx.inventoryItem.update.mock.calls[0][0] as {
+      where: { id: string }
+      data: { quantity: { decrement: number } }
+    }
+    expect(invCall.where.id).toBe(INVENTORY_ID)
+    expect(invCall.data.quantity.decrement).toBe(100)
+
+    const bomCall = tx.bomItem.update.mock.calls[0][0] as {
+      data: { consumptionState: string; consumedAt: Date }
+    }
+    expect(bomCall.data.consumptionState).toBe('CONSUMED')
+    expect(bomCall.data.consumedAt).toBeInstanceOf(Date)
+
+    expect(tx.project.update).toHaveBeenCalledOnce()
+    expect(mockRevalidatePath).toHaveBeenCalledWith(`/hobbies/${HOBBY_ID}/projects/${PROJECT_ID}`)
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/inventory')
+  })
+
+  it('rejects with interpolated toast when available < required', async () => {
+    const tx = buildConsumptionTx({
+      row: materialRow({ required: 100, available: 50, name: 'Silica' }),
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await markBomItemConsumed({ id: BOM_ITEM_ID })
+    expect(result.success).toBe(false)
+    if (!result.success)
+      expect(result.error).toBe(
+        'Not enough Silica in inventory. Create shortage blockers first.',
+      )
+    expect(tx.inventoryItem.update).not.toHaveBeenCalled()
+    expect(tx.bomItem.update).not.toHaveBeenCalled()
+  })
+
+  it('rejects when row already CONSUMED', async () => {
+    const tx = buildConsumptionTx({
+      row: materialRow({ state: 'CONSUMED', required: 10, available: 1000 }),
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await markBomItemConsumed({ id: BOM_ITEM_ID })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Row already consumed or reverted.')
+  })
+
+  it('rejects when row is UNDONE', async () => {
+    const tx = buildConsumptionTx({
+      row: materialRow({ state: 'UNDONE', required: 10, available: 1000 }),
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await markBomItemConsumed({ id: BOM_ITEM_ID })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects CONSUMABLE type', async () => {
+    const tx = buildConsumptionTx({ row: materialRow({ type: 'CONSUMABLE' }) })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await markBomItemConsumed({ id: BOM_ITEM_ID })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Cannot mark this row as consumed.')
+  })
+
+  it('rejects TOOL type', async () => {
+    const tx = buildConsumptionTx({ row: materialRow({ type: 'TOOL' }) })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await markBomItemConsumed({ id: BOM_ITEM_ID })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects soft-deleted inventory', async () => {
+    const tx = buildConsumptionTx({
+      row: materialRow({ isDeleted: true, required: 10, available: 1000 }),
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await markBomItemConsumed({ id: BOM_ITEM_ID })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Cannot mark this row as consumed.')
+  })
+
+  it('rejects null inventory quantity as insufficient', async () => {
+    const tx = buildConsumptionTx({
+      row: materialRow({ available: null, name: 'Kaolin' }),
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await markBomItemConsumed({ id: BOM_ITEM_ID })
+    expect(result.success).toBe(false)
+    if (!result.success)
+      expect(result.error).toContain('Not enough Kaolin in inventory')
+  })
+
+  it('returns BOM item not found when row missing', async () => {
+    const tx = buildConsumptionTx({ row: null })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await markBomItemConsumed({ id: BOM_ITEM_ID })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('BOM item not found.')
+  })
+})
+
+describe('undoBomItemConsumption', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('rejects invalid UUID before the transaction', async () => {
+    const result = await undoBomItemConsumption({ id: 'nope' } as never)
+    expect(result.success).toBe(false)
+    expect(mockTransaction).not.toHaveBeenCalled()
+  })
+
+  it('happy path: credits inventory, flips to UNDONE, bumps lastActivityAt', async () => {
+    const tx = buildConsumptionTx({
+      row: materialRow({ state: 'CONSUMED', required: 100, available: 400 }),
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await undoBomItemConsumption({ id: BOM_ITEM_ID })
+    expect(result.success).toBe(true)
+
+    const invCall = tx.inventoryItem.update.mock.calls[0][0] as {
+      data: { quantity: { increment: number } }
+    }
+    expect(invCall.data.quantity.increment).toBe(100)
+
+    const bomCall = tx.bomItem.update.mock.calls[0][0] as {
+      data: { consumptionState: string; unconsumedAt: Date }
+    }
+    expect(bomCall.data.consumptionState).toBe('UNDONE')
+    expect(bomCall.data.unconsumedAt).toBeInstanceOf(Date)
+
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/inventory')
+  })
+
+  it('still credits inventory when the item is soft-deleted (AC #7)', async () => {
+    const tx = buildConsumptionTx({
+      row: materialRow({
+        state: 'CONSUMED',
+        required: 50,
+        available: 10,
+        isDeleted: true,
+      }),
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await undoBomItemConsumption({ id: BOM_ITEM_ID })
+    expect(result.success).toBe(true)
+    expect(tx.inventoryItem.update).toHaveBeenCalledOnce()
+  })
+
+  it('rejects when row is NOT_CONSUMED', async () => {
+    const tx = buildConsumptionTx({ row: materialRow({ state: 'NOT_CONSUMED' }) })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await undoBomItemConsumption({ id: BOM_ITEM_ID })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Row is not in a consumed state.')
+  })
+
+  it('rejects when row is UNDONE (one-shot semantics)', async () => {
+    const tx = buildConsumptionTx({ row: materialRow({ state: 'UNDONE' }) })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await undoBomItemConsumption({ id: BOM_ITEM_ID })
+    expect(result.success).toBe(false)
+  })
+
+  it('returns BOM item not found when row missing', async () => {
+    const tx = buildConsumptionTx({ row: null })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await undoBomItemConsumption({ id: BOM_ITEM_ID })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('BOM item not found.')
+  })
+})
+
 
 
