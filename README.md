@@ -48,15 +48,15 @@ App runs at http://localhost:3000
 
 ### Scripts
 
-| Script | Description |
-|---|---|
-| `pnpm dev` | Start dev server with Turbopack |
-| `pnpm build` | Production build |
-| `pnpm lint` | Run ESLint |
-| `pnpm test` | Run Vitest unit tests |
-| `pnpm test run --coverage` | Unit tests with coverage report |
-| `pnpm test:e2e` | Run Playwright E2E tests (all browsers) |
-| `pnpm test:e2e:chrome` | Run Playwright E2E tests (Chromium only) |
+| Script                     | Description                              |
+| -------------------------- | ---------------------------------------- |
+| `pnpm dev`                 | Start dev server with Turbopack          |
+| `pnpm build`               | Production build                         |
+| `pnpm lint`                | Run ESLint                               |
+| `pnpm test`                | Run Vitest unit tests                    |
+| `pnpm test run --coverage` | Unit tests with coverage report          |
+| `pnpm test:e2e`            | Run Playwright E2E tests (all browsers)  |
+| `pnpm test:e2e:chrome`     | Run Playwright E2E tests (Chromium only) |
 
 ### Testing
 
@@ -121,17 +121,20 @@ R2 provides S3-compatible storage with presigned URL uploads. Requires CORS conf
 3. Set environment variables in Vercel:
 
 **Required (all deployments):**
+
 - `DATABASE_URL` — Postgres connection string (pooled, port 6543 for Supabase)
 - `DIRECT_URL` — Postgres direct connection (port 5432, used for migrations)
 - `APP_SECRET` — Random secret string for authentication
 
 **For Cloudinary image storage:**
+
 - `IMAGE_PROVIDER=cloudinary`
 - `CLOUDINARY_CLOUD_NAME` — from Cloudinary Dashboard
 - `CLOUDINARY_API_KEY` — from Cloudinary Dashboard
 - `CLOUDINARY_API_SECRET` — from Cloudinary Dashboard
 
 **For R2 image storage:**
+
 - `IMAGE_PROVIDER=s3`
 - `R2_ENDPOINT` — Cloudflare R2 endpoint
 - `R2_ACCESS_KEY_ID` — R2 API token key ID

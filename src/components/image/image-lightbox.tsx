@@ -49,7 +49,12 @@ export function ImageLightbox({ images, initialIndex, onClose }: ImageLightboxPr
   if (!current) return null
 
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
       <DialogContent
         showCloseButton={false}
         className="flex h-[100dvh] max-h-[100dvh] w-screen max-w-full flex-col items-center justify-center gap-0 rounded-none border-none bg-black/95 p-0 sm:max-w-full"

@@ -7,10 +7,7 @@ export const STEP_STATES = {
 
 export type StepState = (typeof STEP_STATES)[keyof typeof STEP_STATES]
 
-export const STEP_STATE_CONFIG: Record<
-  StepState,
-  { label: string; colorClass: string }
-> = {
+export const STEP_STATE_CONFIG: Record<StepState, { label: string; colorClass: string }> = {
   NOT_STARTED: {
     label: 'Not Started',
     colorClass: 'bg-step-not-started text-foreground',

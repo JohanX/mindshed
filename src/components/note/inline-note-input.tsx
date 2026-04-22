@@ -95,17 +95,16 @@ export function InlineNoteInput({ stepId }: InlineNoteInputProps) {
         aria-describedby={error ? 'note-input-error' : undefined}
       />
       {error && (
-        <p id="note-input-error" className="text-sm text-destructive" data-testid="note-input-error">
+        <p
+          id="note-input-error"
+          className="text-sm text-destructive"
+          data-testid="note-input-error"
+        >
           {error}
         </p>
       )}
       <div className="flex gap-2">
-        <Button
-          size="sm"
-          className="min-h-[44px]"
-          onClick={handleSave}
-          disabled={isPending}
-        >
+        <Button size="sm" className="min-h-[44px]" onClick={handleSave} disabled={isPending}>
           {isPending ? 'Saving...' : 'Save'}
         </Button>
         <Button

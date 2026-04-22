@@ -19,9 +19,7 @@ export function DashboardIdleSection({ projects }: DashboardIdleSectionProps) {
           <Clock className="h-5 w-5 text-primary" />
           Idle Projects
         </h2>
-        <p className="text-muted-foreground py-4">
-          No idle projects — everything is moving along!
-        </p>
+        <p className="text-muted-foreground py-4">No idle projects — everything is moving along!</p>
       </section>
     )
   }
@@ -56,7 +54,10 @@ export function DashboardIdleSection({ projects }: DashboardIdleSectionProps) {
                   </p>
                 </CardContent>
                 {watermarkIcon && (
-                  <div className="absolute bottom-2 right-2 z-10 pointer-events-none" aria-hidden="true">
+                  <div
+                    className="absolute bottom-2 right-2 z-10 pointer-events-none"
+                    aria-hidden="true"
+                  >
                     {watermarkIcon}
                   </div>
                 )}

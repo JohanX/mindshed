@@ -60,11 +60,7 @@ interface StepCardProps {
   isProjectCompleted: boolean
 }
 
-export function StepCard({
-  step,
-  variant,
-  isProjectCompleted,
-}: StepCardProps) {
+export function StepCard({ step, variant, isProjectCompleted }: StepCardProps) {
   const [expanded, setExpanded] = useState(variant === 'current')
   const [isPending, startTransition] = useTransition()
   const [editing, setEditing] = useState(false)
@@ -110,128 +106,156 @@ export function StepCard({
 
   return (
     <>
-    <Card data-testid={`step-card-${step.id}`} className={cn(!expanded && 'gap-0 py-0')}>
-      <div className="flex items-center">
-        {editing ? (
-          <form
-            className="flex-1 flex items-center gap-2 px-3 py-1.5"
-            onSubmit={(e) => { e.preventDefault(); handleEdit() }}
-          >
-            <Input
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              autoFocus
-              maxLength={200}
-              className="flex-1"
-            />
-            <Button type="submit" size="sm" disabled={!editName.trim() || isPending}>Save</Button>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(false)}>Cancel</Button>
-          </form>
-        ) : (
-          <>
-            <button
-              type="button"
-              className={cn(
-                'flex flex-1 items-center gap-2 px-3 py-2 text-left',
-                'min-h-[44px] cursor-pointer min-w-0',
-              )}
-              aria-expanded={expanded}
-              aria-controls={`step-content-${step.id}`}
-              onClick={() => setExpanded((prev) => !prev)}
+      <Card data-testid={`step-card-${step.id}`} className={cn(!expanded && 'gap-0 py-0')}>
+        <div className="flex items-center">
+          {editing ? (
+            <form
+              className="flex-1 flex items-center gap-2 px-3 py-1.5"
+              onSubmit={(e) => {
+                e.preventDefault()
+                handleEdit()
+              }}
             >
-              <span className="font-medium truncate">{step.name}</span>
-              {!expanded && <StepThumbnailStrip images={step.images.map(img => ({
-                id: img.id,
-                displayUrl: img.displayUrl,
-                thumbnailUrl: img.stripThumbnailUrl || img.thumbnailUrl,
-              }))} />}
-            </button>
-            <StepStatusSelect
-              currentState={step.state}
-              previousState={step.previousState}
-              onStateChange={handleStateChange}
-              disabled={isPending || isProjectCompleted}
-            />
-            {!isProjectCompleted && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] mr-1">
-                    <MoreHorizontal className="h-4 w-4" />
-                    <span className="sr-only">Step actions</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem className="min-h-[44px]" onClick={() => { setEditing(true); setEditName(step.name) }}>
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="min-h-[44px] text-destructive" onClick={() => setDeleteOpen(true)}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </>
-        )}
-      </div>
-
-      <div
-        id={`step-content-${step.id}`}
-        className={cn(
-          'grid transition-[grid-template-rows] duration-200 motion-reduce:transition-none',
-          expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
-        )}
-      >
-        <div className={expanded ? '' : 'overflow-hidden'}>
-          <CardContent className="pt-0">
-            {/* Photos section */}
-            <section>
-              <h4 className="text-sm font-semibold text-muted-foreground mb-2">Photos</h4>
-              {step.images.length > 0 ? (
-                <ImageGallery images={step.images} stepId={step.id} />
-              ) : (
-                <p className="text-sm text-muted-foreground">Add photos to document your progress.</p>
-              )}
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                autoFocus
+                maxLength={200}
+                className="flex-1"
+              />
+              <Button type="submit" size="sm" disabled={!editName.trim() || isPending}>
+                Save
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(false)}>
+                Cancel
+              </Button>
+            </form>
+          ) : (
+            <>
+              <button
+                type="button"
+                className={cn(
+                  'flex flex-1 items-center gap-2 px-3 py-2 text-left',
+                  'min-h-[44px] cursor-pointer min-w-0',
+                )}
+                aria-expanded={expanded}
+                aria-controls={`step-content-${step.id}`}
+                onClick={() => setExpanded((prev) => !prev)}
+              >
+                <span className="font-medium truncate">{step.name}</span>
+                {!expanded && (
+                  <StepThumbnailStrip
+                    images={step.images.map((img) => ({
+                      id: img.id,
+                      displayUrl: img.displayUrl,
+                      thumbnailUrl: img.stripThumbnailUrl || img.thumbnailUrl,
+                    }))}
+                  />
+                )}
+              </button>
+              <StepStatusSelect
+                currentState={step.state}
+                previousState={step.previousState}
+                onStateChange={handleStateChange}
+                disabled={isPending || isProjectCompleted}
+              />
               {!isProjectCompleted && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <ImageUploadButton stepId={step.id} />
-                  <CameraCaptureButton stepId={step.id} />
-                  <ImageLinkInput stepId={step.id} />
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] mr-1">
+                      <MoreHorizontal className="h-4 w-4" />
+                      <span className="sr-only">Step actions</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      className="min-h-[44px]"
+                      onClick={() => {
+                        setEditing(true)
+                        setEditName(step.name)
+                      }}
+                    >
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="min-h-[44px] text-destructive"
+                      onClick={() => setDeleteOpen(true)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
-            </section>
-
-            <Separator className="my-3" />
-
-            {/* Notes section */}
-            <section className="space-y-2">
-              <h4 className="text-sm font-semibold text-muted-foreground">Notes</h4>
-              {!isProjectCompleted && <InlineNoteInput stepId={step.id} />}
-              <NotesList notes={step.notes} isProjectCompleted={isProjectCompleted} />
-            </section>
-
-            {/* Blockers section — only show if blockers exist or project is active */}
-            {(step.blockers.length > 0 || !isProjectCompleted) && (
-              <>
-                <Separator className="my-3" />
-                <section>
-                  <h4 className="text-sm font-semibold text-muted-foreground mb-2">Blockers</h4>
-                  {step.blockers.map((blocker) => (
-                    <BlockerCard key={blocker.id} id={blocker.id} description={blocker.description} />
-                  ))}
-                  {!isProjectCompleted && <InlineBlockerInput stepId={step.id} />}
-                </section>
-              </>
-            )}
-          </CardContent>
+            </>
+          )}
         </div>
-      </div>
-    </Card>
+
+        <div
+          id={`step-content-${step.id}`}
+          className={cn(
+            'grid transition-[grid-template-rows] duration-200 motion-reduce:transition-none',
+            expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+          )}
+        >
+          <div className={expanded ? '' : 'overflow-hidden'}>
+            <CardContent className="pt-0">
+              {/* Photos section */}
+              <section>
+                <h4 className="text-sm font-semibold text-muted-foreground mb-2">Photos</h4>
+                {step.images.length > 0 ? (
+                  <ImageGallery images={step.images} stepId={step.id} />
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Add photos to document your progress.
+                  </p>
+                )}
+                {!isProjectCompleted && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <ImageUploadButton stepId={step.id} />
+                    <CameraCaptureButton stepId={step.id} />
+                    <ImageLinkInput stepId={step.id} />
+                  </div>
+                )}
+              </section>
+
+              <Separator className="my-3" />
+
+              {/* Notes section */}
+              <section className="space-y-2">
+                <h4 className="text-sm font-semibold text-muted-foreground">Notes</h4>
+                {!isProjectCompleted && <InlineNoteInput stepId={step.id} />}
+                <NotesList notes={step.notes} isProjectCompleted={isProjectCompleted} />
+              </section>
+
+              {/* Blockers section — only show if blockers exist or project is active */}
+              {(step.blockers.length > 0 || !isProjectCompleted) && (
+                <>
+                  <Separator className="my-3" />
+                  <section>
+                    <h4 className="text-sm font-semibold text-muted-foreground mb-2">Blockers</h4>
+                    {step.blockers.map((blocker) => (
+                      <BlockerCard
+                        key={blocker.id}
+                        id={blocker.id}
+                        description={blocker.description}
+                      />
+                    ))}
+                    {!isProjectCompleted && <InlineBlockerInput stepId={step.id} />}
+                  </section>
+                </>
+              )}
+            </CardContent>
+          </div>
+        </div>
+      </Card>
 
       <ConfirmDialog
         open={deleteOpen}
-        onOpenChange={(v) => { if (!v) setDeleteOpen(false) }}
+        onOpenChange={(v) => {
+          if (!v) setDeleteOpen(false)
+        }}
         title="Delete this step?"
         description="Notes, blockers, and images on this step will be removed."
         onConfirm={handleDelete}

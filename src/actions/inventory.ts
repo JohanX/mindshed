@@ -2,20 +2,41 @@
 
 import { prisma } from '@/lib/db'
 import { z } from 'zod/v4'
-import { createInventoryItemSchema, updateInventoryItemSchema, updateMaintenanceSchema, type CreateInventoryItemInput, type UpdateInventoryItemInput, type UpdateMaintenanceInput, type InventoryItemData, type InventoryItemOption } from '@/lib/schemas/inventory'
+import {
+  createInventoryItemSchema,
+  updateInventoryItemSchema,
+  updateMaintenanceSchema,
+  type CreateInventoryItemInput,
+  type UpdateInventoryItemInput,
+  type UpdateMaintenanceInput,
+  type InventoryItemData,
+  type InventoryItemOption,
+} from '@/lib/schemas/inventory'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 import { nextUniqueInventoryName } from '@/lib/inventory-name'
 
 function isP2002(error: unknown): boolean {
-  return !!error && typeof error === 'object' && 'code' in error && (error as { code: string }).code === 'P2002'
+  return (
+    !!error &&
+    typeof error === 'object' &&
+    'code' in error &&
+    (error as { code: string }).code === 'P2002'
+  )
 }
 
 function isP2025(error: unknown): boolean {
-  return !!error && typeof error === 'object' && 'code' in error && (error as { code: string }).code === 'P2025'
+  return (
+    !!error &&
+    typeof error === 'object' &&
+    'code' in error &&
+    (error as { code: string }).code === 'P2025'
+  )
 }
 
-export async function createInventoryItem(input: CreateInventoryItemInput): Promise<ActionResult<{ id: string }>> {
+export async function createInventoryItem(
+  input: CreateInventoryItemInput,
+): Promise<ActionResult<{ id: string }>> {
   const parsed = createInventoryItemSchema.safeParse(input)
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
@@ -65,7 +86,7 @@ export async function getInventoryItems(
 
     return {
       success: true,
-      data: items.map(i => ({
+      data: items.map((i) => ({
         ...i,
         activeBlockerCount: i._count.blockers,
       })),
@@ -76,7 +97,9 @@ export async function getInventoryItems(
   }
 }
 
-export async function updateInventoryItem(input: UpdateInventoryItemInput): Promise<ActionResult<{ id: string }>> {
+export async function updateInventoryItem(
+  input: UpdateInventoryItemInput,
+): Promise<ActionResult<{ id: string }>> {
   const parsed = updateInventoryItemSchema.safeParse(input)
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
@@ -167,9 +190,12 @@ export async function getInventoryItemOptions(): Promise<ActionResult<InventoryI
   }
 }
 
-export async function updateMaintenanceData(input: UpdateMaintenanceInput): Promise<ActionResult<{ id: string }>> {
+export async function updateMaintenanceData(
+  input: UpdateMaintenanceInput,
+): Promise<ActionResult<{ id: string }>> {
   const parsed = updateMaintenanceSchema.safeParse(input)
-  if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
+  if (!parsed.success)
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
 
   try {
     const item = await prisma.inventoryItem.findUnique({
@@ -207,7 +233,8 @@ export async function recordMaintenance(itemId: string): Promise<ActionResult<{ 
     })
     if (!item || item.isDeleted) return { success: false, error: 'Item not found.' }
     if (item.type !== 'TOOL') return { success: false, error: 'Maintenance only applies to tools.' }
-    if (!item.maintenanceIntervalDays) return { success: false, error: 'No maintenance interval configured.' }
+    if (!item.maintenanceIntervalDays)
+      return { success: false, error: 'No maintenance interval configured.' }
 
     const updated = await prisma.inventoryItem.update({
       where: { id: parsed.data },
@@ -244,11 +271,12 @@ export async function getOverdueMaintenanceItems(): Promise<ActionResult<Mainten
       orderBy: { lastMaintenanceDate: 'asc' },
     })
 
-    const { isMaintenanceOverdue, getNextMaintenanceDate, getDaysOverdue } = await import('@/lib/maintenance')
+    const { isMaintenanceOverdue, getNextMaintenanceDate, getDaysOverdue } =
+      await import('@/lib/maintenance')
 
     const overdue = tools
-      .filter(t => isMaintenanceOverdue(t.lastMaintenanceDate!, t.maintenanceIntervalDays!))
-      .map(t => ({
+      .filter((t) => isMaintenanceOverdue(t.lastMaintenanceDate!, t.maintenanceIntervalDays!))
+      .map((t) => ({
         id: t.id,
         name: t.name,
         lastMaintenanceDate: t.lastMaintenanceDate!,

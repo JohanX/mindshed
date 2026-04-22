@@ -5,12 +5,13 @@
  */
 
 export function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    || 'project'
+  return (
+    name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'project'
+  )
 }
 
 export function ensureUniqueSlug(slug: string, existingSlugs: string[]): string {

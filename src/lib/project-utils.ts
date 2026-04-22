@@ -10,11 +10,13 @@ export interface StepForCurrentStep {
  * Finds the current step: first IN_PROGRESS step, or first NOT_STARTED step by sortOrder.
  * Steps must be pre-sorted by sortOrder ascending.
  */
-export function getCurrentStep(steps: StepForCurrentStep[]): { name: string; state: StepState } | null {
-  const inProgress = steps.find(s => s.state === 'IN_PROGRESS')
+export function getCurrentStep(
+  steps: StepForCurrentStep[],
+): { name: string; state: StepState } | null {
+  const inProgress = steps.find((s) => s.state === 'IN_PROGRESS')
   if (inProgress) return { name: inProgress.name, state: inProgress.state as StepState }
 
-  const notStarted = steps.find(s => s.state === 'NOT_STARTED')
+  const notStarted = steps.find((s) => s.state === 'NOT_STARTED')
   if (notStarted) return { name: notStarted.name, state: notStarted.state as StepState }
 
   return null

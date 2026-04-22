@@ -51,10 +51,24 @@ export function InventoryItemCard({ item }: InventoryItemCardProps) {
               <Badge className={typeConfig.colorClass} variant="default">
                 {typeConfig.label}
               </Badge>
-              <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" onClick={() => setEditOpen(true)} title="Edit item" aria-label={`Edit ${item.name}`}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="min-h-[44px] min-w-[44px]"
+                onClick={() => setEditOpen(true)}
+                title="Edit item"
+                aria-label={`Edit ${item.name}`}
+              >
                 <Pencil className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] text-destructive" onClick={() => setDeleteOpen(true)} title="Delete item" aria-label={`Delete ${item.name}`}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="min-h-[44px] min-w-[44px] text-destructive"
+                onClick={() => setDeleteOpen(true)}
+                title="Delete item"
+                aria-label={`Delete ${item.name}`}
+              >
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
@@ -66,9 +80,7 @@ export function InventoryItemCard({ item }: InventoryItemCardProps) {
               {item.unit}
             </p>
           )}
-          {item.notes && (
-            <p className="text-sm text-muted-foreground line-clamp-2">{item.notes}</p>
-          )}
+          {item.notes && <p className="text-sm text-muted-foreground line-clamp-2">{item.notes}</p>}
           {item.activeBlockerCount > 0 && (
             <Badge variant="outline" className="text-xs text-step-blocked border-step-blocked">
               {item.activeBlockerCount} blocker{item.activeBlockerCount > 1 ? 's' : ''}
@@ -82,7 +94,9 @@ export function InventoryItemCard({ item }: InventoryItemCardProps) {
 
       <ConfirmDialog
         open={deleteOpen}
-        onOpenChange={(v) => { if (!isDeleting) setDeleteOpen(v) }}
+        onOpenChange={(v) => {
+          if (!isDeleting) setDeleteOpen(v)
+        }}
         title="Delete this item?"
         description="Any linked blockers will have their inventory link cleared."
         onConfirm={handleDelete}

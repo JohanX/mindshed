@@ -35,7 +35,9 @@ describe('CloudinaryStorageAdapter', () => {
     it('injects f_auto,q_auto,w_<width> transforms into the URL', () => {
       const adapter = createCloudinaryAdapter()
       const url = adapter.getThumbnailUrl('mindshed/steps/abc/img', 64)
-      expect(url).toBe('https://res.cloudinary.com/demo/image/upload/f_auto,q_auto,w_64/mindshed/steps/abc/img')
+      expect(url).toBe(
+        'https://res.cloudinary.com/demo/image/upload/f_auto,q_auto,w_64/mindshed/steps/abc/img',
+      )
     })
 
     it('handles different widths correctly', () => {
@@ -84,9 +86,9 @@ describe('CloudinaryStorageAdapter', () => {
   describe('generatePresignedUrl', () => {
     it('throws — Cloudinary does not use presigned URLs', async () => {
       const adapter = createCloudinaryAdapter()
-      await expect(
-        adapter.generatePresignedUrl('key', 'image/jpeg'),
-      ).rejects.toThrow('does not support presigned URLs')
+      await expect(adapter.generatePresignedUrl('key', 'image/jpeg')).rejects.toThrow(
+        'does not support presigned URLs',
+      )
     })
   })
 })

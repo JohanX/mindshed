@@ -9,10 +9,7 @@ export default async function HobbiesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Hobbies"
-        breadcrumbs={[{ label: 'Hobbies' }]}
-      >
+      <PageHeader title="Hobbies" breadcrumbs={[{ label: 'Hobbies' }]}>
         <HobbyFormDialog />
       </PageHeader>
       {!result.success ? (

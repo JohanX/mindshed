@@ -2,11 +2,22 @@
 
 import { prisma } from '@/lib/db'
 import { z } from 'zod/v4'
-import { createReminderSchema, updateReminderSchema, snoozeReminderSchema, type CreateReminderInput, type UpdateReminderInput, type SnoozeReminderInput, type ReminderData, type DashboardReminder } from '@/lib/schemas/reminder'
+import {
+  createReminderSchema,
+  updateReminderSchema,
+  snoozeReminderSchema,
+  type CreateReminderInput,
+  type UpdateReminderInput,
+  type SnoozeReminderInput,
+  type ReminderData,
+  type DashboardReminder,
+} from '@/lib/schemas/reminder'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 
-export async function createReminder(input: CreateReminderInput): Promise<ActionResult<{ id: string }>> {
+export async function createReminder(
+  input: CreateReminderInput,
+): Promise<ActionResult<{ id: string }>> {
   const parsed = createReminderSchema.safeParse(input)
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
@@ -20,14 +31,16 @@ export async function createReminder(input: CreateReminderInput): Promise<Action
         select: { project: { select: { isCompleted: true } } },
       })
       if (!step) return { success: false, error: 'Step not found.' }
-      if (step.project.isCompleted) return { success: false, error: 'Cannot set reminders on a completed project.' }
+      if (step.project.isCompleted)
+        return { success: false, error: 'Cannot set reminders on a completed project.' }
     } else {
       const project = await prisma.project.findUnique({
         where: { id: parsed.data.targetId },
         select: { isCompleted: true },
       })
       if (!project) return { success: false, error: 'Project not found.' }
-      if (project.isCompleted) return { success: false, error: 'Cannot set reminders on a completed project.' }
+      if (project.isCompleted)
+        return { success: false, error: 'Cannot set reminders on a completed project.' }
     }
 
     const reminder = await prisma.reminder.create({
@@ -46,7 +59,9 @@ export async function createReminder(input: CreateReminderInput): Promise<Action
   }
 }
 
-export async function updateReminder(input: UpdateReminderInput): Promise<ActionResult<{ id: string }>> {
+export async function updateReminder(
+  input: UpdateReminderInput,
+): Promise<ActionResult<{ id: string }>> {
   const parsed = updateReminderSchema.safeParse(input)
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
@@ -123,7 +138,8 @@ export async function dismissReminder(reminderId: string): Promise<ActionResult<
 
 export async function snoozeReminder(input: SnoozeReminderInput): Promise<ActionResult<null>> {
   const parsed = snoozeReminderSchema.safeParse(input)
-  if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
+  if (!parsed.success)
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
 
   try {
     const snoozedUntil = new Date(Date.now() + parsed.data.snoozeDays * 86400000)
@@ -148,10 +164,7 @@ export async function getDashboardReminders(): Promise<ActionResult<DashboardRem
     const reminders = await prisma.reminder.findMany({
       where: {
         isDismissed: false,
-        OR: [
-          { snoozedUntil: null },
-          { snoozedUntil: { lt: now } },
-        ],
+        OR: [{ snoozedUntil: null }, { snoozedUntil: { lt: now } }],
         dueDate: { lte: weekFromNow },
       },
       orderBy: { dueDate: 'asc' },

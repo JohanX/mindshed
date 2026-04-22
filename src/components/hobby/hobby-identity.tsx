@@ -25,7 +25,12 @@ export function HobbyIdentity({ hobby, variant, className, children }: HobbyIden
 
     case 'badge':
       return (
-        <span className={cn('inline-flex items-center gap-1.5 text-sm text-muted-foreground', className)}>
+        <span
+          className={cn(
+            'inline-flex items-center gap-1.5 text-sm text-muted-foreground',
+            className,
+          )}
+        >
           <span
             className="inline-block w-2 h-2 rounded-full shrink-0"
             style={{ backgroundColor: hobby.color }}
@@ -37,16 +42,16 @@ export function HobbyIdentity({ hobby, variant, className, children }: HobbyIden
 
     case 'accent':
       return (
-        <div
-          className={cn('border-l-4', className)}
-          style={{ borderLeftColor: hobby.color }}
-        >
+        <div className={cn('border-l-4', className)} style={{ borderLeftColor: hobby.color }}>
           {children}
         </div>
       )
 
     case 'full': {
-      const iconElement = renderHobbyIcon(hobby.icon, { className: 'h-5 w-5', style: { color: hobby.color } })
+      const iconElement = renderHobbyIcon(hobby.icon, {
+        className: 'h-5 w-5',
+        style: { color: hobby.color },
+      })
       return (
         <div className={cn('flex items-center gap-2', className)}>
           {iconElement ? (

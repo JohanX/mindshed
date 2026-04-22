@@ -2,7 +2,12 @@
 
 import { prisma } from '@/lib/db'
 import { z } from 'zod/v4'
-import { createIdeaSchema, type CreateIdeaInput, updateIdeaSchema, type UpdateIdeaInput } from '@/lib/schemas/idea'
+import {
+  createIdeaSchema,
+  type CreateIdeaInput,
+  updateIdeaSchema,
+  type UpdateIdeaInput,
+} from '@/lib/schemas/idea'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 import type { Idea } from '@/generated/prisma/client'
@@ -59,7 +64,9 @@ export async function getIdeasByHobby(hobbyId: string): Promise<ActionResult<Ide
   }
 }
 
-export type IdeaWithHobby = Idea & { hobby: { id: string; name: string; color: string; icon: string | null } }
+export type IdeaWithHobby = Idea & {
+  hobby: { id: string; name: string; color: string; icon: string | null }
+}
 
 export async function getAllIdeas(): Promise<ActionResult<IdeaWithHobby[]>> {
   try {
@@ -119,7 +126,8 @@ export async function promoteIdea(ideaId: string): Promise<ActionResult<{ projec
     console.error('promoteIdea failed:', error)
     if (error instanceof Error) {
       if (error.message === 'IDEA_NOT_FOUND') return { success: false, error: 'Idea not found.' }
-      if (error.message === 'ALREADY_PROMOTED') return { success: false, error: 'Idea already promoted.' }
+      if (error.message === 'ALREADY_PROMOTED')
+        return { success: false, error: 'Idea already promoted.' }
       if (error.message === 'HOBBY_NOT_FOUND') return { success: false, error: 'Hobby not found.' }
     }
     return { success: false, error: 'Failed to promote idea.' }

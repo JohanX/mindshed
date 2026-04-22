@@ -6,7 +6,9 @@ import type { RecentProject } from '@/lib/schemas/dashboard'
 // Mock next/link
 vi.mock('next/link', () => ({
   default: ({ children, href, ...rest }: React.PropsWithChildren<{ href: string }>) => (
-    <a href={href} {...rest}>{children}</a>
+    <a href={href} {...rest}>
+      {children}
+    </a>
   ),
 }))
 
@@ -22,7 +24,8 @@ vi.mock('next/image', () => ({
 vi.mock('@/lib/image-storage/adapter', () => ({
   getImageStorageAdapter: () => ({
     getPublicUrl: (key: string) => `https://r2.example.com/bucket/${key}`,
-    getThumbnailUrl: (key: string, width: number) => `https://r2.example.com/bucket/${key}?w=${width}`,
+    getThumbnailUrl: (key: string, width: number) =>
+      `https://r2.example.com/bucket/${key}?w=${width}`,
   }),
   isImageProviderSelfOptimized: () => true,
 }))

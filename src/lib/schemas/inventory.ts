@@ -3,7 +3,11 @@ import { z } from 'zod/v4'
 export const inventoryItemTypeEnum = z.enum(['MATERIAL', 'CONSUMABLE', 'TOOL'])
 
 export const createInventoryItemSchema = z.object({
-  name: z.string().trim().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Name is required')
+    .max(100, 'Name must be 100 characters or less'),
   type: inventoryItemTypeEnum,
   quantity: z.number().min(0, 'Quantity must be 0 or more').optional(),
   unit: z.string().trim().max(50, 'Unit must be 50 characters or less').optional(),
@@ -14,7 +18,11 @@ export type CreateInventoryItemInput = z.infer<typeof createInventoryItemSchema>
 
 export const updateInventoryItemSchema = z.object({
   id: z.uuid(),
-  name: z.string().trim().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Name is required')
+    .max(100, 'Name must be 100 characters or less'),
   type: inventoryItemTypeEnum,
   quantity: z.number().min(0, 'Quantity must be 0 or more').optional(),
   unit: z.string().trim().max(50, 'Unit must be 50 characters or less').optional(),
@@ -48,7 +56,11 @@ export type InventoryItemData = {
 export const updateMaintenanceSchema = z.object({
   id: z.uuid(),
   lastMaintenanceDate: z.coerce.date(),
-  maintenanceIntervalDays: z.number().int().min(1, 'Interval must be at least 1 day').max(365, 'Interval must be 365 days or less'),
+  maintenanceIntervalDays: z
+    .number()
+    .int()
+    .min(1, 'Interval must be at least 1 day')
+    .max(365, 'Interval must be 365 days or less'),
 })
 
 export type UpdateMaintenanceInput = z.infer<typeof updateMaintenanceSchema>

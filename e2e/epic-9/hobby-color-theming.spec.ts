@@ -52,9 +52,7 @@ test.describe('Hobby Color Palette Theming', () => {
     const wrapper = page.locator('[data-hobby-context]')
     await expect(wrapper).toBeVisible()
 
-    const primaryVar = await wrapper.evaluate((el) =>
-      el.style.getPropertyValue('--hobby-primary')
-    )
+    const primaryVar = await wrapper.evaluate((el) => el.style.getPropertyValue('--hobby-primary'))
     expect(primaryVar).toBeTruthy()
     expect(primaryVar).not.toBe('')
   })
@@ -81,16 +79,12 @@ test.describe('Hobby Color Palette Theming', () => {
     await page.goto(`/hobbies/${hobbyId1}`)
     await page.waitForLoadState('networkidle')
     const wrapper1 = page.locator('[data-hobby-context]')
-    const primary1 = await wrapper1.evaluate((el) =>
-      el.style.getPropertyValue('--hobby-primary')
-    )
+    const primary1 = await wrapper1.evaluate((el) => el.style.getPropertyValue('--hobby-primary'))
 
     await page.goto(`/hobbies/${hobbyId2}`)
     await page.waitForLoadState('networkidle')
     const wrapper2 = page.locator('[data-hobby-context]')
-    const primary2 = await wrapper2.evaluate((el) =>
-      el.style.getPropertyValue('--hobby-primary')
-    )
+    const primary2 = await wrapper2.evaluate((el) => el.style.getPropertyValue('--hobby-primary'))
 
     expect(primary1).not.toBe(primary2)
   })
@@ -111,9 +105,7 @@ test.describe('Hobby Color Palette Theming', () => {
 
     // The desktop header should have the hobby color as background
     const header = page.locator('header').first()
-    const bgColor = await header.evaluate((el) =>
-      window.getComputedStyle(el).backgroundColor
-    )
+    const bgColor = await header.evaluate((el) => window.getComputedStyle(el).backgroundColor)
     // Should not be the default card color — should be a solid hobby color
     expect(bgColor).toBeTruthy()
     expect(bgColor).not.toBe('rgba(0, 0, 0, 0)')
@@ -124,17 +116,13 @@ test.describe('Hobby Color Palette Theming', () => {
     await page.goto(`/hobbies/${hobbyId1}`)
     await page.waitForLoadState('networkidle')
     const header = page.locator('header').first()
-    const hobbyBg = await header.evaluate((el) =>
-      window.getComputedStyle(el).backgroundColor
-    )
+    const hobbyBg = await header.evaluate((el) => window.getComputedStyle(el).backgroundColor)
 
     // Then navigate to dashboard
     await page.goto('/')
     await page.waitForLoadState('networkidle')
     const dashHeader = page.locator('header').first()
-    const dashBg = await dashHeader.evaluate((el) =>
-      window.getComputedStyle(el).backgroundColor
-    )
+    const dashBg = await dashHeader.evaluate((el) => window.getComputedStyle(el).backgroundColor)
 
     // The backgrounds should differ
     expect(hobbyBg).not.toBe(dashBg)
@@ -157,7 +145,9 @@ test.describe('Hobby Color Palette Theming', () => {
     await page.waitForTimeout(1000)
   })
 
-  test('dashboard project cards have hobby-tinted background (no left border)', async ({ page }) => {
+  test('dashboard project cards have hobby-tinted background (no left border)', async ({
+    page,
+  }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
@@ -167,9 +157,7 @@ test.describe('Hobby Color Palette Theming', () => {
     await expect(firstCard).toBeVisible()
 
     // Verify the card has a tinted background (not transparent)
-    const bgColor = await firstCard.evaluate((el) =>
-      window.getComputedStyle(el).backgroundColor
-    )
+    const bgColor = await firstCard.evaluate((el) => window.getComputedStyle(el).backgroundColor)
     expect(bgColor).toBeTruthy()
     expect(bgColor).not.toBe('rgba(0, 0, 0, 0)')
   })
@@ -177,7 +165,10 @@ test.describe('Hobby Color Palette Theming', () => {
   test('current step card has hobby-primary left border in hobby context', async ({ page }) => {
     await page.goto(`/hobbies/${hobbyId1}`)
     await page.waitForLoadState('networkidle')
-    await page.getByRole('link', { name: new RegExp(`${testPrefix} Color Project`) }).first().click()
+    await page
+      .getByRole('link', { name: new RegExp(`${testPrefix} Color Project`) })
+      .first()
+      .click()
     await page.waitForLoadState('networkidle')
 
     // Find the current step card

@@ -28,7 +28,7 @@ Every story must follow this sequence:
 7. Auto-apply review patches (no pause for approval)
 8. Re-run all tests after patches
 9. Commit mindshed/ changes
-10. Commit _bmad-output/ changes separately
+10. Commit \_bmad-output/ changes separately
 
 ## Code Conventions
 

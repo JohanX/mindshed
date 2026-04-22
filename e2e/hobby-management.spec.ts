@@ -40,7 +40,9 @@ test.describe('Hobby Management', () => {
     await page.getByRole('button', { name: 'Save' }).click()
 
     // Check the hobby card (with project count to distinguish from top-bar)
-    await expect(page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) })).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) }),
+    ).toBeVisible()
   })
 
   test('save button is disabled when name is empty', async ({ page }) => {
@@ -87,7 +89,9 @@ test.describe('Hobby Management', () => {
     await page.getByPlaceholder('e.g., Woodworking').fill(hobbyName)
     await page.getByTitle('Sage').click()
     await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) })).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) }),
+    ).toBeVisible()
 
     await hobbyActionsButton(page, new RegExp(hobbyName)).click()
     await page.getByRole('menuitem', { name: 'Delete' }).click()
@@ -96,7 +100,9 @@ test.describe('Hobby Management', () => {
     await page.getByRole('button', { name: 'Delete' }).click()
     await page.waitForTimeout(1000)
 
-    await expect(page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) })).not.toBeVisible()
+    await expect(
+      page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) }),
+    ).not.toBeVisible()
   })
 
   test('cancel on delete dialog does not delete', async ({ page }) => {
@@ -106,13 +112,17 @@ test.describe('Hobby Management', () => {
     await page.getByPlaceholder('e.g., Woodworking').fill(hobbyName)
     await page.getByTitle('Denim').click()
     await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) })).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) }),
+    ).toBeVisible()
 
     await hobbyActionsButton(page, new RegExp(hobbyName)).click()
     await page.getByRole('menuitem', { name: 'Delete' }).click()
     await page.getByRole('button', { name: 'Cancel' }).click()
 
     // Check the hobby card link (with project count to distinguish from top-bar link)
-    await expect(page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) })).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) }),
+    ).toBeVisible()
   })
 })

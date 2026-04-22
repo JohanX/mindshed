@@ -8,12 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -114,21 +109,42 @@ export function ProjectActions({ project }: ProjectActionsProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem className="min-h-[44px]" onClick={(e) => { e.stopPropagation(); handleOpenEdit() }}>
+          <DropdownMenuItem
+            className="min-h-[44px]"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleOpenEdit()
+            }}
+          >
             <Pencil className="h-4 w-4 mr-2" />
             Edit
           </DropdownMenuItem>
-          <DropdownMenuItem className="min-h-[44px]" onClick={(e) => { e.stopPropagation(); handleArchive() }}>
+          <DropdownMenuItem
+            className="min-h-[44px]"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleArchive()
+            }}
+          >
             <Archive className="h-4 w-4 mr-2" />
             Archive
           </DropdownMenuItem>
-          <DropdownMenuItem className="min-h-[44px]" onClick={(e) => { e.stopPropagation(); handleClone() }}>
+          <DropdownMenuItem
+            className="min-h-[44px]"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleClone()
+            }}
+          >
             <Copy className="h-4 w-4 mr-2" />
             Clone
           </DropdownMenuItem>
           <DropdownMenuItem
             className="min-h-[44px] text-destructive focus:text-destructive"
-            onClick={(e) => { e.stopPropagation(); setDeleteOpen(true) }}
+            onClick={(e) => {
+              e.stopPropagation()
+              setDeleteOpen(true)
+            }}
           >
             <Trash2 className="h-4 w-4 mr-2" />
             Delete
@@ -166,7 +182,14 @@ export function ProjectActions({ project }: ProjectActionsProps) {
               />
             </div>
             <Button type="submit" disabled={!name.trim() || isPending} className="w-full">
-              {isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : 'Save'}
+              {isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save'
+              )}
             </Button>
           </form>
         </DialogContent>
@@ -174,7 +197,9 @@ export function ProjectActions({ project }: ProjectActionsProps) {
 
       <ConfirmDialog
         open={deleteOpen}
-        onOpenChange={(v) => { if (!isDeleting) setDeleteOpen(v) }}
+        onOpenChange={(v) => {
+          if (!isDeleting) setDeleteOpen(v)
+        }}
         title={`Delete ${project.name}?`}
         description="All steps, notes, and photos will be removed."
         onConfirm={handleDelete}

@@ -36,7 +36,11 @@ describe('getProjectsByHobby', () => {
   it('returns projects ordered by lastActivityAt', async () => {
     const mockProjects = [
       {
-        id: 'p1', name: 'Recent', hobbyId: 'h1', isArchived: false, isCompleted: false,
+        id: 'p1',
+        name: 'Recent',
+        hobbyId: 'h1',
+        isArchived: false,
+        isCompleted: false,
         lastActivityAt: new Date('2026-04-06'),
         steps: [
           { id: 's1', name: 'Step 1', state: 'COMPLETED', sortOrder: 0 },
@@ -44,7 +48,11 @@ describe('getProjectsByHobby', () => {
         ],
       },
       {
-        id: 'p2', name: 'Older', hobbyId: 'h1', isArchived: false, isCompleted: false,
+        id: 'p2',
+        name: 'Older',
+        hobbyId: 'h1',
+        isArchived: false,
+        isCompleted: false,
         lastActivityAt: new Date('2026-04-01'),
         steps: [{ id: 's3', name: 'Step A', state: 'NOT_STARTED', sortOrder: 0 }],
       },
@@ -63,7 +71,11 @@ describe('getProjectsByHobby', () => {
   it('computes step progress counts correctly', async () => {
     mockFindMany.mockResolvedValue([
       {
-        id: 'p1', name: 'Project', hobbyId: 'h1', isArchived: false, isCompleted: false,
+        id: 'p1',
+        name: 'Project',
+        hobbyId: 'h1',
+        isArchived: false,
+        isCompleted: false,
         lastActivityAt: new Date(),
         steps: [
           { id: 's1', name: 'Done', state: 'COMPLETED', sortOrder: 0 },
@@ -88,12 +100,20 @@ describe('getProjectsByHobby', () => {
   it('includes archived projects flagged in response', async () => {
     mockFindMany.mockResolvedValue([
       {
-        id: 'p1', name: 'Active', hobbyId: 'h1', isArchived: false, isCompleted: false,
+        id: 'p1',
+        name: 'Active',
+        hobbyId: 'h1',
+        isArchived: false,
+        isCompleted: false,
         lastActivityAt: new Date(),
         steps: [{ id: 's1', name: 'Step', state: 'NOT_STARTED', sortOrder: 0 }],
       },
       {
-        id: 'p2', name: 'Archived', hobbyId: 'h1', isArchived: true, isCompleted: false,
+        id: 'p2',
+        name: 'Archived',
+        hobbyId: 'h1',
+        isArchived: true,
+        isCompleted: false,
         lastActivityAt: new Date(),
         steps: [{ id: 's2', name: 'Step', state: 'COMPLETED', sortOrder: 0 }],
       },
@@ -111,7 +131,11 @@ describe('getProjectsByHobby', () => {
   it('returns current step as first IN_PROGRESS or NOT_STARTED by sortOrder', async () => {
     mockFindMany.mockResolvedValue([
       {
-        id: 'p1', name: 'Project', hobbyId: 'h1', isArchived: false, isCompleted: false,
+        id: 'p1',
+        name: 'Project',
+        hobbyId: 'h1',
+        isArchived: false,
+        isCompleted: false,
         lastActivityAt: new Date(),
         steps: [
           { id: 's1', name: 'Done Step', state: 'COMPLETED', sortOrder: 0 },

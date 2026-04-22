@@ -2,7 +2,15 @@
 
 import { prisma } from '@/lib/db'
 import { z } from 'zod/v4'
-import { createHobbySchema, updateHobbySchema, reorderHobbiesSchema, type CreateHobbyInput, type UpdateHobbyInput, type ReorderHobbiesInput, type HobbyWithCounts } from '@/lib/schemas/hobby'
+import {
+  createHobbySchema,
+  updateHobbySchema,
+  reorderHobbiesSchema,
+  type CreateHobbyInput,
+  type UpdateHobbyInput,
+  type ReorderHobbiesInput,
+  type HobbyWithCounts,
+} from '@/lib/schemas/hobby'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 import { getIdleThresholdDays } from '@/lib/settings'
@@ -169,8 +177,8 @@ export async function reorderHobbies(input: ReorderHobbiesInput): Promise<Action
         prisma.hobby.update({
           where: { id },
           data: { sortOrder: index },
-        })
-      )
+        }),
+      ),
     )
 
     revalidatePath('/settings')

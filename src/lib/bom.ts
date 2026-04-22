@@ -128,8 +128,7 @@ export function summarizeBomRows(rows: BomItemData[]): BomSummary {
   for (const row of rows) {
     if (isRowShort(row)) shortCount += 1
   }
-  const summary: BomSummary['summary'] =
-    total === 0 ? 'empty' : shortCount > 0 ? 'short' : 'ready'
+  const summary: BomSummary['summary'] = total === 0 ? 'empty' : shortCount > 0 ? 'short' : 'ready'
   return { total, shortCount, summary }
 }
 

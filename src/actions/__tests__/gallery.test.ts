@@ -19,7 +19,14 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { enableJourneyGallery, disableJourneyGallery, enableResultGallery, disableResultGallery, setResultStep, toggleStepGalleryExclusion } from '../gallery'
+import {
+  enableJourneyGallery,
+  disableJourneyGallery,
+  enableResultGallery,
+  disableResultGallery,
+  setResultStep,
+  toggleStepGalleryExclusion,
+} from '../gallery'
 import { prisma } from '@/lib/db'
 
 const mockTransaction = vi.mocked(prisma.$transaction)
@@ -39,9 +46,19 @@ describe('enableJourneyGallery', () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         project: {
-          findUnique: vi.fn().mockResolvedValue({ id: 'p1', name: 'Walnut Table', gallerySlug: null, hobbyId: 'h1', isArchived: false }),
+          findUnique: vi
+            .fn()
+            .mockResolvedValue({
+              id: 'p1',
+              name: 'Walnut Table',
+              gallerySlug: null,
+              hobbyId: 'h1',
+              isArchived: false,
+            }),
           findMany: vi.fn().mockResolvedValue([]),
-          update: vi.fn().mockResolvedValue({ id: 'p1', gallerySlug: 'walnut-table', hobbyId: 'h1' }),
+          update: vi
+            .fn()
+            .mockResolvedValue({ id: 'p1', gallerySlug: 'walnut-table', hobbyId: 'h1' }),
         },
       }
       return fn(tx as never)
@@ -56,8 +73,18 @@ describe('enableJourneyGallery', () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         project: {
-          findUnique: vi.fn().mockResolvedValue({ id: 'p1', name: 'Walnut Table', gallerySlug: 'walnut-table', hobbyId: 'h1', isArchived: false }),
-          update: vi.fn().mockResolvedValue({ id: 'p1', gallerySlug: 'walnut-table', hobbyId: 'h1' }),
+          findUnique: vi
+            .fn()
+            .mockResolvedValue({
+              id: 'p1',
+              name: 'Walnut Table',
+              gallerySlug: 'walnut-table',
+              hobbyId: 'h1',
+              isArchived: false,
+            }),
+          update: vi
+            .fn()
+            .mockResolvedValue({ id: 'p1', gallerySlug: 'walnut-table', hobbyId: 'h1' }),
         },
       }
       return fn(tx as never)
@@ -106,12 +133,18 @@ describe('enableResultGallery', () => {
       const tx = {
         project: {
           findUnique: vi.fn().mockResolvedValue({
-            id: 'p1', name: 'Walnut Table', gallerySlug: 'walnut-table', hobbyId: 'h1', isArchived: false,
+            id: 'p1',
+            name: 'Walnut Table',
+            gallerySlug: 'walnut-table',
+            hobbyId: 'h1',
+            isArchived: false,
             resultStepId: null,
             steps: [{ id: 's3' }],
           }),
           findMany: vi.fn().mockResolvedValue([]),
-          update: vi.fn().mockResolvedValue({ id: 'p1', gallerySlug: 'walnut-table', hobbyId: 'h1' }),
+          update: vi
+            .fn()
+            .mockResolvedValue({ id: 'p1', gallerySlug: 'walnut-table', hobbyId: 'h1' }),
         },
       }
       return fn(tx as never)
@@ -122,13 +155,19 @@ describe('enableResultGallery', () => {
   })
 
   it('preserves existing resultStepId when step is still COMPLETED', async () => {
-    const mockProjectUpdateTx = vi.fn().mockResolvedValue({ id: 'p1', gallerySlug: 'walnut-table', hobbyId: 'h1' })
+    const mockProjectUpdateTx = vi
+      .fn()
+      .mockResolvedValue({ id: 'p1', gallerySlug: 'walnut-table', hobbyId: 'h1' })
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         project: {
           findUnique: vi.fn().mockResolvedValue({
-            id: 'p1', name: 'Walnut Table', gallerySlug: 'walnut-table', hobbyId: 'h1',
-            resultStepId: 's2', isArchived: false,
+            id: 'p1',
+            name: 'Walnut Table',
+            gallerySlug: 'walnut-table',
+            hobbyId: 'h1',
+            resultStepId: 's2',
+            isArchived: false,
             steps: [{ id: 's3' }],
           }),
           findMany: vi.fn().mockResolvedValue([]),
@@ -142,9 +181,11 @@ describe('enableResultGallery', () => {
     })
 
     await enableResultGallery('550e8400-e29b-41d4-a716-446655440000')
-    expect(mockProjectUpdateTx).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ resultStepId: 's2' }),
-    }))
+    expect(mockProjectUpdateTx).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ resultStepId: 's2' }),
+      }),
+    )
   })
 })
 
@@ -179,7 +220,10 @@ describe('setResultStep', () => {
   })
 
   it('updates result step', async () => {
-    mockStepFindUnique.mockResolvedValue({ projectId: '550e8400-e29b-41d4-a716-446655440000', state: 'COMPLETED' } as never)
+    mockStepFindUnique.mockResolvedValue({
+      projectId: '550e8400-e29b-41d4-a716-446655440000',
+      state: 'COMPLETED',
+    } as never)
     mockProjectUpdate.mockResolvedValue({ id: 'p1', hobbyId: 'h1' } as never)
 
     const result = await setResultStep(
@@ -200,7 +244,9 @@ describe('toggleStepGalleryExclusion', () => {
 
   it('toggles exclusion from false to true', async () => {
     mockStepFindUnique.mockResolvedValue({
-      excludeFromGallery: false, projectId: 'p1', project: { hobbyId: 'h1' },
+      excludeFromGallery: false,
+      projectId: 'p1',
+      project: { hobbyId: 'h1' },
     } as never)
     mockStepUpdate.mockResolvedValue({} as never)
 
@@ -214,7 +260,9 @@ describe('toggleStepGalleryExclusion', () => {
 
   it('toggles exclusion from true to false', async () => {
     mockStepFindUnique.mockResolvedValue({
-      excludeFromGallery: true, projectId: 'p1', project: { hobbyId: 'h1' },
+      excludeFromGallery: true,
+      projectId: 'p1',
+      project: { hobbyId: 'h1' },
     } as never)
     mockStepUpdate.mockResolvedValue({} as never)
 

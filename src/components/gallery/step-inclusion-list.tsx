@@ -13,7 +13,7 @@ interface StepInclusionListProps {
 export function StepInclusionList({ steps }: StepInclusionListProps) {
   const [isPending, startTransition] = useTransition()
 
-  const stepsWithImages = steps.filter(s => s.hasImages)
+  const stepsWithImages = steps.filter((s) => s.hasImages)
 
   if (stepsWithImages.length === 0) {
     return <p className="text-xs text-muted-foreground">No steps with images to include.</p>
@@ -31,7 +31,7 @@ export function StepInclusionList({ steps }: StepInclusionListProps) {
   return (
     <div className="space-y-1">
       <p className="text-xs text-muted-foreground mb-2">Include in journey:</p>
-      {stepsWithImages.map(step => (
+      {stepsWithImages.map((step) => (
         <div key={step.id} className="flex items-center justify-between gap-2 py-1">
           <span className="text-sm truncate">{step.name}</span>
           <Switch

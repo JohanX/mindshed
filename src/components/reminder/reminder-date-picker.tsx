@@ -16,7 +16,11 @@ interface ReminderDatePickerProps {
   existingReminder?: ReminderData | null
 }
 
-export function ReminderDatePicker({ targetType, targetId, existingReminder }: ReminderDatePickerProps) {
+export function ReminderDatePicker({
+  targetType,
+  targetId,
+  existingReminder,
+}: ReminderDatePickerProps) {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
 
@@ -60,7 +64,12 @@ export function ReminderDatePicker({ targetType, targetId, existingReminder }: R
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className="min-h-[44px] text-muted-foreground" disabled={isPending}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="min-h-[44px] text-muted-foreground"
+          disabled={isPending}
+        >
           {isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
@@ -80,7 +89,13 @@ export function ReminderDatePicker({ targetType, targetId, existingReminder }: R
         />
         {existingReminder && (
           <div className="border-t p-2">
-            <Button variant="ghost" size="sm" className="w-full min-h-[44px] text-destructive" onClick={handleRemove} disabled={isPending}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full min-h-[44px] text-destructive"
+              onClick={handleRemove}
+              disabled={isPending}
+            >
               <X className="h-4 w-4 mr-1" /> Remove Reminder
             </Button>
           </div>

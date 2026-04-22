@@ -48,9 +48,7 @@ export function StepThumbnailStrip({ images, maxVisible = 4 }: StepThumbnailStri
         <Thumbnail key={img.id} src={img.thumbnailUrl || img.displayUrl} alt="" />
       ))}
       {overflow > 0 && (
-        <span className="text-xs text-muted-foreground font-medium px-1">
-          +{overflow}
-        </span>
+        <span className="text-xs text-muted-foreground font-medium px-1">+{overflow}</span>
       )}
     </div>
   )

@@ -3,7 +3,8 @@ import { mkdirSync, existsSync, writeFileSync } from 'fs'
 import path from 'path'
 import pg from 'pg'
 
-const DATABASE_URL = process.env.DATABASE_URL ?? 'postgresql://mindshed:mindshed@localhost:5432/mindshed_test'
+const DATABASE_URL =
+  process.env.DATABASE_URL ?? 'postgresql://mindshed:mindshed@localhost:5432/mindshed_test'
 
 export default async function globalSetup() {
   // 0. Ensure auth state directory exists (required by Playwright storageState)

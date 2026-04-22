@@ -41,9 +41,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: process.env.CI
-      ? 'pnpm build && pnpm start'
-      : 'pnpm dev --port 3001',
+    command: process.env.CI ? 'pnpm build && pnpm start' : 'pnpm dev --port 3001',
     url: process.env.CI ? 'http://localhost:3000' : 'http://localhost:3001',
     reuseExistingServer: false,
     env: {

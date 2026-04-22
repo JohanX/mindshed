@@ -65,7 +65,11 @@ function buildTx(opts: {
   maxSortOrder?: number | null
   createResult?: { id: string }
   createError?: Error | { code: string }
-  existing?: { projectId: string; inventoryItemId: string | null; project: { hobbyId: string } } | null
+  existing?: {
+    projectId: string
+    inventoryItemId: string | null
+    project: { hobbyId: string }
+  } | null
   updateError?: Error | { code: string }
   deleteError?: Error | { code: string }
 }): TxMock {
@@ -80,9 +84,7 @@ function buildTx(opts: {
       findUnique: vi.fn(async () =>
         opts.inventoryItem !== undefined ? opts.inventoryItem : { isDeleted: false },
       ),
-      findMany: vi.fn(async () =>
-        (opts.existingInventoryNames ?? []).map((name) => ({ name })),
-      ),
+      findMany: vi.fn(async () => (opts.existingInventoryNames ?? []).map((name) => ({ name }))),
       create: vi.fn(async () => {
         if (opts.inventoryCreateError) throw opts.inventoryCreateError
         return opts.inventoryCreateResult ?? { id: 'new-inv-id', unit: null }
@@ -647,12 +649,12 @@ function buildPerRowTx(opts: {
       findUnique: vi.fn(async () =>
         opts.step === null
           ? null
-          : opts.step ?? {
+          : (opts.step ?? {
               id: STEP_ID,
               name: 'Prep',
               state: 'NOT_STARTED',
               projectId: PROJECT_ID,
-            },
+            }),
       ),
       update: vi.fn(async () => ({ id: STEP_ID })),
     },
@@ -904,7 +906,12 @@ describe('createBomShortageBlocker', () => {
 
   it('description omits unit when row.unit is null', async () => {
     const tx = buildPerRowTx({
-      row: { ...defaultRow(), unit: null, requiredQuantity: 1, inventoryItem: { ...defaultRow().inventoryItem!, quantity: 0 } },
+      row: {
+        ...defaultRow(),
+        unit: null,
+        requiredQuantity: 1,
+        inventoryItem: { ...defaultRow().inventoryItem!, quantity: 0 },
+      },
     })
     mockTransaction.mockImplementation(async (fn) => fn(tx as never))
 
@@ -977,14 +984,16 @@ function buildConsumptionTx(opts: {
   }
 }
 
-function materialRow(overrides: {
-  required?: number
-  available?: number | null
-  state?: 'NOT_CONSUMED' | 'CONSUMED' | 'UNDONE'
-  isDeleted?: boolean
-  type?: 'MATERIAL' | 'CONSUMABLE' | 'TOOL'
-  name?: string
-} = {}) {
+function materialRow(
+  overrides: {
+    required?: number
+    available?: number | null
+    state?: 'NOT_CONSUMED' | 'CONSUMED' | 'UNDONE'
+    isDeleted?: boolean
+    type?: 'MATERIAL' | 'CONSUMABLE' | 'TOOL'
+    name?: string
+  } = {},
+) {
   return {
     requiredQuantity: overrides.required ?? 100,
     consumptionState: overrides.state ?? ('NOT_CONSUMED' as const),
@@ -1046,9 +1055,7 @@ describe('markBomItemConsumed', () => {
     const result = await markBomItemConsumed({ id: BOM_ITEM_ID })
     expect(result.success).toBe(false)
     if (!result.success)
-      expect(result.error).toBe(
-        'Not enough Silica in inventory. Create shortage blockers first.',
-      )
+      expect(result.error).toBe('Not enough Silica in inventory. Create shortage blockers first.')
     expect(tx.inventoryItem.update).not.toHaveBeenCalled()
     expect(tx.bomItem.update).not.toHaveBeenCalled()
   })
@@ -1110,8 +1117,7 @@ describe('markBomItemConsumed', () => {
 
     const result = await markBomItemConsumed({ id: BOM_ITEM_ID })
     expect(result.success).toBe(false)
-    if (!result.success)
-      expect(result.error).toContain('Not enough Kaolin in inventory')
+    if (!result.success) expect(result.error).toContain('Not enough Kaolin in inventory')
   })
 
   it('returns BOM item not found when row missing', async () => {
@@ -1198,6 +1204,3 @@ describe('undoBomItemConsumption', () => {
     if (!result.success) expect(result.error).toBe('BOM item not found.')
   })
 })
-
-
-

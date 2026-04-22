@@ -1,12 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -30,7 +25,11 @@ interface EditInventoryItemDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-export function EditInventoryItemDialog({ item, open, onOpenChange }: EditInventoryItemDialogProps) {
+export function EditInventoryItemDialog({
+  item,
+  open,
+  onOpenChange,
+}: EditInventoryItemDialogProps) {
   const [name, setName] = useState(item.name)
   const [type, setType] = useState<string>(item.type)
   const [quantity, setQuantity] = useState(item.quantity?.toString() ?? '')
@@ -76,7 +75,13 @@ export function EditInventoryItemDialog({ item, open, onOpenChange }: EditInvent
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-2">
             <Label htmlFor="edit-item-name">Name</Label>
-            <Input id="edit-item-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} autoFocus />
+            <Input
+              id="edit-item-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={100}
+              autoFocus
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-item-type">Type</Label>
@@ -94,19 +99,48 @@ export function EditInventoryItemDialog({ item, open, onOpenChange }: EditInvent
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="edit-item-qty">Quantity</Label>
-              <Input id="edit-item-qty" type="number" min={0} step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+              <Input
+                id="edit-item-qty"
+                type="number"
+                min={0}
+                step="any"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-item-unit">Unit</Label>
-              <Input id="edit-item-unit" value={unit} onChange={(e) => setUnit(e.target.value)} maxLength={50} />
+              <Input
+                id="edit-item-unit"
+                value={unit}
+                onChange={(e) => setUnit(e.target.value)}
+                maxLength={50}
+              />
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-item-notes">Notes</Label>
-            <Textarea id="edit-item-notes" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} rows={2} />
+            <Textarea
+              id="edit-item-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              maxLength={500}
+              rows={2}
+            />
           </div>
-          <Button type="submit" disabled={!name.trim() || isPending} className="w-full min-h-[44px]">
-            {isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : 'Save'}
+          <Button
+            type="submit"
+            disabled={!name.trim() || isPending}
+            className="w-full min-h-[44px]"
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save'
+            )}
           </Button>
         </form>
       </DialogContent>

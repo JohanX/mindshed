@@ -66,7 +66,9 @@ test.describe('BOM Basic CRUD', () => {
     await expect(page.getByRole('button', { name: /Add row/ })).toBeVisible()
   })
 
-  test('can add via combobox Add-new, edit, and delete BOM rows; pill reflects state', async ({ page }, testInfo) => {
+  test('can add via combobox Add-new, edit, and delete BOM rows; pill reflects state', async ({
+    page,
+  }, testInfo) => {
     await page.goto(projectUrl)
     await page.waitForLoadState('networkidle')
 
@@ -105,7 +107,11 @@ test.describe('BOM Basic CRUD', () => {
     await expect(page.locator('table').getByLabel('Required quantity').first()).toHaveValue('10')
 
     // Delete the second row via actions menu (desktop table scope)
-    await page.locator('table').getByRole('button', { name: /Actions for / }).last().click()
+    await page
+      .locator('table')
+      .getByRole('button', { name: /Actions for / })
+      .last()
+      .click()
     await page.getByRole('menuitem', { name: 'Delete row' }).click()
     await page.getByRole('button', { name: 'Delete' }).click()
     await page.waitForTimeout(1000)

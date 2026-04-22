@@ -14,7 +14,9 @@ vi.mock('@/lib/toast', () => ({
 
 // Mock child components to isolate StepCard behavior
 vi.mock('@/components/note/inline-note-input', () => ({
-  InlineNoteInput: ({ stepId }: { stepId: string }) => <div data-testid={`mock-note-input-${stepId}`}>Note Input</div>,
+  InlineNoteInput: ({ stepId }: { stepId: string }) => (
+    <div data-testid={`mock-note-input-${stepId}`}>Note Input</div>
+  ),
 }))
 vi.mock('@/components/note/notes-list', () => ({
   NotesList: () => <div data-testid="mock-notes-list">Notes List</div>,
@@ -32,11 +34,29 @@ vi.mock('@/components/blocker/inline-blocker-input', () => ({
   InlineBlockerInput: () => <div data-testid="mock-blocker-input">Blocker Input</div>,
 }))
 vi.mock('@/components/blocker/blocker-card', () => ({
-  BlockerCard: ({ description }: { id: string; description: string }) => <div data-testid="mock-blocker-card">{description}</div>,
+  BlockerCard: ({ description }: { id: string; description: string }) => (
+    <div data-testid="mock-blocker-card">{description}</div>
+  ),
 }))
 vi.mock('@/components/step/step-status-select', () => ({
-  StepStatusSelect: ({ currentState, disabled }: { currentState: string; previousState: string | null; onStateChange: (s: string) => void; disabled?: boolean }) => (
-    <button aria-label="Step status" disabled={disabled} data-testid="mock-status-select">{currentState === 'NOT_STARTED' ? 'Not Started' : currentState === 'IN_PROGRESS' ? 'In Progress' : currentState === 'COMPLETED' ? 'Completed' : 'Blocked'}</button>
+  StepStatusSelect: ({
+    currentState,
+    disabled,
+  }: {
+    currentState: string
+    previousState: string | null
+    onStateChange: (s: string) => void
+    disabled?: boolean
+  }) => (
+    <button aria-label="Step status" disabled={disabled} data-testid="mock-status-select">
+      {currentState === 'NOT_STARTED'
+        ? 'Not Started'
+        : currentState === 'IN_PROGRESS'
+          ? 'In Progress'
+          : currentState === 'COMPLETED'
+            ? 'Completed'
+            : 'Blocked'}
+    </button>
   ),
 }))
 
@@ -108,7 +128,13 @@ describe('StepCard', () => {
   })
 
   it('status dropdown is disabled on completed project', () => {
-    render(<StepCard {...defaultProps} isProjectCompleted={true} step={{ ...baseStep, state: 'COMPLETED' }} />)
+    render(
+      <StepCard
+        {...defaultProps}
+        isProjectCompleted={true}
+        step={{ ...baseStep, state: 'COMPLETED' }}
+      />,
+    )
     expect(screen.getByLabelText('Step status')).toBeDisabled()
   })
 
@@ -119,7 +145,13 @@ describe('StepCard', () => {
         step={{
           ...baseStep,
           notes: [{ id: 'n1', text: 'My note', createdAt: new Date() }],
-          images: [{ id: 'img1', displayUrl: 'https://example.com/photo.jpg', originalFilename: 'photo.jpg' }],
+          images: [
+            {
+              id: 'img1',
+              displayUrl: 'https://example.com/photo.jpg',
+              originalFilename: 'photo.jpg',
+            },
+          ],
         }}
       />,
     )

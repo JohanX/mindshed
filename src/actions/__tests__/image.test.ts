@@ -25,10 +25,16 @@ vi.mock('next/cache', () => ({
 vi.mock('@/lib/image-storage/adapter', () => ({
   getImageStorageAdapter: vi.fn(() => ({
     getPublicUrl: vi.fn((key: string) => `https://r2.example.com/bucket/${key}`),
-    getThumbnailUrl: vi.fn((key: string, width: number) => `https://r2.example.com/bucket/${key}?w=${width}`),
+    getThumbnailUrl: vi.fn(
+      (key: string, width: number) => `https://r2.example.com/bucket/${key}?w=${width}`,
+    ),
     deleteObject: vi.fn().mockResolvedValue(undefined),
-    generatePresignedUrl: vi.fn().mockResolvedValue({ url: 'https://presigned.url', key: 'test-key' }),
-    upload: vi.fn().mockResolvedValue({ publicUrl: 'https://cdn.example.com/img.jpg', storageKey: 'test-key' }),
+    generatePresignedUrl: vi
+      .fn()
+      .mockResolvedValue({ url: 'https://presigned.url', key: 'test-key' }),
+    upload: vi
+      .fn()
+      .mockResolvedValue({ publicUrl: 'https://cdn.example.com/img.jpg', storageKey: 'test-key' }),
   })),
 }))
 
@@ -82,7 +88,14 @@ describe('addStepImageLink', () => {
     const mockTx = vi.mocked(prisma.$transaction)
     mockTx.mockImplementation(async (fn) => {
       const tx = {
-        step: { findUnique: vi.fn().mockResolvedValue({ projectId: 'p1', project: { id: 'p1', hobbyId: 'h1', isCompleted: true } }) },
+        step: {
+          findUnique: vi
+            .fn()
+            .mockResolvedValue({
+              projectId: 'p1',
+              project: { id: 'p1', hobbyId: 'h1', isCompleted: true },
+            }),
+        },
         stepImage: { create: vi.fn() },
         project: { update: vi.fn() },
       }
@@ -100,7 +113,14 @@ describe('addStepImageLink', () => {
     const mockTx = vi.mocked(prisma.$transaction)
     mockTx.mockImplementation(async (fn) => {
       const tx = {
-        step: { findUnique: vi.fn().mockResolvedValue({ projectId: 'p1', project: { id: 'p1', hobbyId: 'h1', isCompleted: false } }) },
+        step: {
+          findUnique: vi
+            .fn()
+            .mockResolvedValue({
+              projectId: 'p1',
+              project: { id: 'p1', hobbyId: 'h1', isCompleted: false },
+            }),
+        },
         stepImage: { create: mockCreate },
         project: { update: mockUpdate },
       }
@@ -324,8 +344,12 @@ describe('getStepImages', () => {
     expect(result.success).toBe(true)
     if (result.success) {
       expect(result.data.images).toHaveLength(1)
-      expect(result.data.images[0].displayUrl).toBe('https://r2.example.com/bucket/steps/abc/def.jpg')
-      expect(result.data.images[0].thumbnailUrl).toBe('https://r2.example.com/bucket/steps/abc/def.jpg?w=400')
+      expect(result.data.images[0].displayUrl).toBe(
+        'https://r2.example.com/bucket/steps/abc/def.jpg',
+      )
+      expect(result.data.images[0].thumbnailUrl).toBe(
+        'https://r2.example.com/bucket/steps/abc/def.jpg?w=400',
+      )
     }
   })
 
@@ -404,7 +428,9 @@ describe('deleteStepImage', () => {
       upload: vi.fn(),
     })
     mockStepImageFindUnique.mockResolvedValue({
-      id: VALID_UUID, type: 'UPLOAD', storageKey: 'steps/abc/def.jpg',
+      id: VALID_UUID,
+      type: 'UPLOAD',
+      storageKey: 'steps/abc/def.jpg',
       step: { projectId: 'p1', project: { hobbyId: 'h1' } },
     } as never)
     mockStepImageDelete.mockResolvedValue({} as never)
@@ -425,7 +451,9 @@ describe('deleteStepImage', () => {
       upload: vi.fn(),
     })
     mockStepImageFindUnique.mockResolvedValue({
-      id: VALID_UUID, type: 'LINK', storageKey: null,
+      id: VALID_UUID,
+      type: 'LINK',
+      storageKey: null,
       step: { projectId: 'p1', project: { hobbyId: 'h1' } },
     } as never)
     mockStepImageDelete.mockResolvedValue({} as never)
@@ -445,7 +473,9 @@ describe('deleteStepImage', () => {
       upload: vi.fn(),
     })
     mockStepImageFindUnique.mockResolvedValue({
-      id: VALID_UUID, type: 'UPLOAD', storageKey: 'steps/abc/def.jpg',
+      id: VALID_UUID,
+      type: 'UPLOAD',
+      storageKey: 'steps/abc/def.jpg',
       step: { projectId: 'p1', project: { hobbyId: 'h1' } },
     } as never)
     mockStepImageDelete.mockResolvedValue({} as never)
@@ -456,4 +486,3 @@ describe('deleteStepImage', () => {
     expect(mockStepImageDelete).toHaveBeenCalled()
   })
 })
-

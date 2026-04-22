@@ -10,7 +10,16 @@ interface IconProps {
  */
 export function TangleA({ className }: IconProps) {
   return (
-    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+    <svg
+      viewBox="0 0 64 64"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
       <path d="M14 10 C16 14, 20 16, 24 15" />
       <path d="M24 15 C30 12, 42 10, 48 16 C54 22, 52 32, 46 36 C40 40, 30 42, 24 38 C18 34, 16 26, 20 20 C24 14, 34 14, 40 20 C46 26, 44 36, 38 40 C32 44, 22 44, 18 38 C14 32, 16 22, 22 18" />
       <path d="M28 18 C34 16, 44 20, 44 28 C44 36, 36 40, 28 38 C20 36, 18 28, 22 22 C26 16, 36 18, 40 24" />
@@ -27,7 +36,16 @@ export function TangleA({ className }: IconProps) {
  */
 export function TangleB({ className }: IconProps) {
   return (
-    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+    <svg
+      viewBox="0 0 64 64"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
       {/* Loose end top */}
       <path d="M18 8 C20 12, 22 16, 26 18" />
       {/* Outer loop */}
@@ -50,7 +68,16 @@ export function TangleB({ className }: IconProps) {
  */
 export function TangleC({ className }: IconProps) {
   return (
-    <svg viewBox="4 6 56 52" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+    <svg
+      viewBox="4 6 56 52"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
       {/* Scribble arcs — overlapping in different directions */}
       <path d="M22 18 C12 22, 8 34, 16 42 C24 50, 42 52, 50 44" />
       <path d="M50 44 C56 36, 54 22, 44 16 C34 10, 20 14, 16 24" />
@@ -69,7 +96,16 @@ export function TangleC({ className }: IconProps) {
  */
 export function TangleD({ className }: IconProps) {
   return (
-    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+    <svg
+      viewBox="0 0 64 64"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
       {/* Loose end top */}
       <path d="M16 10 C18 14, 22 16, 26 16" />
       {/* Outer wrap */}

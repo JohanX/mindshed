@@ -62,16 +62,12 @@ function buildTx(opts: {
 
   // Default bomItems to empty array so existing tests exercise the new
   // include path without per-test wiring.
-  const sourceWithBom = opts.source
-    ? { bomItems: [], ...opts.source }
-    : opts.source
+  const sourceWithBom = opts.source ? { bomItems: [], ...opts.source } : opts.source
 
   return {
     project: {
       findUnique: vi.fn().mockResolvedValue(sourceWithBom),
-      findMany: vi.fn().mockResolvedValue(
-        (opts.existingNames ?? []).map((name) => ({ name })),
-      ),
+      findMany: vi.fn().mockResolvedValue((opts.existingNames ?? []).map((name) => ({ name }))),
       aggregate: vi.fn().mockResolvedValue({
         _max: { sortOrder: opts.maxSortOrder ?? null },
       }),
@@ -190,9 +186,11 @@ describe('cloneProject', () => {
 
     await cloneProject(validProjectId)
 
-    const payload = (tx.project.create.mock.calls[0][0] as {
-      data: { steps: { create: Array<Record<string, unknown>> } }
-    }).data
+    const payload = (
+      tx.project.create.mock.calls[0][0] as {
+        data: { steps: { create: Array<Record<string, unknown>> } }
+      }
+    ).data
     const stepsPayload = payload.steps.create
 
     expect(stepsPayload).toHaveLength(3)
@@ -354,9 +352,11 @@ describe('cloneProject', () => {
 
     await cloneProject(validProjectId)
 
-    const projectPayload = (tx.project.create.mock.calls[0][0] as {
-      data: { bomItems: { create: Array<Record<string, unknown>> } }
-    }).data
+    const projectPayload = (
+      tx.project.create.mock.calls[0][0] as {
+        data: { bomItems: { create: Array<Record<string, unknown>> } }
+      }
+    ).data
 
     expect(projectPayload.bomItems.create).toHaveLength(3)
     for (const cloned of projectPayload.bomItems.create) {
@@ -398,9 +398,11 @@ describe('cloneProject', () => {
 
     const result = await cloneProject(validProjectId)
     expect(result.success).toBe(true)
-    const projectPayload = (tx.project.create.mock.calls[0][0] as {
-      data: { bomItems: { create: Array<unknown> } }
-    }).data
+    const projectPayload = (
+      tx.project.create.mock.calls[0][0] as {
+        data: { bomItems: { create: Array<unknown> } }
+      }
+    ).data
     expect(projectPayload.bomItems.create).toEqual([])
   })
 })

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { createHobbySchema, updateHobbySchema, reorderHobbiesSchema, HOBBY_COLORS } from '../schemas/hobby'
+import {
+  createHobbySchema,
+  updateHobbySchema,
+  reorderHobbiesSchema,
+  HOBBY_COLORS,
+} from '../schemas/hobby'
 
 describe('createHobbySchema', () => {
   it('rejects empty name', () => {
@@ -100,10 +105,7 @@ describe('reorderHobbiesSchema', () => {
 
   it('accepts valid array of UUIDs', () => {
     const result = reorderHobbiesSchema.safeParse({
-      orderedIds: [
-        '550e8400-e29b-41d4-a716-446655440000',
-        '550e8400-e29b-41d4-a716-446655440001',
-      ],
+      orderedIds: ['550e8400-e29b-41d4-a716-446655440000', '550e8400-e29b-41d4-a716-446655440001'],
     })
     expect(result.success).toBe(true)
   })

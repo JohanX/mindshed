@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import {
-  getNextMaintenanceDate,
-  isMaintenanceOverdue,
-  getDaysOverdue,
-} from '../maintenance'
+import { getNextMaintenanceDate, isMaintenanceOverdue, getDaysOverdue } from '../maintenance'
 
 // IMPORTANT: maintenance.ts uses `setDate(getDate() + n)` — LOCAL time
 // semantics. Inputs below use local-time constructors so assertions are

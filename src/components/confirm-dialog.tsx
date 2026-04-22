@@ -34,14 +34,21 @@ export function ConfirmDialog({
   loading = false,
 }: ConfirmDialogProps) {
   return (
-    <AlertDialog open={open} onOpenChange={(v) => { if (!loading) onOpenChange(v) }}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!loading) onOpenChange(v)
+      }}
+    >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading} className="min-h-[44px]">Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={loading} className="min-h-[44px]">
+            Cancel
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault()

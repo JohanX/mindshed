@@ -73,7 +73,9 @@ test.describe('BOM Autocomplete + Inline Inventory Creation', () => {
     await page.close()
   })
 
-  test('pick existing inventory item via combobox — row added immediately with 0 required', async ({ page }) => {
+  test('pick existing inventory item via combobox — row added immediately with 0 required', async ({
+    page,
+  }) => {
     await page.goto(projectUrl)
     await page.waitForLoadState('networkidle')
 

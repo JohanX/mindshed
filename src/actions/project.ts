@@ -1,7 +1,12 @@
 'use server'
 
 import { prisma } from '@/lib/db'
-import { createProjectSchema, updateProjectSchema, type CreateProjectInput, type UpdateProjectInput } from '@/lib/schemas/project'
+import {
+  createProjectSchema,
+  updateProjectSchema,
+  type CreateProjectInput,
+  type UpdateProjectInput,
+} from '@/lib/schemas/project'
 import { z } from 'zod/v4'
 import type { ProjectCardData } from '@/components/project/project-card'
 import { revalidatePath } from 'next/cache'
@@ -11,7 +16,9 @@ import { getCurrentStep } from '@/lib/project-utils'
 import { deriveProjectStatus } from '@/lib/project-status'
 import { nextCloneName } from '@/lib/project-clone'
 
-export async function createProject(input: CreateProjectInput): Promise<ActionResult<{ id: string; hobbyId: string }>> {
+export async function createProject(
+  input: CreateProjectInput,
+): Promise<ActionResult<{ id: string; hobbyId: string }>> {
   const parsed = createProjectSchema.safeParse(input)
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
@@ -78,14 +85,15 @@ export async function getAllProjects(): Promise<ActionResult<ProjectWithHobby[]>
     return {
       success: true,
       data: projects.map((p) => {
-        const currentStep = p.steps.find(s => s.state === 'IN_PROGRESS') ??
-          p.steps.find(s => s.state === 'NOT_STARTED')
+        const currentStep =
+          p.steps.find((s) => s.state === 'IN_PROGRESS') ??
+          p.steps.find((s) => s.state === 'NOT_STARTED')
         return {
           id: p.id,
           name: p.name,
           hobbyId: p.hobbyId,
           totalSteps: p.steps.length,
-          completedSteps: p.steps.filter(s => s.state === 'COMPLETED').length,
+          completedSteps: p.steps.filter((s) => s.state === 'COMPLETED').length,
           derivedStatus: deriveProjectStatus(p.steps),
           currentStepName: currentStep?.name ?? null,
           hobby: p.hobby,
@@ -103,7 +111,9 @@ export interface ProjectWithProgress extends ProjectCardData {
   isCompleted: boolean // DB field kept for query optimization
 }
 
-export async function getProjectsByHobby(hobbyId: string): Promise<ActionResult<ProjectWithProgress[]>> {
+export async function getProjectsByHobby(
+  hobbyId: string,
+): Promise<ActionResult<ProjectWithProgress[]>> {
   const parsed = z.uuid().safeParse(hobbyId)
   if (!parsed.success) {
     return { success: false, error: 'Invalid hobby ID' }
@@ -124,14 +134,15 @@ export async function getProjectsByHobby(hobbyId: string): Promise<ActionResult<
     return {
       success: true,
       data: projects.map((p) => {
-        const currentStep = p.steps.find(s => s.state === 'IN_PROGRESS') ??
-          p.steps.find(s => s.state === 'NOT_STARTED')
+        const currentStep =
+          p.steps.find((s) => s.state === 'IN_PROGRESS') ??
+          p.steps.find((s) => s.state === 'NOT_STARTED')
         return {
           id: p.id,
           name: p.name,
           hobbyId: p.hobbyId,
           totalSteps: p.steps.length,
-          completedSteps: p.steps.filter(s => s.state === 'COMPLETED').length,
+          completedSteps: p.steps.filter((s) => s.state === 'COMPLETED').length,
           derivedStatus: deriveProjectStatus(p.steps),
           currentStepName: currentStep?.name ?? null,
           isArchived: p.isArchived,
@@ -145,7 +156,9 @@ export async function getProjectsByHobby(hobbyId: string): Promise<ActionResult<
   }
 }
 
-export async function updateProject(input: UpdateProjectInput): Promise<ActionResult<{ id: string }>> {
+export async function updateProject(
+  input: UpdateProjectInput,
+): Promise<ActionResult<{ id: string }>> {
   const parsed = updateProjectSchema.safeParse(input)
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
@@ -175,7 +188,9 @@ export async function updateProject(input: UpdateProjectInput): Promise<ActionRe
   }
 }
 
-export async function cloneProject(id: string): Promise<ActionResult<{ id: string; hobbyId: string }>> {
+export async function cloneProject(
+  id: string,
+): Promise<ActionResult<{ id: string; hobbyId: string }>> {
   const parsed = z.uuid().safeParse(id)
   if (!parsed.success) {
     return { success: false, error: 'Invalid project ID.' }
@@ -196,7 +211,10 @@ export async function cloneProject(id: string): Promise<ActionResult<{ id: strin
         where: { hobbyId: source.hobbyId, name: { startsWith: source.name } },
         select: { name: true },
       })
-      const cloneName = nextCloneName(source.name, siblings.map((p) => p.name))
+      const cloneName = nextCloneName(
+        source.name,
+        siblings.map((p) => p.name),
+      )
 
       const maxSort = await tx.project.aggregate({
         where: { hobbyId: source.hobbyId },
@@ -330,7 +348,7 @@ export async function getIdleProjects(): Promise<ActionResult<IdleProjectData[]>
           name: p.name,
           hobbyId: p.hobbyId,
           totalSteps: p.steps.length,
-          completedSteps: p.steps.filter(s => s.state === 'COMPLETED').length,
+          completedSteps: p.steps.filter((s) => s.state === 'COMPLETED').length,
           derivedStatus: deriveProjectStatus(p.steps),
           currentStepName: currentStep?.name ?? null,
           hobby: p.hobby,

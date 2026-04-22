@@ -17,18 +17,15 @@ interface TopBarProps {
   hobbies: HobbyWithCounts[]
 }
 
-const TAGLINES = [
-  'keep track of the chaos',
-  'organise passion',
-  'chaos organised',
-  'where was I?',
-]
+const TAGLINES = ['keep track of the chaos', 'organise passion', 'chaos organised', 'where was I?']
 
 export function TopBar({ hobbies }: TopBarProps) {
   const pathname = usePathname()
   const activeHobby = getHobbyContext(pathname, hobbies)
   const bgColor = activeHobby ? activeHobby.color : 'var(--navbar)'
-  const textColor = activeHobby ? getContrastTextColor(activeHobby.color) : 'var(--navbar-foreground)'
+  const textColor = activeHobby
+    ? getContrastTextColor(activeHobby.color)
+    : 'var(--navbar-foreground)'
   const [tagline, setTagline] = useState(TAGLINES[0])
   useEffect(() => {
     // Pick a random tagline once on mount; SSR + first client render both use TAGLINES[0] to avoid hydration mismatch.
@@ -43,11 +40,7 @@ export function TopBar({ hobbies }: TopBarProps) {
     >
       <div className="relative flex items-center justify-between w-full px-6">
         {/* Left: Logo */}
-        <Link
-          href="/"
-          className="flex items-center gap-2 shrink-0"
-          style={{ color: textColor }}
-        >
+        <Link href="/" className="flex items-center gap-2 shrink-0" style={{ color: textColor }}>
           <BrainIcon className="h-7 w-7 shrink-0" />
           <div className="flex flex-col leading-none">
             <span className="text-lg font-bold tracking-tight">MindShed</span>
@@ -61,7 +54,9 @@ export function TopBar({ hobbies }: TopBarProps) {
             href="/"
             className={cn(
               'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-opacity min-h-[44px] shrink-0',
-              pathname === '/' && !activeHobby ? 'bg-white/20 opacity-100' : 'opacity-80 hover:opacity-100',
+              pathname === '/' && !activeHobby
+                ? 'bg-white/20 opacity-100'
+                : 'opacity-80 hover:opacity-100',
             )}
             style={{ color: textColor }}
           >
@@ -87,8 +82,12 @@ export function TopBar({ hobbies }: TopBarProps) {
                 title={hobby.name}
                 className={cn(
                   'flex items-center gap-1.5 rounded-lg transition-opacity min-h-[44px] shrink-0',
-                  compact ? 'px-2 py-2 min-w-[44px] justify-center' : 'px-3 py-2 text-sm font-medium',
-                  isActive ? 'bg-white/20 font-semibold opacity-100' : 'opacity-70 hover:opacity-100',
+                  compact
+                    ? 'px-2 py-2 min-w-[44px] justify-center'
+                    : 'px-3 py-2 text-sm font-medium',
+                  isActive
+                    ? 'bg-white/20 font-semibold opacity-100'
+                    : 'opacity-70 hover:opacity-100',
                 )}
                 style={{ color: textColor }}
               >
@@ -116,7 +115,9 @@ export function TopBar({ hobbies }: TopBarProps) {
             href="/inventory"
             className={cn(
               'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-opacity min-h-[44px]',
-              pathname.startsWith('/inventory') && !activeHobby ? 'bg-white/20 opacity-100' : 'opacity-80 hover:opacity-100',
+              pathname.startsWith('/inventory') && !activeHobby
+                ? 'bg-white/20 opacity-100'
+                : 'opacity-80 hover:opacity-100',
             )}
             style={{ color: textColor }}
           >
@@ -127,21 +128,28 @@ export function TopBar({ hobbies }: TopBarProps) {
             href="/ideas"
             className={cn(
               'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-opacity min-h-[44px]',
-              pathname.startsWith('/ideas') && !activeHobby ? 'bg-white/20 opacity-100' : 'opacity-80 hover:opacity-100',
+              pathname.startsWith('/ideas') && !activeHobby
+                ? 'bg-white/20 opacity-100'
+                : 'opacity-80 hover:opacity-100',
             )}
             style={{ color: textColor }}
           >
             <Lightbulb className="h-4 w-4" />
             <span>Ideas</span>
           </Link>
-          <div className="opacity-80 hover:opacity-100 transition-opacity" style={{ color: textColor }}>
+          <div
+            className="opacity-80 hover:opacity-100 transition-opacity"
+            style={{ color: textColor }}
+          >
             <ThemeToggle />
           </div>
           <Link
             href="/settings"
             className={cn(
               'flex items-center px-2 py-2 rounded-lg transition-opacity min-h-[44px] min-w-[44px] justify-center',
-              pathname.startsWith('/settings') && !activeHobby ? 'bg-white/20 opacity-100' : 'opacity-80 hover:opacity-100',
+              pathname.startsWith('/settings') && !activeHobby
+                ? 'bg-white/20 opacity-100'
+                : 'opacity-80 hover:opacity-100',
             )}
             style={{ color: textColor }}
             title="Settings"

@@ -29,14 +29,9 @@ interface SortableHobbyListProps {
 }
 
 function SortableItem({ hobby }: { hobby: HobbyWithCounts }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: hobby.id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: hobby.id,
+  })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -74,7 +69,7 @@ export function SortableHobbyList({ hobbies: initialHobbies }: SortableHobbyList
   function persistOrder(newHobbies: HobbyWithCounts[]) {
     startTransition(async () => {
       const result = await reorderHobbies({
-        orderedIds: newHobbies.map(h => h.id),
+        orderedIds: newHobbies.map((h) => h.id),
       })
       if (result.success) {
         lastConfirmedOrderRef.current = newHobbies
@@ -89,20 +84,16 @@ export function SortableHobbyList({ hobbies: initialHobbies }: SortableHobbyList
     const { active, over } = event
     if (!over || active.id === over.id) return
 
-    const oldIndex = hobbies.findIndex(h => h.id === active.id)
-    const newIndex = hobbies.findIndex(h => h.id === over.id)
+    const oldIndex = hobbies.findIndex((h) => h.id === active.id)
+    const newIndex = hobbies.findIndex((h) => h.id === over.id)
     const newHobbies = arrayMove(hobbies, oldIndex, newIndex)
     setHobbies(newHobbies)
     persistOrder(newHobbies)
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragEnd={handleDragEnd}
-    >
-      <SortableContext items={hobbies.map(h => h.id)} strategy={verticalListSortingStrategy}>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={hobbies.map((h) => h.id)} strategy={verticalListSortingStrategy}>
         <div className="space-y-3">
           {hobbies.map((hobby) => (
             <SortableItem key={hobby.id} hobby={hobby} />

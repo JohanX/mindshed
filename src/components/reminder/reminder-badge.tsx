@@ -13,13 +13,15 @@ export function ReminderBadge({ reminder }: ReminderBadgeProps) {
   return (
     <Badge
       variant="outline"
-      className={isOverdue
-        ? 'text-step-in-progress border-step-in-progress text-xs'
-        : 'text-muted-foreground border-muted text-xs'
+      className={
+        isOverdue
+          ? 'text-step-in-progress border-step-in-progress text-xs'
+          : 'text-muted-foreground border-muted text-xs'
       }
     >
       <CalendarDays className="h-3 w-3 mr-1" />
-      {isOverdue ? 'Overdue: ' : ''}{format(new Date(reminder.dueDate), 'MMM d')}
+      {isOverdue ? 'Overdue: ' : ''}
+      {format(new Date(reminder.dueDate), 'MMM d')}
     </Badge>
   )
 }

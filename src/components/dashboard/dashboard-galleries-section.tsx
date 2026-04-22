@@ -123,7 +123,10 @@ export function DashboardGalleriesSection({ galleries }: DashboardGalleriesSecti
                 </div>
               </CardContent>
               {watermarkIcon && (
-                <div className="absolute bottom-2 right-2 z-10 pointer-events-none" aria-hidden="true">
+                <div
+                  className="absolute bottom-2 right-2 z-10 pointer-events-none"
+                  aria-hidden="true"
+                >
                   {watermarkIcon}
                 </div>
               )}

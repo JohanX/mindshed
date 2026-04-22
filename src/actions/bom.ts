@@ -18,24 +18,28 @@ import {
 } from '@/lib/schemas/bom'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
-import {
-  buildShortageBlockerDescription,
-  isRowShort,
-  type BomItemData,
-} from '@/lib/bom'
+import { buildShortageBlockerDescription, isRowShort, type BomItemData } from '@/lib/bom'
 import { nextUniqueInventoryName } from '@/lib/inventory-name'
 
 function isP2002(error: unknown): boolean {
-  return !!error && typeof error === 'object' && 'code' in error && (error as { code: string }).code === 'P2002'
+  return (
+    !!error &&
+    typeof error === 'object' &&
+    'code' in error &&
+    (error as { code: string }).code === 'P2002'
+  )
 }
 
 function isP2025(error: unknown): boolean {
-  return !!error && typeof error === 'object' && 'code' in error && (error as { code: string }).code === 'P2025'
+  return (
+    !!error &&
+    typeof error === 'object' &&
+    'code' in error &&
+    (error as { code: string }).code === 'P2025'
+  )
 }
 
-export async function addBomItem(
-  input: AddBomItemInput,
-): Promise<ActionResult<{ id: string }>> {
+export async function addBomItem(input: AddBomItemInput): Promise<ActionResult<{ id: string }>> {
   const parsed = addBomItemSchema.safeParse(input)
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }

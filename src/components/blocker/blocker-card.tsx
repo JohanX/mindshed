@@ -62,7 +62,10 @@ export function BlockerCard({ id, description, inventoryItem }: BlockerCardProps
     return (
       <form
         className="flex items-center gap-2 rounded-lg border border-border p-2 mb-2"
-        onSubmit={(e) => { e.preventDefault(); handleEdit() }}
+        onSubmit={(e) => {
+          e.preventDefault()
+          handleEdit()
+        }}
       >
         <Input
           value={editText}
@@ -71,8 +74,26 @@ export function BlockerCard({ id, description, inventoryItem }: BlockerCardProps
           autoFocus
           className="flex-1 h-9"
         />
-        <Button type="submit" size="sm" className="min-h-[36px]" disabled={!editText.trim() || isPending}>Save</Button>
-        <Button type="button" variant="ghost" size="sm" className="min-h-[36px]" onClick={() => { setEditing(false); setEditText(description) }}>Cancel</Button>
+        <Button
+          type="submit"
+          size="sm"
+          className="min-h-[36px]"
+          disabled={!editText.trim() || isPending}
+        >
+          Save
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="min-h-[36px]"
+          onClick={() => {
+            setEditing(false)
+            setEditText(description)
+          }}
+        >
+          Cancel
+        </Button>
       </form>
     )
   }
@@ -83,7 +104,9 @@ export function BlockerCard({ id, description, inventoryItem }: BlockerCardProps
         <div className="flex-1 min-w-0">
           <p className="text-sm truncate">{description}</p>
           {inventoryItem && (
-            <Badge variant="outline" className="mt-1 text-xs">{inventoryItem.name}</Badge>
+            <Badge variant="outline" className="mt-1 text-xs">
+              {inventoryItem.name}
+            </Badge>
           )}
         </div>
         <div className="flex items-center shrink-0">
@@ -91,7 +114,10 @@ export function BlockerCard({ id, description, inventoryItem }: BlockerCardProps
             variant="ghost"
             size="icon"
             className="min-h-[44px] min-w-[44px]"
-            onClick={() => { setEditing(true); setEditText(description) }}
+            onClick={() => {
+              setEditing(true)
+              setEditText(description)
+            }}
             title="Edit blocker"
             aria-label="Edit blocker"
           >
@@ -123,7 +149,9 @@ export function BlockerCard({ id, description, inventoryItem }: BlockerCardProps
 
       <ConfirmDialog
         open={deleteOpen}
-        onOpenChange={(v) => { if (!v) setDeleteOpen(false) }}
+        onOpenChange={(v) => {
+          if (!v) setDeleteOpen(false)
+        }}
         title="Delete this blocker?"
         description="This will permanently remove the blocker."
         onConfirm={handleDelete}

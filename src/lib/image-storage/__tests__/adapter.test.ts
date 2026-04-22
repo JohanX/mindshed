@@ -52,9 +52,7 @@ describe('getImageStorageAdapter', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const adapter = getImageStorageAdapter()
     expect(adapter).toBeNull()
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('IMAGE_PROVIDER is not set'),
-    )
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('IMAGE_PROVIDER is not set'))
     warnSpy.mockRestore()
   })
 
@@ -63,9 +61,7 @@ describe('getImageStorageAdapter', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const adapter = getImageStorageAdapter()
     expect(adapter).toBeNull()
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('"dropbox" is not a valid option'),
-    )
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('"dropbox" is not a valid option'))
     warnSpy.mockRestore()
   })
 

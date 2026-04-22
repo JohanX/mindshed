@@ -30,21 +30,27 @@ export function JourneyGalleryView({ project, steps }: JourneyGalleryViewProps) 
       originalFilename: img.originalFilename,
       stepName: step.name,
       description: step.notes.map((n) => n.text).join(' ') || null,
-    }))
+    })),
   )
 
   // Map (stepIndex, imageIndex) to flat index
-  const getFlatIndex = useCallback((stepIdx: number, imgIdx: number) => {
-    let flat = 0
-    for (let s = 0; s < stepIdx; s++) {
-      flat += steps[s].images.length
-    }
-    return flat + imgIdx
-  }, [steps])
+  const getFlatIndex = useCallback(
+    (stepIdx: number, imgIdx: number) => {
+      let flat = 0
+      for (let s = 0; s < stepIdx; s++) {
+        flat += steps[s].images.length
+      }
+      return flat + imgIdx
+    },
+    [steps],
+  )
 
-  const openLightbox = useCallback((stepIdx: number, imgIdx: number) => {
-    setLightboxIndex(getFlatIndex(stepIdx, imgIdx))
-  }, [getFlatIndex])
+  const openLightbox = useCallback(
+    (stepIdx: number, imgIdx: number) => {
+      setLightboxIndex(getFlatIndex(stepIdx, imgIdx))
+    },
+    [getFlatIndex],
+  )
 
   const closeLightbox = useCallback(() => {
     setLightboxIndex(null)
@@ -107,11 +113,7 @@ export function JourneyGalleryView({ project, steps }: JourneyGalleryViewProps) 
       )}
 
       {lightboxIndex !== null && (
-        <GalleryLightbox
-          images={allImages}
-          initialIndex={lightboxIndex}
-          onClose={closeLightbox}
-        />
+        <GalleryLightbox images={allImages} initialIndex={lightboxIndex} onClose={closeLightbox} />
       )}
     </article>
   )

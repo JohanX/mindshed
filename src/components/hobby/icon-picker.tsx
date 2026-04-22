@@ -18,7 +18,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
         onClick={() => onChange(null)}
         className={cn(
           'min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center border transition-all text-sm text-muted-foreground',
-          value === null && 'ring-2 ring-offset-2 ring-foreground'
+          value === null && 'ring-2 ring-offset-2 ring-foreground',
         )}
       >
         None
@@ -35,10 +35,12 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
             onClick={() => onChange(name)}
             className={cn(
               'min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center border transition-all',
-              isSelected && 'ring-2 ring-offset-2 ring-foreground bg-accent'
+              isSelected && 'ring-2 ring-offset-2 ring-foreground bg-accent',
             )}
           >
-            <Icon className={cn('h-5 w-5', isSelected ? 'text-foreground' : 'text-muted-foreground')} />
+            <Icon
+              className={cn('h-5 w-5', isSelected ? 'text-foreground' : 'text-muted-foreground')}
+            />
           </button>
         )
       })}

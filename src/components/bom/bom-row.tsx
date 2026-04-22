@@ -18,12 +18,7 @@ import {
   undoBomItemConsumption,
 } from '@/actions/bom'
 import { showErrorToast, showSuccessToast } from '@/lib/toast'
-import {
-  renderAvailable,
-  isRowShort,
-  type BomConsumptionState,
-  type BomItemData,
-} from '@/lib/bom'
+import { renderAvailable, isRowShort, type BomConsumptionState, type BomItemData } from '@/lib/bom'
 
 interface BomRowProps {
   row: BomItemData
@@ -80,9 +75,7 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
     !row.inventoryItem.isDeleted &&
     !!onRequestCreateBlocker
   const nameIsMuted = !!row.inventoryItem?.isDeleted
-  const nameClass = nameIsMuted
-    ? 'italic text-muted-foreground'
-    : 'text-foreground'
+  const nameClass = nameIsMuted ? 'italic text-muted-foreground' : 'text-foreground'
 
   async function persistRequired() {
     const num = Number(required)
@@ -280,7 +273,10 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
     return (
       <tr className="border-b last:border-b-0">
         <td className="py-2 pr-3">
-          <span className={nameClass} title={nameIsMuted ? 'Item removed from inventory' : undefined}>
+          <span
+            className={nameClass}
+            title={nameIsMuted ? 'Item removed from inventory' : undefined}
+          >
             {displayName}
           </span>
         </td>
@@ -321,7 +317,10 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
   return (
     <div className="rounded-md border border-border bg-background p-3">
       <div className="flex items-center justify-between gap-2">
-        <span className={`font-medium ${nameClass}`} title={nameIsMuted ? 'Item removed from inventory' : undefined}>
+        <span
+          className={`font-medium ${nameClass}`}
+          title={nameIsMuted ? 'Item removed from inventory' : undefined}
+        >
           {displayName}
         </span>
         {mobileHeaderActions}

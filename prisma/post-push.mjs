@@ -10,7 +10,9 @@ import 'dotenv/config'
 
 const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL
 if (!connectionString) {
-  console.log('[post-push] DIRECT_URL / DATABASE_URL not set — skipping (ok for builds without DB access)')
+  console.log(
+    '[post-push] DIRECT_URL / DATABASE_URL not set — skipping (ok for builds without DB access)',
+  )
   process.exit(0)
 }
 

@@ -56,9 +56,7 @@ export function DashboardContinueCard({ project, variant }: DashboardContinueCar
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium truncate">{project.name}</p>
               {project.currentStep && (
-                <p className="text-xs text-muted-foreground truncate">
-                  {project.currentStep.name}
-                </p>
+                <p className="text-xs text-muted-foreground truncate">{project.currentStep.name}</p>
               )}
             </div>
           </CardContent>
@@ -92,9 +90,7 @@ export function DashboardContinueCard({ project, variant }: DashboardContinueCar
             <p className="text-base font-medium truncate">{project.name}</p>
             <HobbyIdentity hobby={project.hobby} variant="badge" />
             {project.currentStep && (
-              <p className="text-sm text-muted-foreground truncate">
-                {project.currentStep.name}
-              </p>
+              <p className="text-sm text-muted-foreground truncate">{project.currentStep.name}</p>
             )}
           </div>
         </CardContent>

@@ -127,7 +127,9 @@ test.describe('Ideation Pipeline', () => {
     expect(count).toBeGreaterThanOrEqual(2)
   })
 
-  test('global ideas page shows ideas from multiple hobbies with hobby badges', async ({ page }) => {
+  test('global ideas page shows ideas from multiple hobbies with hobby badges', async ({
+    page,
+  }) => {
     // Create a second hobby and add an idea to it
     const secondHobbyName = `${testPrefix} Painting`
     await page.goto('/hobbies')
@@ -135,7 +137,9 @@ test.describe('Ideation Pipeline', () => {
     await page.getByPlaceholder('e.g., Woodworking').fill(secondHobbyName)
     await page.getByTitle('Denim').click()
     await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByRole('link', { name: new RegExp(`${secondHobbyName}.*projects`) })).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: new RegExp(`${secondHobbyName}.*projects`) }),
+    ).toBeVisible()
 
     // Create an idea from global page for the second hobby
     await page.goto('/ideas')
@@ -174,7 +178,9 @@ test.describe('Ideation Pipeline', () => {
     await page.getByPlaceholder('e.g., Woodworking').fill(emptyHobbyName)
     await page.getByTitle('Terracotta').click()
     await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByRole('link', { name: new RegExp(`${emptyHobbyName}.*projects`) })).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: new RegExp(`${emptyHobbyName}.*projects`) }),
+    ).toBeVisible()
 
     // Get the hobby URL from the link, then navigate to its ideas page
     const hobbyLink = page.getByRole('link', { name: new RegExp(`${emptyHobbyName}.*projects`) })
@@ -183,7 +189,9 @@ test.describe('Ideation Pipeline', () => {
     await page.waitForLoadState('networkidle')
 
     // Verify empty state
-    await expect(page.getByText('No ideas captured yet. When inspiration strikes, add it here.')).toBeVisible()
+    await expect(
+      page.getByText('No ideas captured yet. When inspiration strikes, add it here.'),
+    ).toBeVisible()
     await expect(page.getByRole('button', { name: 'New Idea' }).first()).toBeVisible()
   })
 

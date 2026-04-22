@@ -4,7 +4,12 @@ import { useState, useTransition } from 'react'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { Copy, Check } from 'lucide-react'
-import { enableJourneyGallery, disableJourneyGallery, enableResultGallery, disableResultGallery } from '@/actions/gallery'
+import {
+  enableJourneyGallery,
+  disableJourneyGallery,
+  enableResultGallery,
+  disableResultGallery,
+} from '@/actions/gallery'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
 import { StepInclusionList } from '@/components/gallery/step-inclusion-list'
 import { ResultStepSelector } from '@/components/gallery/result-step-selector'
@@ -45,7 +50,11 @@ function CopyLinkButton({ url }: { url: string }) {
         onClick={handleCopy}
         aria-label="Copy link"
       >
-        {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+        {copied ? (
+          <Check className="h-3.5 w-3.5 text-green-600" />
+        ) : (
+          <Copy className="h-3.5 w-3.5" />
+        )}
       </Button>
     </div>
   )
@@ -116,7 +125,7 @@ export function GallerySection({
     })
   }
 
-  const completedSteps = steps.filter(s => s.state === 'COMPLETED')
+  const completedSteps = steps.filter((s) => s.state === 'COMPLETED')
 
   return (
     <section className="space-y-4">
@@ -126,7 +135,9 @@ export function GallerySection({
         {/* Journey Gallery */}
         <div className="space-y-3 rounded-lg border border-border p-4 min-w-0">
           <div className="flex items-center justify-between">
-            <label htmlFor="journey-toggle" className="text-sm font-medium">Journey Gallery</label>
+            <label htmlFor="journey-toggle" className="text-sm font-medium">
+              Journey Gallery
+            </label>
             <Switch
               id="journey-toggle"
               checked={journeyOn}
@@ -146,7 +157,9 @@ export function GallerySection({
         {/* Result Gallery */}
         <div className="space-y-3 rounded-lg border border-border p-4 min-w-0">
           <div className="flex items-center justify-between">
-            <label htmlFor="result-toggle" className="text-sm font-medium">Result Gallery</label>
+            <label htmlFor="result-toggle" className="text-sm font-medium">
+              Result Gallery
+            </label>
             <Switch
               id="result-toggle"
               checked={resultOn}

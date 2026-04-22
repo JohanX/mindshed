@@ -84,12 +84,7 @@ export function InlineBlockerInput({ stepId }: InlineBlockerInputProps) {
         </p>
       )}
       <div className="flex gap-2">
-        <Button
-          size="sm"
-          className="min-h-[44px]"
-          onClick={handleSave}
-          disabled={isPending}
-        >
+        <Button size="sm" className="min-h-[44px]" onClick={handleSave} disabled={isPending}>
           {isPending ? 'Saving...' : 'Save'}
         </Button>
         <Button

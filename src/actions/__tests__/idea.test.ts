@@ -236,9 +236,7 @@ describe('promoteIdea', () => {
   }) {
     return {
       idea: {
-        findUnique: vi.fn(async () =>
-          opts.idea === null ? null : (opts.idea ?? defaultIdea()),
-        ),
+        findUnique: vi.fn(async () => (opts.idea === null ? null : (opts.idea ?? defaultIdea()))),
         update: vi.fn(async () => ({ id: opts.idea?.id ?? defaultIdea().id })),
       },
       hobby: {

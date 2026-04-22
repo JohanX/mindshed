@@ -164,15 +164,9 @@ export function IdeaFormDialog({ hobbyId, hobbies }: IdeaFormDialogProps) {
             />
           </div>
 
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
-          <Button
-            type="submit"
-            disabled={!isValid || isPending}
-            className="w-full"
-          >
+          <Button type="submit" disabled={!isValid || isPending} className="w-full">
             {isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

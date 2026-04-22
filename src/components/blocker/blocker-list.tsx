@@ -76,11 +76,7 @@ function DashboardBlockerItem({ blocker }: { blocker: BlockerWithContext }) {
 
 export function BlockerList({ blockers }: BlockerListProps) {
   if (blockers.length === 0) {
-    return (
-      <p className="text-center text-muted-foreground py-8">
-        No blockers — all clear!
-      </p>
-    )
+    return <p className="text-center text-muted-foreground py-8">No blockers — all clear!</p>
   }
 
   return (

@@ -36,7 +36,9 @@ describe('uploadImageToStorage', () => {
   it('returns success on successful S3 upload', async () => {
     const mockFetch = vi.mocked(global.fetch)
     mockFetch
-      .mockResolvedValueOnce(new Response(JSON.stringify({ url: 'https://s3/put', key: 'k1' }), { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ url: 'https://s3/put', key: 'k1' }), { status: 200 }),
+      )
       .mockResolvedValueOnce(new Response(null, { status: 200 }))
 
     const file = makeFile('photo.jpg', 'image/jpeg', 5000)
@@ -56,7 +58,9 @@ describe('uploadImageToStorage', () => {
   it('returns error on PUT failure', async () => {
     const mockFetch = vi.mocked(global.fetch)
     mockFetch
-      .mockResolvedValueOnce(new Response(JSON.stringify({ url: 'https://s3/put', key: 'k1' }), { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ url: 'https://s3/put', key: 'k1' }), { status: 200 }),
+      )
       .mockResolvedValueOnce(new Response(null, { status: 500 }))
 
     const file = makeFile('photo.jpg', 'image/jpeg', 5000)

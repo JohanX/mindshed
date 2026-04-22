@@ -58,7 +58,8 @@ describe('getIdleProjects', () => {
     })
 
     // The threshold date should be approximately IDLE_THRESHOLD_DAYS ago
-    const threshold = (callArgs as { where: { lastActivityAt: { lt: Date } } }).where.lastActivityAt.lt
+    const threshold = (callArgs as { where: { lastActivityAt: { lt: Date } } }).where.lastActivityAt
+      .lt
     const diff = Math.abs(threshold.getTime() - beforeCall.getTime())
     expect(diff).toBeLessThan(5000) // within 5 seconds
   })

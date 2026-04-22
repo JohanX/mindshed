@@ -63,7 +63,7 @@ export function generateHobbyPalette(color: string): HobbyPalette {
     primary: color,
     accent: hslString(h, Math.min(s, 0.3), 0.94),
     card: hslString(h, Math.min(s, 0.15), 0.98),
-    border: hslString(h, Math.min(s, 0.2), 0.90),
+    border: hslString(h, Math.min(s, 0.2), 0.9),
   }
 }
 
@@ -72,7 +72,7 @@ function generateHobbyPaletteDark(color: string): HobbyPalette {
 
   return {
     primary: color,
-    accent: hslString(h, Math.min(s, 0.20), 0.22),
+    accent: hslString(h, Math.min(s, 0.2), 0.22),
     card: hslString(h, Math.min(s, 0.15), 0.15),
     border: hslString(h, Math.min(s, 0.15), 0.28),
   }

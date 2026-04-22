@@ -2,7 +2,16 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Palette, Lightbulb, Package, Settings, ArrowLeft, FolderOpen, MoreHorizontal } from 'lucide-react'
+import {
+  LayoutDashboard,
+  Palette,
+  Lightbulb,
+  Package,
+  Settings,
+  ArrowLeft,
+  FolderOpen,
+  MoreHorizontal,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getHobbyContext } from '@/lib/hobby-utils'
 import { getContrastTextColor } from '@/lib/hobby-color'
@@ -40,11 +49,12 @@ export function MobileNav({ hobbies }: MobileNavProps) {
       >
         <div className="flex items-center justify-around h-16">
           {contextItems.map((item) => {
-            const isActive = item.href === `/hobbies/${activeHobby.id}`
-              ? pathname === item.href
-              : item.href === '/hobbies'
-                ? false  // Back link is never "active"
-                : pathname.startsWith(item.href) && item.href !== '/settings'
+            const isActive =
+              item.href === `/hobbies/${activeHobby.id}`
+                ? pathname === item.href
+                : item.href === '/hobbies'
+                  ? false // Back link is never "active"
+                  : pathname.startsWith(item.href) && item.href !== '/settings'
             return (
               <Link
                 key={item.label}
@@ -73,16 +83,14 @@ export function MobileNav({ hobbies }: MobileNavProps) {
     >
       <div className="flex items-center justify-around h-16">
         {DEFAULT_NAV_ITEMS.map((item) => {
-          const isActive = item.href === '/'
-            ? pathname === '/'
-            : pathname.startsWith(item.href)
+          const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
                 'flex flex-col items-center justify-center gap-1 min-h-[44px] min-w-[44px] px-3 py-2 text-xs font-medium transition-opacity',
-                isActive ? 'opacity-100' : 'opacity-70 hover:opacity-100'
+                isActive ? 'opacity-100' : 'opacity-70 hover:opacity-100',
               )}
               style={{ color: 'var(--navbar-foreground)' }}
             >

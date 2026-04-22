@@ -15,7 +15,11 @@ interface ProjectStatusBadgeProps {
   className?: string
 }
 
-export function ProjectStatusBadge({ status, size = 'default', className }: ProjectStatusBadgeProps) {
+export function ProjectStatusBadge({
+  status,
+  size = 'default',
+  className,
+}: ProjectStatusBadgeProps) {
   const config = STATUS_CONFIG[status]
   return (
     <Badge

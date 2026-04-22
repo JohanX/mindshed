@@ -22,10 +22,7 @@ export default async function IdeasPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Ideas"
-        breadcrumbs={[{ label: 'Ideas' }]}
-      >
+      <PageHeader title="Ideas" breadcrumbs={[{ label: 'Ideas' }]}>
         <IdeaFormDialog hobbies={hobbies} />
       </PageHeader>
 
@@ -69,13 +66,14 @@ export default async function IdeasPage() {
                 </CardHeader>
                 {idea.description && (
                   <CardContent>
-                    <p className="text-sm text-muted-foreground line-clamp-3">
-                      {idea.description}
-                    </p>
+                    <p className="text-sm text-muted-foreground line-clamp-3">{idea.description}</p>
                   </CardContent>
                 )}
                 {watermarkIcon && (
-                  <div className="absolute bottom-2 right-2 z-10 pointer-events-none" aria-hidden="true">
+                  <div
+                    className="absolute bottom-2 right-2 z-10 pointer-events-none"
+                    aria-hidden="true"
+                  >
                     {watermarkIcon}
                   </div>
                 )}

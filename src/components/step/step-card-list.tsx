@@ -28,7 +28,12 @@ interface StepCardListProps {
   projectId: string
 }
 
-export function StepCardList({ initialSteps, currentStepId, isProjectCompleted, projectId }: StepCardListProps) {
+export function StepCardList({
+  initialSteps,
+  currentStepId,
+  isProjectCompleted,
+  projectId,
+}: StepCardListProps) {
   const [steps, setSteps] = useState(initialSteps)
   const lastConfirmedOrderRef = useRef(initialSteps)
   const [, startTransition] = useTransition()
@@ -42,8 +47,8 @@ export function StepCardList({ initialSteps, currentStepId, isProjectCompleted, 
     const { active, over } = event
     if (!over || active.id === over.id) return
 
-    const oldIndex = steps.findIndex(s => s.id === active.id)
-    const newIndex = steps.findIndex(s => s.id === over.id)
+    const oldIndex = steps.findIndex((s) => s.id === active.id)
+    const newIndex = steps.findIndex((s) => s.id === over.id)
     const newSteps = arrayMove(steps, oldIndex, newIndex)
     setSteps(newSteps)
     persistOrder(newSteps)
@@ -53,7 +58,7 @@ export function StepCardList({ initialSteps, currentStepId, isProjectCompleted, 
     startTransition(async () => {
       const result = await reorderSteps({
         projectId,
-        orderedStepIds: newSteps.map(s => s.id),
+        orderedStepIds: newSteps.map((s) => s.id),
       })
       if (result.success) {
         lastConfirmedOrderRef.current = newSteps
@@ -65,12 +70,8 @@ export function StepCardList({ initialSteps, currentStepId, isProjectCompleted, 
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragEnd={handleDragEnd}
-    >
-      <SortableContext items={steps.map(s => s.id)} strategy={verticalListSortingStrategy}>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={steps.map((s) => s.id)} strategy={verticalListSortingStrategy}>
         <div className="space-y-3">
           {steps.map((step) => (
             <SortableStepCard

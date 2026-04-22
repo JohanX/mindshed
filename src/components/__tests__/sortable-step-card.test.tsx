@@ -17,7 +17,9 @@ vi.mock('@dnd-kit/utilities', () => ({
 }))
 
 vi.mock('@/components/step/step-card', () => ({
-  StepCard: ({ step }: { step: { name: string } }) => <div data-testid="mock-step-card">{step.name}</div>,
+  StepCard: ({ step }: { step: { name: string } }) => (
+    <div data-testid="mock-step-card">{step.name}</div>
+  ),
 }))
 
 import { SortableStepCard } from '@/components/step/sortable-step-card'

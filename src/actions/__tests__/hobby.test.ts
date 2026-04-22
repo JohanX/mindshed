@@ -22,13 +22,7 @@ vi.mock('@/lib/settings', () => ({
   getIdleThresholdDays: vi.fn().mockResolvedValue(30),
 }))
 
-import {
-  createHobby,
-  getHobbies,
-  updateHobby,
-  deleteHobby,
-  reorderHobbies,
-} from '../hobby'
+import { createHobby, getHobbies, updateHobby, deleteHobby, reorderHobbies } from '../hobby'
 import { prisma } from '@/lib/db'
 
 const mockHobbyFindMany = vi.mocked(prisma.hobby.findMany)

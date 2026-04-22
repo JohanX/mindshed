@@ -82,7 +82,11 @@ function IdeaCard({ idea }: { idea: Idea }) {
             {!idea.isPromoted && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="min-h-[44px] min-w-[44px] shrink-0"
+                  >
                     <MoreHorizontal className="h-4 w-4" />
                     <span className="sr-only">Idea actions</span>
                   </Button>
@@ -92,11 +96,18 @@ function IdeaCard({ idea }: { idea: Idea }) {
                     <Pencil className="h-4 w-4 mr-2" />
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="min-h-[44px]" onClick={handlePromote} disabled={isPending}>
+                  <DropdownMenuItem
+                    className="min-h-[44px]"
+                    onClick={handlePromote}
+                    disabled={isPending}
+                  >
                     <ArrowUpRight className="h-4 w-4 mr-2" />
                     Promote to Project
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="min-h-[44px] text-destructive" onClick={() => setDeleteOpen(true)}>
+                  <DropdownMenuItem
+                    className="min-h-[44px] text-destructive"
+                    onClick={() => setDeleteOpen(true)}
+                  >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete
                   </DropdownMenuItem>
@@ -104,7 +115,9 @@ function IdeaCard({ idea }: { idea: Idea }) {
               </DropdownMenu>
             )}
             {idea.isPromoted && (
-              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded shrink-0">Promoted</span>
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded shrink-0">
+                Promoted
+              </span>
             )}
           </div>
         </CardHeader>
@@ -115,11 +128,15 @@ function IdeaCard({ idea }: { idea: Idea }) {
         )}
       </Card>
 
-      {editOpen && <IdeaEditDialog key={idea.id} idea={idea} open={editOpen} onOpenChange={setEditOpen} />}
+      {editOpen && (
+        <IdeaEditDialog key={idea.id} idea={idea} open={editOpen} onOpenChange={setEditOpen} />
+      )}
 
       <ConfirmDialog
         open={deleteOpen}
-        onOpenChange={(v) => { if (!v) setDeleteOpen(false) }}
+        onOpenChange={(v) => {
+          if (!v) setDeleteOpen(false)
+        }}
         title={`Delete "${idea.title}"?`}
         description="This idea will be permanently removed."
         onConfirm={handleDelete}

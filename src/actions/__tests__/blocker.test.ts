@@ -25,7 +25,13 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { createBlocker, resolveBlocker, getActiveBlockers, updateBlocker, deleteBlocker } from '../blocker'
+import {
+  createBlocker,
+  resolveBlocker,
+  getActiveBlockers,
+  updateBlocker,
+  deleteBlocker,
+} from '../blocker'
 import { prisma } from '@/lib/db'
 
 const mockTransaction = vi.mocked(prisma.$transaction)
@@ -583,9 +589,10 @@ describe('getActiveBlockers', () => {
   })
 })
 
-
 describe('updateBlocker', () => {
-  beforeEach(() => { vi.clearAllMocks() })
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
 
   it('rejects invalid id', async () => {
     const result = await updateBlocker({ id: 'bad', description: 'Test' })
@@ -595,7 +602,14 @@ describe('updateBlocker', () => {
   it('updates description and lastActivityAt', async () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
-        blocker: { update: vi.fn().mockResolvedValue({ id: 'b1', step: { projectId: PROJECT_ID, project: { hobbyId: HOBBY_ID } } }) },
+        blocker: {
+          update: vi
+            .fn()
+            .mockResolvedValue({
+              id: 'b1',
+              step: { projectId: PROJECT_ID, project: { hobbyId: HOBBY_ID } },
+            }),
+        },
         project: { update: vi.fn().mockResolvedValue({}) },
       }
       return fn(tx as never)
@@ -615,7 +629,9 @@ describe('updateBlocker', () => {
 })
 
 describe('deleteBlocker', () => {
-  beforeEach(() => { vi.clearAllMocks() })
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
 
   it('rejects invalid id', async () => {
     const result = await deleteBlocker('bad')
@@ -627,7 +643,9 @@ describe('deleteBlocker', () => {
       const tx = {
         blocker: {
           findUnique: vi.fn().mockResolvedValue({
-            id: 'b1', isResolved: false, stepId: 's1',
+            id: 'b1',
+            isResolved: false,
+            stepId: 's1',
             step: { id: 's1', previousState: 'IN_PROGRESS', projectId: PROJECT_ID },
           }),
           delete: vi.fn(),
@@ -649,7 +667,9 @@ describe('deleteBlocker', () => {
       const tx = {
         blocker: {
           findUnique: vi.fn().mockResolvedValue({
-            id: 'b1', isResolved: false, stepId: 's1',
+            id: 'b1',
+            isResolved: false,
+            stepId: 's1',
             step: { id: 's1', previousState: 'IN_PROGRESS', projectId: PROJECT_ID },
           }),
           delete: vi.fn(),

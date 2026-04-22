@@ -11,22 +11,14 @@ export default async function AllProjectsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="All Projects"
-        breadcrumbs={[{ label: 'All Projects' }]}
-      />
+      <PageHeader title="All Projects" breadcrumbs={[{ label: 'All Projects' }]} />
 
       {!result.success ? (
         <EmptyStateCard message="Failed to load projects. Please refresh." />
       ) : projects.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              hobby={project.hobby}
-              showHobbyBadge
-            />
+            <ProjectCard key={project.id} project={project} hobby={project.hobby} showHobbyBadge />
           ))}
         </div>
       ) : (

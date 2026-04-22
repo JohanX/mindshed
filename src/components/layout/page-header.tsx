@@ -45,7 +45,10 @@ export function PageHeader({ title, breadcrumbs, children }: PageHeaderProps) {
                       {segment.label}
                     </BreadcrumbPage>
                   ) : (
-                    <BreadcrumbLink href={segment.href ?? '#'} className="inline-flex items-center gap-1.5">
+                    <BreadcrumbLink
+                      href={segment.href ?? '#'}
+                      className="inline-flex items-center gap-1.5"
+                    >
                       {segment.hobbyColor && (
                         <span
                           className="inline-block w-2 h-2 rounded-full shrink-0"

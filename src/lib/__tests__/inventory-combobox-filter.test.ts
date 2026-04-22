@@ -44,10 +44,7 @@ describe('filterInventoryOptions', () => {
   })
 
   it('substring with exact also hides Add New', () => {
-    const { showAddNew } = filterInventoryOptions(
-      [opt('Kaolin'), opt('Kaolin Clay')],
-      'Kaolin',
-    )
+    const { showAddNew } = filterInventoryOptions([opt('Kaolin'), opt('Kaolin Clay')], 'Kaolin')
     expect(showAddNew).toBe(false)
   })
 

@@ -53,10 +53,14 @@ describe('ensureUniqueSlug', () => {
   })
 
   it('increments counter on multiple conflicts', () => {
-    expect(ensureUniqueSlug('walnut-table', ['walnut-table', 'walnut-table-2'])).toBe('walnut-table-3')
+    expect(ensureUniqueSlug('walnut-table', ['walnut-table', 'walnut-table-2'])).toBe(
+      'walnut-table-3',
+    )
   })
 
   it('finds next available counter with gaps', () => {
-    expect(ensureUniqueSlug('walnut-table', ['walnut-table', 'walnut-table-2', 'walnut-table-3'])).toBe('walnut-table-4')
+    expect(
+      ensureUniqueSlug('walnut-table', ['walnut-table', 'walnut-table-2', 'walnut-table-3']),
+    ).toBe('walnut-table-4')
   })
 })

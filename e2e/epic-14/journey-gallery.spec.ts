@@ -63,7 +63,9 @@ test.describe('Public Journey Gallery Page', () => {
     await page.goto(`/gallery/${gallerySlug}`)
     await page.waitForLoadState('networkidle')
 
-    await expect(page.getByRole('heading', { name: new RegExp(`${testPrefix} Journey Test`) })).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: new RegExp(`${testPrefix} Journey Test`) }),
+    ).toBeVisible()
   })
 
   test('disabled journey gallery shows not-found page', async ({ page }) => {

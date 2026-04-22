@@ -63,7 +63,9 @@ export function MaintenanceSection({ item }: MaintenanceSectionProps) {
           <Wrench className="h-3 w-3" /> Set up maintenance schedule
         </p>
         <div className="flex items-center gap-2">
-          <Label htmlFor={`interval-${item.id}`} className="text-xs shrink-0">Every</Label>
+          <Label htmlFor={`interval-${item.id}`} className="text-xs shrink-0">
+            Every
+          </Label>
           <Input
             id={`interval-${item.id}`}
             type="number"
@@ -83,9 +85,18 @@ export function MaintenanceSection({ item }: MaintenanceSectionProps) {
     )
   }
 
-  const nextDate = getNextMaintenanceDate(new Date(item.lastMaintenanceDate!), item.maintenanceIntervalDays!)
-  const overdue = isMaintenanceOverdue(new Date(item.lastMaintenanceDate!), item.maintenanceIntervalDays!)
-  const daysOver = getDaysOverdue(new Date(item.lastMaintenanceDate!), item.maintenanceIntervalDays!)
+  const nextDate = getNextMaintenanceDate(
+    new Date(item.lastMaintenanceDate!),
+    item.maintenanceIntervalDays!,
+  )
+  const overdue = isMaintenanceOverdue(
+    new Date(item.lastMaintenanceDate!),
+    item.maintenanceIntervalDays!,
+  )
+  const daysOver = getDaysOverdue(
+    new Date(item.lastMaintenanceDate!),
+    item.maintenanceIntervalDays!,
+  )
 
   return (
     <div className="pt-2 space-y-1.5">
@@ -97,13 +108,22 @@ export function MaintenanceSection({ item }: MaintenanceSectionProps) {
       </div>
       <div className="flex items-center gap-2">
         {overdue ? (
-          <Badge variant="outline" className="text-xs text-step-in-progress border-step-in-progress">
+          <Badge
+            variant="outline"
+            className="text-xs text-step-in-progress border-step-in-progress"
+          >
             Overdue by {daysOver} day{daysOver !== 1 ? 's' : ''}
           </Badge>
         ) : (
           <span className="text-xs text-muted-foreground">Next: {format(nextDate, 'MMM d')}</span>
         )}
-        <Button variant="ghost" size="sm" className="min-h-[44px] text-xs" onClick={handleRecord} disabled={isPending}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="min-h-[44px] text-xs"
+          onClick={handleRecord}
+          disabled={isPending}
+        >
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Record Maintenance'}
         </Button>
       </div>

@@ -88,7 +88,10 @@ test.describe('BOM Consumption (Mark / Undo) + Clone Integration', () => {
     const combobox = page.getByPlaceholder('Type to search inventory…')
     await expect(combobox).toBeVisible()
     await combobox.fill(itemName)
-    await page.getByRole('option', { name: new RegExp(itemName) }).first().click()
+    await page
+      .getByRole('option', { name: new RegExp(itemName) })
+      .first()
+      .click()
     await expect(page.getByText(itemName).first()).toBeVisible({ timeout: 5000 })
     const row = page.locator('table tbody tr').filter({ hasText: itemName })
     const requiredInput = row.getByLabel('Required quantity')
@@ -97,7 +100,9 @@ test.describe('BOM Consumption (Mark / Undo) + Clone Integration', () => {
     await expect(page.getByText('BOM item updated').first()).toBeVisible({ timeout: 5000 })
   }
 
-  test('Mark consumed → Undo cycle for a MATERIAL row, TOOL row hides the action', async ({ page }) => {
+  test('Mark consumed → Undo cycle for a MATERIAL row, TOOL row hides the action', async ({
+    page,
+  }) => {
     test.setTimeout(120_000)
     await page.goto(projectUrl)
     await page.waitForLoadState('networkidle')
@@ -125,7 +130,9 @@ test.describe('BOM Consumption (Mark / Undo) + Clone Integration', () => {
     await page.waitForLoadState('networkidle')
     const matRow2 = page.locator('table tbody tr').filter({ hasText: matName })
     await matRow2.getByRole('button', { name: /Undo/ }).click()
-    await expect(page.getByText(`Reverted consumption of ${matName}`)).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText(`Reverted consumption of ${matName}`)).toBeVisible({
+      timeout: 5000,
+    })
     // Available cell now shows "Reverted"
     await expect(matRow2.getByText('Reverted', { exact: true })).toBeVisible()
     // Inventory credited back

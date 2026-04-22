@@ -11,10 +11,9 @@ export const addBomItemSchema = z
     requiredQuantity: z.number().min(0, 'Required quantity must be 0 or more'),
     unit: z.string().trim().max(50).optional(),
   })
-  .refine(
-    (data) => (data.label ? !data.inventoryItemId : !!data.inventoryItemId),
-    { message: 'Provide exactly one of: label (free-form) OR inventoryItemId (linked)' },
-  )
+  .refine((data) => (data.label ? !data.inventoryItemId : !!data.inventoryItemId), {
+    message: 'Provide exactly one of: label (free-form) OR inventoryItemId (linked)',
+  })
 
 export type AddBomItemInput = z.infer<typeof addBomItemSchema>
 
@@ -45,9 +44,7 @@ export const addBomItemWithNewInventorySchema = z.object({
   unit: z.string().trim().max(50).optional(),
 })
 
-export type AddBomItemWithNewInventoryInput = z.infer<
-  typeof addBomItemWithNewInventorySchema
->
+export type AddBomItemWithNewInventoryInput = z.infer<typeof addBomItemWithNewInventorySchema>
 
 export const createBomShortageBlockerSchema = z.object({
   bomItemId: z.uuid(),

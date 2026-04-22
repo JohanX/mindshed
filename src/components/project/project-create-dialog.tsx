@@ -30,7 +30,8 @@ export function ProjectCreateDialog({ hobbyId }: ProjectCreateDialogProps) {
   const [steps, setSteps] = useState([{ id: 0, name: '' }])
   const [isPending, startTransition] = useTransition()
 
-  const isValid = name.trim().length > 0 && steps.length > 0 && steps.every(s => s.name.trim().length > 0)
+  const isValid =
+    name.trim().length > 0 && steps.length > 0 && steps.every((s) => s.name.trim().length > 0)
 
   function resetForm() {
     setName('')
@@ -55,7 +56,7 @@ export function ProjectCreateDialog({ hobbyId }: ProjectCreateDialogProps) {
   }
 
   function updateStep(index: number, value: string) {
-    setSteps(steps.map((s, i) => i === index ? { ...s, name: value } : s))
+    setSteps(steps.map((s, i) => (i === index ? { ...s, name: value } : s)))
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -67,7 +68,7 @@ export function ProjectCreateDialog({ hobbyId }: ProjectCreateDialogProps) {
         name: name.trim(),
         description: description.trim() || null,
         hobbyId,
-        steps: steps.map(s => ({ name: s.name.trim() })),
+        steps: steps.map((s) => ({ name: s.name.trim() })),
       })
 
       if (result.success) {
@@ -128,7 +129,9 @@ export function ProjectCreateDialog({ hobbyId }: ProjectCreateDialogProps) {
             <div className="space-y-2">
               {steps.map((step, index) => (
                 <div key={step.id} className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground w-6 text-right shrink-0">{index + 1}.</span>
+                  <span className="text-xs text-muted-foreground w-6 text-right shrink-0">
+                    {index + 1}.
+                  </span>
                   <Input
                     placeholder={`Step ${index + 1} name`}
                     value={step.name}
@@ -149,7 +152,12 @@ export function ProjectCreateDialog({ hobbyId }: ProjectCreateDialogProps) {
                 </div>
               ))}
               {steps.length < 50 && (
-                <Button type="button" variant="outline" onClick={addStep} className="w-full min-h-[44px]">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addStep}
+                  className="w-full min-h-[44px]"
+                >
                   <Plus className="h-4 w-4 mr-1" />
                   Add Step
                 </Button>
@@ -158,11 +166,7 @@ export function ProjectCreateDialog({ hobbyId }: ProjectCreateDialogProps) {
           </div>
 
           <div className="relative group">
-            <Button
-              type="submit"
-              disabled={!isValid || isPending}
-              className="w-full"
-            >
+            <Button type="submit" disabled={!isValid || isPending} className="w-full">
               {isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

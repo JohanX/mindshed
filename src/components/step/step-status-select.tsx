@@ -52,9 +52,12 @@ export function StepStatusSelect({
             className="min-h-[36px] py-1 pr-1! pl-1! rounded-none focus:bg-muted/30 focus:text-foreground data-[state=checked]:bg-muted/50 [&>span:first-child]:hidden"
           >
             <StepStateBadge state={state} size="sm" />
-            {state !== 'BLOCKED' && currentState === 'BLOCKED' && previousState && state === previousState && (
-              <span className="text-xs text-muted-foreground ml-1">(restore)</span>
-            )}
+            {state !== 'BLOCKED' &&
+              currentState === 'BLOCKED' &&
+              previousState &&
+              state === previousState && (
+                <span className="text-xs text-muted-foreground ml-1">(restore)</span>
+              )}
           </SelectItem>
         ))}
       </SelectContent>

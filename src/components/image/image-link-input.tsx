@@ -144,15 +144,17 @@ export function ImageLinkInput({ stepId }: ImageLinkInputProps) {
         </p>
       )}
       <div className="flex gap-2">
-        <Button
-          size="sm"
-          className="min-h-[44px]"
-          onClick={handleSave}
-          disabled={busy}
-        >
+        <Button size="sm" className="min-h-[44px]" onClick={handleSave} disabled={busy}>
           {isUploading ? (
-            <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading…</>
-          ) : isPending ? 'Saving...' : 'Save'}
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Uploading…
+            </>
+          ) : isPending ? (
+            'Saving...'
+          ) : (
+            'Save'
+          )}
         </Button>
         <Button
           variant="outline"

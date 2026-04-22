@@ -34,7 +34,10 @@ export function AddStepForm({ projectId }: AddStepFormProps) {
     return (
       <form
         className="flex gap-2"
-        onSubmit={(e) => { e.preventDefault(); handleAdd() }}
+        onSubmit={(e) => {
+          e.preventDefault()
+          handleAdd()
+        }}
       >
         <Input
           placeholder="Step name"
@@ -46,7 +49,15 @@ export function AddStepForm({ projectId }: AddStepFormProps) {
         <Button type="submit" className="min-h-[44px]" disabled={!newStepName.trim() || isPending}>
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add'}
         </Button>
-        <Button type="button" variant="ghost" className="min-h-[44px]" onClick={() => { setAdding(false); setNewStepName('') }}>
+        <Button
+          type="button"
+          variant="ghost"
+          className="min-h-[44px]"
+          onClick={() => {
+            setAdding(false)
+            setNewStepName('')
+          }}
+        >
           Cancel
         </Button>
       </form>

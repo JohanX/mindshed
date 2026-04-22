@@ -2,7 +2,16 @@
 
 import { prisma } from '@/lib/db'
 import { z } from 'zod/v4'
-import { createStepSchema, updateStepSchema, updateStepStateSchema, reorderStepsSchema, type CreateStepInput, type UpdateStepInput, type UpdateStepStateInput, type ReorderStepsInput } from '@/lib/schemas/step'
+import {
+  createStepSchema,
+  updateStepSchema,
+  updateStepStateSchema,
+  reorderStepsSchema,
+  type CreateStepInput,
+  type UpdateStepInput,
+  type UpdateStepStateInput,
+  type ReorderStepsInput,
+} from '@/lib/schemas/step'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -53,8 +62,10 @@ export async function createStep(input: CreateStepInput): Promise<ActionResult<{
   } catch (error) {
     console.error('createStep failed:', error)
     if (error instanceof Error) {
-      if (error.message === 'PROJECT_NOT_FOUND') return { success: false, error: 'Project not found.' }
-      if (error.message === 'PROJECT_COMPLETED') return { success: false, error: 'Cannot add steps to a completed project.' }
+      if (error.message === 'PROJECT_NOT_FOUND')
+        return { success: false, error: 'Project not found.' }
+      if (error.message === 'PROJECT_COMPLETED')
+        return { success: false, error: 'Cannot add steps to a completed project.' }
     }
     return { success: false, error: 'Failed to add step.' }
   }
@@ -130,7 +141,12 @@ export async function updateStepState(input: UpdateStepStateInput): Promise<Acti
     const step = await prisma.$transaction(async (tx) => {
       const existing = await tx.step.findUniqueOrThrow({
         where: { id: parsed.data.id },
-        select: { state: true, previousState: true, projectId: true, project: { select: { isCompleted: true } } },
+        select: {
+          state: true,
+          previousState: true,
+          projectId: true,
+          project: { select: { isCompleted: true } },
+        },
       })
       if (existing.project.isCompleted) throw new Error('PROJECT_COMPLETED')
 
@@ -169,7 +185,7 @@ export async function updateStepState(input: UpdateStepStateInput): Promise<Acti
         where: { projectId: existing.projectId },
         select: { state: true },
       })
-      const allCompleted = allSteps.length > 0 && allSteps.every(s => s.state === 'COMPLETED')
+      const allCompleted = allSteps.length > 0 && allSteps.every((s) => s.state === 'COMPLETED')
       if (allCompleted !== existing.project.isCompleted) {
         await tx.project.update({
           where: { id: existing.projectId },
@@ -214,7 +230,7 @@ export async function reorderSteps(input: ReorderStepsInput): Promise<ActionResu
         where: { projectId: parsed.data.projectId },
         select: { id: true },
       })
-      const projectStepIds = new Set(steps.map(s => s.id))
+      const projectStepIds = new Set(steps.map((s) => s.id))
       if (parsed.data.orderedStepIds.length !== projectStepIds.size) {
         throw new Error('STEP_COUNT_MISMATCH')
       }
@@ -229,7 +245,6 @@ export async function reorderSteps(input: ReorderStepsInput): Promise<ActionResu
           data: { sortOrder: i },
         })
       }
-
     })
 
     await updateProjectActivity(parsed.data.projectId)
@@ -237,10 +252,14 @@ export async function reorderSteps(input: ReorderStepsInput): Promise<ActionResu
   } catch (error) {
     console.error('reorderSteps failed:', error)
     if (error instanceof Error) {
-      if (error.message === 'PROJECT_NOT_FOUND') return { success: false, error: 'Project not found.' }
-      if (error.message === 'PROJECT_COMPLETED') return { success: false, error: 'Cannot reorder steps in a completed project.' }
-      if (error.message === 'STEP_COUNT_MISMATCH') return { success: false, error: 'Step count does not match project.' }
-      if (error.message === 'STEP_NOT_IN_PROJECT') return { success: false, error: 'One or more steps do not belong to this project.' }
+      if (error.message === 'PROJECT_NOT_FOUND')
+        return { success: false, error: 'Project not found.' }
+      if (error.message === 'PROJECT_COMPLETED')
+        return { success: false, error: 'Cannot reorder steps in a completed project.' }
+      if (error.message === 'STEP_COUNT_MISMATCH')
+        return { success: false, error: 'Step count does not match project.' }
+      if (error.message === 'STEP_NOT_IN_PROJECT')
+        return { success: false, error: 'One or more steps do not belong to this project.' }
     }
     return { success: false, error: 'Failed to reorder steps. Please try again.' }
   }

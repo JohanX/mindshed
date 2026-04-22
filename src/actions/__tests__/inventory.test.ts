@@ -167,9 +167,7 @@ describe('getInventoryItems', () => {
   })
 
   it('returns items with activeBlockerCount', async () => {
-    mockFindMany.mockResolvedValue([
-      { id: 'i1', name: 'Item', _count: { blockers: 3 } },
-    ] as never)
+    mockFindMany.mockResolvedValue([{ id: 'i1', name: 'Item', _count: { blockers: 3 } }] as never)
     const result = await getInventoryItems()
     expect(result.success).toBe(true)
     if (result.success) expect(result.data[0].activeBlockerCount).toBe(3)

@@ -38,8 +38,13 @@ export function GalleryLightbox({ images, initialIndex, onClose }: GalleryLightb
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'ArrowRight') { e.preventDefault(); goNext() }
-      else if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev() }
+      if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        goNext()
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        goPrev()
+      }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
@@ -48,7 +53,12 @@ export function GalleryLightbox({ images, initialIndex, onClose }: GalleryLightb
   if (!current) return null
 
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
       <DialogContent
         showCloseButton={false}
         className="flex h-[100dvh] max-h-[100dvh] w-screen max-w-full flex-col items-center justify-center gap-0 rounded-none border-none bg-black/95 p-0 sm:max-w-full"

@@ -80,7 +80,14 @@ function NoteItem({ note, isProjectCompleted }: { note: NoteData; isProjectCompl
           <Button size="sm" onClick={handleSave} disabled={!editText.trim() || isPending}>
             {isPending ? 'Saving...' : 'Save'}
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setEditText(note.text) }}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setEditing(false)
+              setEditText(note.text)
+            }}
+          >
             Cancel
           </Button>
         </div>
@@ -90,10 +97,7 @@ function NoteItem({ note, isProjectCompleted }: { note: NoteData; isProjectCompl
 
   return (
     <>
-      <div
-        className="group rounded-lg bg-muted px-3 py-2 text-sm"
-        data-testid={`note-${note.id}`}
-      >
+      <div className="group rounded-lg bg-muted px-3 py-2 text-sm" data-testid={`note-${note.id}`}>
         <div className="flex items-start justify-between gap-2">
           <p className="whitespace-pre-wrap break-words flex-1">{note.text}</p>
           {!isProjectCompleted && (
@@ -106,7 +110,10 @@ function NoteItem({ note, isProjectCompleted }: { note: NoteData; isProjectCompl
                 variant="ghost"
                 size="icon"
                 className="min-h-[44px] min-w-[44px]"
-                onClick={() => { setEditing(true); setEditText(note.text) }}
+                onClick={() => {
+                  setEditing(true)
+                  setEditText(note.text)
+                }}
                 title="Edit note"
                 aria-label="Edit note"
               >
@@ -125,14 +132,14 @@ function NoteItem({ note, isProjectCompleted }: { note: NoteData; isProjectCompl
             </div>
           )}
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {formatRelativeTime(note.createdAt)}
-        </p>
+        <p className="mt-1 text-xs text-muted-foreground">{formatRelativeTime(note.createdAt)}</p>
       </div>
 
       <ConfirmDialog
         open={deleteOpen}
-        onOpenChange={(v) => { if (!v) setDeleteOpen(false) }}
+        onOpenChange={(v) => {
+          if (!v) setDeleteOpen(false)
+        }}
         title="Delete this note?"
         description="This note will be permanently removed."
         onConfirm={handleDelete}

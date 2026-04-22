@@ -31,7 +31,11 @@ type HobbyFormDialogProps = {
   onOpenChange?: (open: boolean) => void
 }
 
-export function HobbyFormDialog({ hobby, open: controlledOpen, onOpenChange }: HobbyFormDialogProps) {
+export function HobbyFormDialog({
+  hobby,
+  open: controlledOpen,
+  onOpenChange,
+}: HobbyFormDialogProps) {
   const isEditMode = !!hobby
   const [internalOpen, setInternalOpen] = useState(false)
   const open = controlledOpen ?? internalOpen
@@ -133,11 +137,7 @@ export function HobbyFormDialog({ hobby, open: controlledOpen, onOpenChange }: H
           <IconPicker value={icon} onChange={setIcon} />
         </div>
         <div className="relative group">
-          <Button
-            type="submit"
-            disabled={!isValid || isPending}
-            className="w-full"
-          >
+          <Button type="submit" disabled={!isValid || isPending} className="w-full">
             {isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

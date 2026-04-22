@@ -79,7 +79,10 @@ test.describe('Inventory Management', () => {
     await page.waitForLoadState('networkidle')
 
     // Click edit on the first item (aria-label now includes item name)
-    await page.getByLabel(/^Edit /).first().click()
+    await page
+      .getByLabel(/^Edit /)
+      .first()
+      .click()
     await page.waitForTimeout(500)
 
     // Change the name
@@ -102,7 +105,10 @@ test.describe('Inventory Management', () => {
     const itemCount = await page.locator('[data-slot="card"]').count()
 
     // Click delete on the first item (aria-label now includes item name)
-    await page.getByLabel(/^Delete /).first().click()
+    await page
+      .getByLabel(/^Delete /)
+      .first()
+      .click()
     await page.waitForTimeout(500)
 
     // Confirm deletion
@@ -116,7 +122,9 @@ test.describe('Inventory Management', () => {
     expect(newCount).toBe(itemCount - 1)
   })
 
-  test('auto-renames case-insensitive collisions and soft-deletes items', async ({ page }, testInfo) => {
+  test('auto-renames case-insensitive collisions and soft-deletes items', async ({
+    page,
+  }, testInfo) => {
     // Use a browser-unique base name so parallel browser suites don't collide.
     const base = `Kaolin-${testInfo.project.name}`
     const baseLower = base.toLowerCase()

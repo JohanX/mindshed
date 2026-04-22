@@ -101,7 +101,9 @@ test.describe('Gallery Controls on Project Detail Page', () => {
     expect(foundResultLink).toBe(true)
   })
 
-  test('gallery toggles persist across hard reload and navigation (Story 18.4)', async ({ page }) => {
+  test('gallery toggles persist across hard reload and navigation (Story 18.4)', async ({
+    page,
+  }) => {
     test.setTimeout(60_000)
 
     // After the previous tests, Journey is OFF and Result is ON. Start from a

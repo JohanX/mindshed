@@ -12,7 +12,14 @@ import type { InventoryOption, InventoryType } from '@/lib/bom'
 interface BomNewInventoryFormProps {
   projectId: string
   initialName: string
-  onSaved: (result: { id: string; inventoryItemId: string; finalName: string; created: InventoryOption; requiredQuantity: number; unit: string | null }) => void
+  onSaved: (result: {
+    id: string
+    inventoryItemId: string
+    finalName: string
+    created: InventoryOption
+    requiredQuantity: number
+    unit: string | null
+  }) => void
   onCancel: () => void
 }
 

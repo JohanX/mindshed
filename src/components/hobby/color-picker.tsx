@@ -20,13 +20,11 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
           onClick={() => onChange(color.value)}
           className={cn(
             'min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center transition-all',
-            value === color.value && 'ring-2 ring-offset-2 ring-foreground'
+            value === color.value && 'ring-2 ring-offset-2 ring-foreground',
           )}
           style={{ backgroundColor: color.value }}
         >
-          {value === color.value && (
-            <Check className="h-5 w-5 text-white drop-shadow-sm" />
-          )}
+          {value === color.value && <Check className="h-5 w-5 text-white drop-shadow-sm" />}
         </button>
       ))}
     </div>

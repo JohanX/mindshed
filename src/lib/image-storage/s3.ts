@@ -66,9 +66,7 @@ class S3StorageAdapter implements ImageStorageAdapter {
   async deleteObject(storageKey: string): Promise<void> {
     const client = getClient()
     const bucket = getBucket()
-    await client.send(
-      new DeleteObjectCommand({ Bucket: bucket, Key: storageKey }),
-    )
+    await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: storageKey }))
   }
 
   async generatePresignedUrl(

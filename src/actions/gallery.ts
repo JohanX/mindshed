@@ -16,7 +16,9 @@ function isSlugConflict(error: unknown): boolean {
   return !!error && typeof error === 'object' && 'code' in error && error.code === 'P2002'
 }
 
-export async function enableJourneyGallery(projectId: string): Promise<ActionResult<{ slug: string }>> {
+export async function enableJourneyGallery(
+  projectId: string,
+): Promise<ActionResult<{ slug: string }>> {
   const parsed = z.uuid().safeParse(projectId)
   if (!parsed.success) return { success: false, error: 'Invalid project ID' }
 
@@ -37,7 +39,7 @@ export async function enableJourneyGallery(projectId: string): Promise<ActionRes
         })
         slug = ensureUniqueSlug(
           generateSlug(existing.name),
-          allSlugs.map(p => p.gallerySlug).filter((s): s is string => s !== null),
+          allSlugs.map((p) => p.gallerySlug).filter((s): s is string => s !== null),
         )
       }
 
@@ -83,7 +85,9 @@ export async function disableJourneyGallery(projectId: string): Promise<ActionRe
   }
 }
 
-export async function enableResultGallery(projectId: string): Promise<ActionResult<{ slug: string }>> {
+export async function enableResultGallery(
+  projectId: string,
+): Promise<ActionResult<{ slug: string }>> {
   const parsed = z.uuid().safeParse(projectId)
   if (!parsed.success) return { success: false, error: 'Invalid project ID' }
 
@@ -92,7 +96,12 @@ export async function enableResultGallery(projectId: string): Promise<ActionResu
       const existing = await tx.project.findUnique({
         where: { id: parsed.data },
         select: {
-          id: true, name: true, gallerySlug: true, hobbyId: true, resultStepId: true, isArchived: true,
+          id: true,
+          name: true,
+          gallerySlug: true,
+          hobbyId: true,
+          resultStepId: true,
+          isArchived: true,
           steps: {
             where: { state: 'COMPLETED' },
             orderBy: { sortOrder: 'desc' },
@@ -112,7 +121,7 @@ export async function enableResultGallery(projectId: string): Promise<ActionResu
         })
         slug = ensureUniqueSlug(
           generateSlug(existing.name),
-          allSlugs.map(p => p.gallerySlug).filter((s): s is string => s !== null),
+          allSlugs.map((p) => p.gallerySlug).filter((s): s is string => s !== null),
         )
       }
 
@@ -173,7 +182,10 @@ export async function disableResultGallery(projectId: string): Promise<ActionRes
   }
 }
 
-export async function setResultStep(projectId: string, stepId: string): Promise<ActionResult<null>> {
+export async function setResultStep(
+  projectId: string,
+  stepId: string,
+): Promise<ActionResult<null>> {
   const parsedProject = z.uuid().safeParse(projectId)
   const parsedStep = z.uuid().safeParse(stepId)
   if (!parsedProject.success || !parsedStep.success) {

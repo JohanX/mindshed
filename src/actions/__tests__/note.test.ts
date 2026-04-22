@@ -180,7 +180,9 @@ describe('getStepNotes', () => {
 import { updateStepNote, deleteStepNote } from '../note'
 
 describe('updateStepNote', () => {
-  beforeEach(() => { vi.clearAllMocks() })
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
 
   it('rejects invalid id', async () => {
     const result = await updateStepNote({ id: 'bad', text: 'Updated' })
@@ -196,7 +198,9 @@ describe('updateStepNote', () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         stepNote: {
-          findUnique: vi.fn().mockResolvedValue({ step: { projectId: 'p1', project: { hobbyId: 'h1' } } }),
+          findUnique: vi
+            .fn()
+            .mockResolvedValue({ step: { projectId: 'p1', project: { hobbyId: 'h1' } } }),
           update: vi.fn().mockResolvedValue({ id: 'n1' }),
         },
         project: { update: vi.fn().mockResolvedValue({}) },
@@ -225,7 +229,9 @@ describe('updateStepNote', () => {
 })
 
 describe('deleteStepNote', () => {
-  beforeEach(() => { vi.clearAllMocks() })
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
 
   it('rejects invalid id', async () => {
     const result = await deleteStepNote('bad')
@@ -236,7 +242,9 @@ describe('deleteStepNote', () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         stepNote: {
-          findUnique: vi.fn().mockResolvedValue({ step: { projectId: 'p1', project: { hobbyId: 'h1' } } }),
+          findUnique: vi
+            .fn()
+            .mockResolvedValue({ step: { projectId: 'p1', project: { hobbyId: 'h1' } } }),
           delete: vi.fn().mockResolvedValue({}),
         },
         project: { update: vi.fn().mockResolvedValue({}) },

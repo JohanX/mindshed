@@ -23,10 +23,12 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project, hobby, showHobbyBadge }: ProjectCardProps) {
-  const watermarkIcon = hobby ? renderHobbyIcon(hobby.icon, {
-    className: 'h-10 w-10 watermark-icon',
-    style: { color: hobby.color },
-  }) : null
+  const watermarkIcon = hobby
+    ? renderHobbyIcon(hobby.icon, {
+        className: 'h-10 w-10 watermark-icon',
+        style: { color: hobby.color },
+      })
+    : null
 
   return (
     <Link href={`/hobbies/${project.hobbyId}/projects/${project.id}`} className="block">
@@ -44,12 +46,12 @@ export function ProjectCard({ project, hobby, showHobbyBadge }: ProjectCardProps
           <div className="flex items-center gap-2">
             <ProjectStatusBadge status={project.derivedStatus} size="sm" />
             {project.currentStepName && (
-              <span className="text-sm text-muted-foreground truncate">{project.currentStepName}</span>
+              <span className="text-sm text-muted-foreground truncate">
+                {project.currentStepName}
+              </span>
             )}
           </div>
-          {showHobbyBadge && hobby && (
-            <HobbyIdentity hobby={hobby} variant="badge" />
-          )}
+          {showHobbyBadge && hobby && <HobbyIdentity hobby={hobby} variant="badge" />}
         </CardContent>
         {watermarkIcon && (
           <div className="absolute bottom-2 right-2 z-10 pointer-events-none" aria-hidden="true">

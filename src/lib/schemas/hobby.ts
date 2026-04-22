@@ -27,12 +27,15 @@ export const HOBBY_COLORS = [
   { name: 'Sunshine', value: 'hsl(48, 70%, 62%)' },
 ] as const
 
-export const hobbyColorValues = HOBBY_COLORS.map(c => c.value) as unknown as [string, ...string[]]
+export const hobbyColorValues = HOBBY_COLORS.map((c) => c.value) as unknown as [string, ...string[]]
 
 export const createHobbySchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(100, 'Name must be under 100 characters'),
   color: z.enum(hobbyColorValues, { error: 'Please select a valid color' }),
-  icon: z.enum(HOBBY_ICON_OPTIONS as unknown as [string, ...string[]]).nullable().optional(),
+  icon: z
+    .enum(HOBBY_ICON_OPTIONS as unknown as [string, ...string[]])
+    .nullable()
+    .optional(),
 })
 
 export type CreateHobbyInput = z.infer<typeof createHobbySchema>
@@ -44,8 +47,10 @@ export const updateHobbySchema = createHobbySchema.extend({
 export type UpdateHobbyInput = z.infer<typeof updateHobbySchema>
 
 export const reorderHobbiesSchema = z.object({
-  orderedIds: z.array(z.uuid()).min(1, 'At least one hobby required')
-    .refine(ids => new Set(ids).size === ids.length, 'Duplicate hobby IDs'),
+  orderedIds: z
+    .array(z.uuid())
+    .min(1, 'At least one hobby required')
+    .refine((ids) => new Set(ids).size === ids.length, 'Duplicate hobby IDs'),
 })
 
 export type ReorderHobbiesInput = z.infer<typeof reorderHobbiesSchema>

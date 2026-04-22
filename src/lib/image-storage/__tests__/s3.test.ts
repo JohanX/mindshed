@@ -5,7 +5,9 @@ vi.mock('@aws-sdk/client-s3', () => {
   return {
     S3Client: class MockS3Client {
       send = mockSend
-      constructor() { /* noop */ }
+      constructor() {
+        /* noop */
+      }
     },
     DeleteObjectCommand: class MockDeleteCmd {
       constructor(public input: unknown) {}
@@ -71,7 +73,9 @@ describe('S3StorageAdapter', () => {
     it('uses R2_PUBLIC_URL when set', () => {
       process.env.R2_PUBLIC_URL = 'https://cdn.example.com'
       const adapter = createS3Adapter()
-      expect(adapter.getThumbnailUrl('key.jpg', 80)).toBe('https://cdn.example.com/test-bucket/key.jpg')
+      expect(adapter.getThumbnailUrl('key.jpg', 80)).toBe(
+        'https://cdn.example.com/test-bucket/key.jpg',
+      )
     })
   })
 
@@ -94,9 +98,9 @@ describe('S3StorageAdapter', () => {
   describe('upload', () => {
     it('throws — S3 uses presigned URLs, not server-side upload', async () => {
       const adapter = createS3Adapter()
-      await expect(
-        adapter.upload(Buffer.from('test'), 'key', 'image/jpeg'),
-      ).rejects.toThrow('does not support server-side upload')
+      await expect(adapter.upload(Buffer.from('test'), 'key', 'image/jpeg')).rejects.toThrow(
+        'does not support server-side upload',
+      )
     })
   })
 })

@@ -155,8 +155,19 @@ export function CreateInventoryItemDialog() {
             />
           </div>
 
-          <Button type="submit" disabled={!name.trim() || isPending} className="w-full min-h-[44px]">
-            {isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Adding...</> : 'Add Item'}
+          <Button
+            type="submit"
+            disabled={!name.trim() || isPending}
+            className="w-full min-h-[44px]"
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Adding...
+              </>
+            ) : (
+              'Add Item'
+            )}
           </Button>
         </form>
       </DialogContent>

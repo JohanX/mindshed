@@ -58,9 +58,7 @@ function DialogBody({
 }) {
   const selectable = useMemo(
     () =>
-      [...steps]
-        .filter((s) => s.state !== 'COMPLETED')
-        .sort((a, b) => a.sortOrder - b.sortOrder),
+      [...steps].filter((s) => s.state !== 'COMPLETED').sort((a, b) => a.sortOrder - b.sortOrder),
     [steps],
   )
   const [selectedStepId, setSelectedStepId] = useState<string | null>(() =>
@@ -98,9 +96,7 @@ function DialogBody({
       </DialogHeader>
 
       <div className="space-y-3">
-        <p className="text-sm text-muted-foreground">
-          Which step needs this material?
-        </p>
+        <p className="text-sm text-muted-foreground">Which step needs this material?</p>
 
         {allCompleted ? (
           <p
@@ -115,10 +111,7 @@ function DialogBody({
             onValueChange={(v) => setSelectedStepId(v)}
             disabled={isPending}
           >
-            <SelectTrigger
-              aria-label="Target step"
-              className="min-h-[44px] w-full"
-            >
+            <SelectTrigger aria-label="Target step" className="min-h-[44px] w-full">
               <SelectValue placeholder="Pick a step" />
             </SelectTrigger>
             <SelectContent>
@@ -167,12 +160,7 @@ function DialogBody({
   )
 }
 
-export function CreateBlockerDialog({
-  open,
-  row,
-  steps,
-  onClose,
-}: CreateBlockerDialogProps) {
+export function CreateBlockerDialog({ open, row, steps, onClose }: CreateBlockerDialogProps) {
   return (
     <Dialog
       open={open}

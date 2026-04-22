@@ -16,9 +16,7 @@ export default async function AppLayout({
       <TopBar hobbies={hobbies} />
       <MobileBrand />
       <main className="relative z-10 pt-0 lg:pt-16 pb-20 lg:pb-0">
-        <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
-          {children}
-        </div>
+        <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">{children}</div>
       </main>
       <MobileNav hobbies={hobbies} />
     </>

@@ -173,10 +173,9 @@ export async function deleteHobbyCascade(hobbyId: string): Promise<void> {
   // Note: Prisma maps `String` to Postgres TEXT columns — not `uuid`. Use
   // text[] in ANY() or Postgres will throw `operator does not exist: text = uuid`.
   const { rows: stepRows } = projectIds.length
-    ? await client.query<{ id: string }>(
-        'SELECT id FROM step WHERE project_id = ANY($1::text[])',
-        [projectIds],
-      )
+    ? await client.query<{ id: string }>('SELECT id FROM step WHERE project_id = ANY($1::text[])', [
+        projectIds,
+      ])
     : { rows: [] }
   const stepIds = stepRows.map((r) => r.id)
 

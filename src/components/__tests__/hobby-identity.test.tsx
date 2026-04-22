@@ -29,7 +29,7 @@ describe('HobbyIdentity', () => {
       const { container } = render(
         <HobbyIdentity hobby={testHobby} variant="accent">
           <p>Child content</p>
-        </HobbyIdentity>
+        </HobbyIdentity>,
       )
       const accent = container.querySelector('.border-l-4')
       expect(accent).toBeInTheDocument()
@@ -55,7 +55,7 @@ describe('HobbyIdentity', () => {
 
   it('applies className prop', () => {
     const { container } = render(
-      <HobbyIdentity hobby={testHobby} variant="dot" className="extra-class" />
+      <HobbyIdentity hobby={testHobby} variant="dot" className="extra-class" />,
     )
     const dot = container.querySelector('.extra-class')
     expect(dot).toBeInTheDocument()

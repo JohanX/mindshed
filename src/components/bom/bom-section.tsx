@@ -186,8 +186,8 @@ export function BomSection({
 
         {rows.length === 0 && addState.phase === 'closed' && (
           <p className="text-sm text-muted-foreground">
-            Plan your materials before you start. List what this project needs — we&apos;ll
-            compare against your inventory.
+            Plan your materials before you start. List what this project needs — we&apos;ll compare
+            against your inventory.
           </p>
         )}
 
@@ -254,9 +254,7 @@ export function BomSection({
             initialName={addState.query}
             onSaved={(result) => {
               setOptions((prev) =>
-                prev.some((o) => o.id === result.created.id)
-                  ? prev
-                  : [...prev, result.created],
+                prev.some((o) => o.id === result.created.id) ? prev : [...prev, result.created],
               )
               setRows((prev) => {
                 const nextSort = (prev[prev.length - 1]?.sortOrder ?? -1) + 1
@@ -295,4 +293,3 @@ export function BomSection({
     </details>
   )
 }
-

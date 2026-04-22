@@ -38,16 +38,12 @@ export function ResultStepSelector({ projectId, steps, resultStepId }: ResultSte
   return (
     <div className="space-y-1">
       <label className="text-xs text-muted-foreground">Result step:</label>
-      <Select
-        value={defaultStepId}
-        onValueChange={handleChange}
-        disabled={isPending}
-      >
+      <Select value={defaultStepId} onValueChange={handleChange} disabled={isPending}>
         <SelectTrigger className="min-h-[44px]" aria-label="Result step">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {steps.map(step => (
+          {steps.map((step) => (
             <SelectItem key={step.id} value={step.id} className="min-h-[44px]">
               {step.name}
             </SelectItem>

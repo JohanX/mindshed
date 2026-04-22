@@ -66,7 +66,9 @@ test.describe('Public Result Gallery Page', () => {
   test('displays project name', async ({ page }) => {
     await page.goto(`/gallery/${gallerySlug}/result`)
     await page.waitForLoadState('networkidle')
-    await expect(page.getByRole('heading', { name: new RegExp(`${testPrefix} Result Test`) })).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: new RegExp(`${testPrefix} Result Test`) }),
+    ).toBeVisible()
   })
 
   test('shows no images message when step has no images', async ({ page }) => {

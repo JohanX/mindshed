@@ -45,7 +45,9 @@ test.describe('Project Cloning', () => {
     await page.close()
   })
 
-  test('clone resets all per-instance state, handles naming collisions, and does not mutate the source', async ({ page }) => {
+  test('clone resets all per-instance state, handles naming collisions, and does not mutate the source', async ({
+    page,
+  }) => {
     // -------------------- Build a dirty source --------------------
     // Source: "Knife" with 3 steps, where the source carries state that MUST NOT
     // leak into the clone: IN_PROGRESS step, a note, an image (via URL link), a
@@ -101,7 +103,9 @@ test.describe('Project Cloning', () => {
     await page.getByRole('menuitem', { name: 'Clone' }).click()
     // Success toast from AC #10 — has to appear on the destination page.
     await expect(page.getByText('Project cloned')).toBeVisible({ timeout: 10000 })
-    await expect(page.getByRole('heading', { name: 'Knife (copy)' })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('heading', { name: 'Knife (copy)' })).toBeVisible({
+      timeout: 10000,
+    })
     await expect(page).toHaveURL(/\/hobbies\/.*\/projects\//)
     await page.waitForLoadState('networkidle')
     const cloneUrl = page.url()
@@ -139,7 +143,9 @@ test.describe('Project Cloning', () => {
     // has its note, blocker, and enabled gallery after the clone.)
     await page.goto(sourceUrl)
     await page.waitForLoadState('networkidle')
-    await expect(page.getByRole('heading', { name: 'Knife', exact: true })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('heading', { name: 'Knife', exact: true })).toBeVisible({
+      timeout: 10000,
+    })
     await expect(page.getByText('Do NOT carry over')).toBeVisible()
     await expect(page.getByText('Waiting on steel')).toBeVisible()
     await expect(page.getByRole('switch', { name: 'Journey Gallery' })).toBeChecked()
@@ -148,7 +154,9 @@ test.describe('Project Cloning', () => {
     await page.getByRole('button', { name: 'Project actions' }).click()
     await expect(page.getByRole('menuitem', { name: 'Clone' })).toBeVisible({ timeout: 5000 })
     await page.getByRole('menuitem', { name: 'Clone' }).click()
-    await expect(page.getByRole('heading', { name: 'Knife (copy 2)' })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('heading', { name: 'Knife (copy 2)' })).toBeVisible({
+      timeout: 10000,
+    })
 
     // -------------------- Clone #3: cloning a clone uses source's current name --------------------
     // From "Knife (copy 2)", cloning once must produce "Knife (copy 2) (copy)" —
@@ -157,6 +165,8 @@ test.describe('Project Cloning', () => {
     await page.getByRole('button', { name: 'Project actions' }).click()
     await expect(page.getByRole('menuitem', { name: 'Clone' })).toBeVisible({ timeout: 5000 })
     await page.getByRole('menuitem', { name: 'Clone' }).click()
-    await expect(page.getByRole('heading', { name: 'Knife (copy 2) (copy)' })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('heading', { name: 'Knife (copy 2) (copy)' })).toBeVisible({
+      timeout: 10000,
+    })
   })
 })

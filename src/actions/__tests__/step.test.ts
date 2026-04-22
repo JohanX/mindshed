@@ -125,7 +125,9 @@ describe('deleteStep', () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         step: {
-          findUniqueOrThrow: vi.fn().mockResolvedValue({ projectId: 'p1', project: { isCompleted: false } }),
+          findUniqueOrThrow: vi
+            .fn()
+            .mockResolvedValue({ projectId: 'p1', project: { isCompleted: false } }),
           delete: vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' }),
         },
       }
@@ -153,18 +155,37 @@ describe('updateStepState', () => {
   })
 
   it('rejects invalid state', async () => {
-    const result = await updateStepState({ id: '550e8400-e29b-41d4-a716-446655440000', state: 'INVALID' as never })
+    const result = await updateStepState({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      state: 'INVALID' as never,
+    })
     expect(result.success).toBe(false)
   })
 
-  function makeStepStateTx(existing: { state: string; previousState: string | null; projectId?: string; project?: { isCompleted: boolean } }, siblingsAfter: { state: string }[] = [{ state: 'NOT_STARTED' }]) {
-    const mockStepUpdate = vi.fn().mockResolvedValue({ id: 's1', projectId: existing.projectId ?? 'p1' })
+  function makeStepStateTx(
+    existing: {
+      state: string
+      previousState: string | null
+      projectId?: string
+      project?: { isCompleted: boolean }
+    },
+    siblingsAfter: { state: string }[] = [{ state: 'NOT_STARTED' }],
+  ) {
+    const mockStepUpdate = vi
+      .fn()
+      .mockResolvedValue({ id: 's1', projectId: existing.projectId ?? 'p1' })
     const mockStepFindMany = vi.fn().mockResolvedValue(siblingsAfter)
     const mockProjectUpdateTx = vi.fn().mockResolvedValue({})
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         step: {
-          findUniqueOrThrow: vi.fn().mockResolvedValue({ ...existing, projectId: existing.projectId ?? 'p1', project: existing.project ?? { isCompleted: false } }),
+          findUniqueOrThrow: vi
+            .fn()
+            .mockResolvedValue({
+              ...existing,
+              projectId: existing.projectId ?? 'p1',
+              project: existing.project ?? { isCompleted: false },
+            }),
           update: mockStepUpdate,
           findMany: mockStepFindMany,
         },
@@ -243,10 +264,10 @@ describe('updateStepState', () => {
   })
 
   it('syncs project.isCompleted when all steps become COMPLETED', async () => {
-    const { mockProjectUpdateTx } = makeStepStateTx(
-      { state: 'IN_PROGRESS', previousState: null },
-      [{ state: 'COMPLETED' }, { state: 'COMPLETED' }],
-    )
+    const { mockProjectUpdateTx } = makeStepStateTx({ state: 'IN_PROGRESS', previousState: null }, [
+      { state: 'COMPLETED' },
+      { state: 'COMPLETED' },
+    ])
 
     const result = await updateStepState({
       id: '550e8400-e29b-41d4-a716-446655440000',
@@ -383,9 +404,18 @@ describe('reorderSteps', () => {
 
     // Should have updated each step's sortOrder
     expect(mockStepUpdateTx).toHaveBeenCalledTimes(3)
-    expect(mockStepUpdateTx).toHaveBeenCalledWith({ where: { id: stepId3 }, data: { sortOrder: 0 } })
-    expect(mockStepUpdateTx).toHaveBeenCalledWith({ where: { id: stepId1 }, data: { sortOrder: 1 } })
-    expect(mockStepUpdateTx).toHaveBeenCalledWith({ where: { id: stepId2 }, data: { sortOrder: 2 } })
+    expect(mockStepUpdateTx).toHaveBeenCalledWith({
+      where: { id: stepId3 },
+      data: { sortOrder: 0 },
+    })
+    expect(mockStepUpdateTx).toHaveBeenCalledWith({
+      where: { id: stepId1 },
+      data: { sortOrder: 1 },
+    })
+    expect(mockStepUpdateTx).toHaveBeenCalledWith({
+      where: { id: stepId2 },
+      data: { sortOrder: 2 },
+    })
 
     // Should call updateProjectActivity (revalidatePath + lastActivityAt)
     expect(mockProjectUpdate).toHaveBeenCalled()

@@ -10,10 +10,7 @@ export default async function InventoryPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Inventory"
-        breadcrumbs={[{ label: 'Inventory' }]}
-      >
+      <PageHeader title="Inventory" breadcrumbs={[{ label: 'Inventory' }]}>
         <CreateInventoryItemDialog />
       </PageHeader>
 

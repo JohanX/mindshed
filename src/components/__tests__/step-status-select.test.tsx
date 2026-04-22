@@ -5,11 +5,7 @@ import { StepStatusSelect } from '@/components/step/step-status-select'
 describe('StepStatusSelect', () => {
   it('renders with current state badge', () => {
     render(
-      <StepStatusSelect
-        currentState="IN_PROGRESS"
-        previousState={null}
-        onStateChange={vi.fn()}
-      />
+      <StepStatusSelect currentState="IN_PROGRESS" previousState={null} onStateChange={vi.fn()} />,
     )
     expect(screen.getByLabelText('Step status')).toBeInTheDocument()
     expect(screen.getByText('In Progress')).toBeInTheDocument()
@@ -22,7 +18,7 @@ describe('StepStatusSelect', () => {
         previousState={null}
         onStateChange={vi.fn()}
         disabled
-      />
+      />,
     )
     expect(screen.getByLabelText('Step status')).toBeDisabled()
   })
@@ -37,11 +33,7 @@ describe('StepStatusSelect', () => {
 
     for (const { state, label } of states) {
       const { unmount } = render(
-        <StepStatusSelect
-          currentState={state}
-          previousState={null}
-          onStateChange={vi.fn()}
-        />
+        <StepStatusSelect currentState={state} previousState={null} onStateChange={vi.fn()} />,
       )
       expect(screen.getByText(label)).toBeInTheDocument()
       unmount()

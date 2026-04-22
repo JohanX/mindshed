@@ -30,7 +30,16 @@ import {
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { createStep, updateStep, deleteStep, updateStepState, reorderSteps } from '@/actions/step'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
-import { Plus, MoreHorizontal, Pencil, Trash2, Loader2, GripVertical, ArrowUp, ArrowDown } from 'lucide-react'
+import {
+  Plus,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Loader2,
+  GripVertical,
+  ArrowUp,
+  ArrowDown,
+} from 'lucide-react'
 import { StepStatusSelect } from '@/components/step/step-status-select'
 import type { StepState } from '@/lib/step-states'
 
@@ -82,14 +91,9 @@ function SortableStepItem({
   onMoveUp: (id: string) => void
   onMoveDown: (id: string) => void
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: step.id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: step.id,
+  })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -143,7 +147,10 @@ function SortableStepItem({
             {editingStepId === step.id ? (
               <form
                 className="flex-1 flex gap-2"
-                onSubmit={(e) => { e.preventDefault(); onEditStep(step.id) }}
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  onEditStep(step.id)
+                }}
               >
                 <Input
                   value={editName}
@@ -161,7 +168,9 @@ function SortableStepItem({
             ) : (
               <>
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <span className="font-medium truncate" data-testid="step-name">{step.name}</span>
+                  <span className="font-medium truncate" data-testid="step-name">
+                    {step.name}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <StepStatusSelect
@@ -179,11 +188,17 @@ function SortableStepItem({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem className="min-h-[44px]" onClick={() => onStartEdit(step.id, step.name)}>
+                        <DropdownMenuItem
+                          className="min-h-[44px]"
+                          onClick={() => onStartEdit(step.id, step.name)}
+                        >
                           <Pencil className="h-4 w-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="min-h-[44px] text-destructive" onClick={() => onDeleteStep(step.id)}>
+                        <DropdownMenuItem
+                          className="min-h-[44px] text-destructive"
+                          onClick={() => onDeleteStep(step.id)}
+                        >
                           <Trash2 className="h-4 w-4 mr-2" />
                           Delete
                         </DropdownMenuItem>
@@ -200,7 +215,12 @@ function SortableStepItem({
   )
 }
 
-export function StepList({ steps: initialSteps, projectId, isCompleted, hideStepDisplay }: StepListProps) {
+export function StepList({
+  steps: initialSteps,
+  projectId,
+  isCompleted,
+  hideStepDisplay,
+}: StepListProps) {
   const [steps, setSteps] = useState(initialSteps)
   const lastConfirmedOrderRef = useRef(initialSteps)
   const [newStepName, setNewStepName] = useState('')
@@ -214,14 +234,14 @@ export function StepList({ steps: initialSteps, projectId, isCompleted, hideStep
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   )
 
   function persistOrder(newSteps: StepData[]) {
     startTransition(async () => {
       const result = await reorderSteps({
         projectId,
-        orderedStepIds: newSteps.map(s => s.id),
+        orderedStepIds: newSteps.map((s) => s.id),
       })
       if (result.success) {
         lastConfirmedOrderRef.current = newSteps
@@ -236,15 +256,15 @@ export function StepList({ steps: initialSteps, projectId, isCompleted, hideStep
     const { active, over } = event
     if (!over || active.id === over.id) return
 
-    const oldIndex = steps.findIndex(s => s.id === active.id)
-    const newIndex = steps.findIndex(s => s.id === over.id)
+    const oldIndex = steps.findIndex((s) => s.id === active.id)
+    const newIndex = steps.findIndex((s) => s.id === over.id)
     const newSteps = arrayMove(steps, oldIndex, newIndex)
     setSteps(newSteps)
     persistOrder(newSteps)
   }
 
   function handleMoveUp(stepId: string) {
-    const index = steps.findIndex(s => s.id === stepId)
+    const index = steps.findIndex((s) => s.id === stepId)
     if (index <= 0) return
     const newSteps = arrayMove(steps, index, index - 1)
     setSteps(newSteps)
@@ -252,7 +272,7 @@ export function StepList({ steps: initialSteps, projectId, isCompleted, hideStep
   }
 
   function handleMoveDown(stepId: string) {
-    const index = steps.findIndex(s => s.id === stepId)
+    const index = steps.findIndex((s) => s.id === stepId)
     if (index >= steps.length - 1) return
     const newSteps = arrayMove(steps, index, index + 1)
     setSteps(newSteps)
@@ -314,12 +334,8 @@ export function StepList({ steps: initialSteps, projectId, isCompleted, hideStep
   return (
     <div className="space-y-3">
       {!hideStepDisplay && (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext items={steps.map(s => s.id)} strategy={verticalListSortingStrategy}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={steps.map((s) => s.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-3">
               {steps.map((step, index) => (
                 <SortableStepItem
@@ -334,7 +350,10 @@ export function StepList({ steps: initialSteps, projectId, isCompleted, hideStep
                   isPending={isPending}
                   onEditStep={handleEditStep}
                   onCancelEdit={() => setEditingStepId(null)}
-                  onStartEdit={(id, name) => { setEditingStepId(id); setEditName(name) }}
+                  onStartEdit={(id, name) => {
+                    setEditingStepId(id)
+                    setEditName(name)
+                  }}
                   onDeleteStep={(id) => setDeleteStepId(id)}
                   onStateChange={handleStateChange}
                   onMoveUp={handleMoveUp}
@@ -346,11 +365,14 @@ export function StepList({ steps: initialSteps, projectId, isCompleted, hideStep
         </DndContext>
       )}
 
-      {!isCompleted && (
-        addingStep ? (
+      {!isCompleted &&
+        (addingStep ? (
           <form
             className="flex gap-2"
-            onSubmit={(e) => { e.preventDefault(); handleAddStep() }}
+            onSubmit={(e) => {
+              e.preventDefault()
+              handleAddStep()
+            }}
           >
             <Input
               placeholder="Step name"
@@ -362,21 +384,33 @@ export function StepList({ steps: initialSteps, projectId, isCompleted, hideStep
             <Button type="submit" disabled={!newStepName.trim() || isPending}>
               {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add'}
             </Button>
-            <Button type="button" variant="ghost" onClick={() => { setAddingStep(false); setNewStepName('') }}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setAddingStep(false)
+                setNewStepName('')
+              }}
+            >
               Cancel
             </Button>
           </form>
         ) : (
-          <Button variant="outline" className="w-full min-h-[44px]" onClick={() => setAddingStep(true)}>
+          <Button
+            variant="outline"
+            className="w-full min-h-[44px]"
+            onClick={() => setAddingStep(true)}
+          >
             <Plus className="h-4 w-4 mr-1" />
             Add Step
           </Button>
-        )
-      )}
+        ))}
 
       <ConfirmDialog
         open={!!deleteStepId}
-        onOpenChange={(v) => { if (!v) setDeleteStepId(null) }}
+        onOpenChange={(v) => {
+          if (!v) setDeleteStepId(null)
+        }}
         title="Delete this step?"
         description="Notes, blockers, and images on this step will be removed."
         onConfirm={handleDeleteStep}

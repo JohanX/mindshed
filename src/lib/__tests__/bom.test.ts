@@ -9,7 +9,13 @@ import {
   type BomItemData,
 } from '../bom'
 
-function linked(overrides: Partial<BomItemData> & { required: number; available: number | null; isDeleted?: boolean }): BomItemData {
+function linked(
+  overrides: Partial<BomItemData> & {
+    required: number
+    available: number | null
+    isDeleted?: boolean
+  },
+): BomItemData {
   return {
     id: overrides.id ?? 'b1',
     label: null,
@@ -128,9 +134,10 @@ describe('renderAvailable', () => {
   })
 
   it('soft-deleted inventory → missing em-dash', () => {
-    expect(
-      renderAvailable(linked({ required: 100, available: 50, isDeleted: true })),
-    ).toEqual({ label: '—', variant: 'missing' })
+    expect(renderAvailable(linked({ required: 100, available: 50, isDeleted: true }))).toEqual({
+      label: '—',
+      variant: 'missing',
+    })
   })
 
   it('free-form row → missing em-dash', () => {
@@ -173,10 +180,14 @@ describe('isRowShort', () => {
     expect(isRowShort(linked({ required: 100, available: 100 }))).toBe(false)
   })
   it('CONSUMED row → false', () => {
-    expect(isRowShort(linked({ required: 500, available: 0, consumptionState: 'CONSUMED' }))).toBe(false)
+    expect(isRowShort(linked({ required: 500, available: 0, consumptionState: 'CONSUMED' }))).toBe(
+      false,
+    )
   })
   it('UNDONE row → false', () => {
-    expect(isRowShort(linked({ required: 500, available: 0, consumptionState: 'UNDONE' }))).toBe(false)
+    expect(isRowShort(linked({ required: 500, available: 0, consumptionState: 'UNDONE' }))).toBe(
+      false,
+    )
   })
   it('free-form row → false', () => {
     expect(isRowShort(freeForm({ required: 500 }))).toBe(false)
@@ -240,9 +251,9 @@ describe('buildShortageBlockerDescription', () => {
   })
 
   it('omits unit when row.unit is null', () => {
-    expect(
-      buildShortageBlockerDescription(linked({ required: 1, available: 0, unit: null })),
-    ).toBe('Need 1 of Kaolin (have 0)')
+    expect(buildShortageBlockerDescription(linked({ required: 1, available: 0, unit: null }))).toBe(
+      'Need 1 of Kaolin (have 0)',
+    )
   })
 
   it('treats null inventory.quantity as 0', () => {

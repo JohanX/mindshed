@@ -45,7 +45,11 @@ test.describe('BOM Shortage → Per-Row Create Blocker with Step Picker', () => 
     await page.close()
   })
 
-  async function createProjectWithSteps(page: Page, name: string, steps: string[]): Promise<string> {
+  async function createProjectWithSteps(
+    page: Page,
+    name: string,
+    steps: string[],
+  ): Promise<string> {
     await page.goto(`/hobbies/${hobbyId}`)
     await page.waitForLoadState('networkidle')
     await page.getByRole('button', { name: 'Create Project' }).first().click()
@@ -77,7 +81,10 @@ test.describe('BOM Shortage → Per-Row Create Blocker with Step Picker', () => 
     const combobox = page.getByPlaceholder('Type to search inventory…')
     await expect(combobox).toBeVisible()
     await combobox.fill(itemName)
-    await page.getByRole('option', { name: new RegExp(itemName) }).first().click()
+    await page
+      .getByRole('option', { name: new RegExp(itemName) })
+      .first()
+      .click()
     await expect(page.getByText(itemName).first()).toBeVisible({ timeout: 5000 })
     const row = page.locator('table tbody tr').filter({ hasText: itemName })
     const requiredInput = row.getByLabel('Required quantity')
@@ -94,7 +101,10 @@ test.describe('BOM Shortage → Per-Row Create Blocker with Step Picker', () => 
     await page.waitForTimeout(800)
   }
 
-  test('happy path + dedup + sufficient-row absence, all within one project', async ({ page, browserName }) => {
+  test('happy path + dedup + sufficient-row absence, all within one project', async ({
+    page,
+    browserName,
+  }) => {
     test.setTimeout(150_000)
     const stamp = Date.now()
     const shortMat = `ShortA-${browserName}-${stamp}`
@@ -123,7 +133,9 @@ test.describe('BOM Shortage → Per-Row Create Blocker with Step Picker', () => 
     const shortRow = page.locator('table tbody tr').filter({ hasText: shortMat })
     await shortRow.getByRole('button', { name: /Actions for / }).click()
     await page.getByRole('menuitem', { name: 'Create blocker…' }).click()
-    await expect(page.getByRole('heading', { name: new RegExp(`Block:.*${shortMat}`) })).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: new RegExp(`Block:.*${shortMat}`) }),
+    ).toBeVisible()
     const trigger = page.getByLabel('Target step')
     await expect(trigger).toContainText('Prep')
 
@@ -149,12 +161,18 @@ test.describe('BOM Shortage → Per-Row Create Blocker with Step Picker', () => 
     await expect(page.getByText(/Already blocked on Prep/)).toBeVisible({ timeout: 5000 })
   })
 
-  test('step picker excludes COMPLETED steps — original bug: first step completed', async ({ page, browserName }) => {
+  test('step picker excludes COMPLETED steps — original bug: first step completed', async ({
+    page,
+    browserName,
+  }) => {
     test.setTimeout(150_000)
     const stamp = Date.now()
     const shortMat = `ShortB-${browserName}-${stamp}`
     await addInventoryItem(page, shortMat, '5')
-    const projectUrl = await createProjectWithSteps(page, 'Shortage CompletedFirst', ['Prep', 'Fire'])
+    const projectUrl = await createProjectWithSteps(page, 'Shortage CompletedFirst', [
+      'Prep',
+      'Fire',
+    ])
 
     await page.goto(projectUrl)
     await page.waitForLoadState('networkidle')
@@ -205,7 +223,10 @@ test.describe('BOM Shortage → Per-Row Create Blocker with Step Picker', () => 
     await page.getByRole('button', { name: 'Cancel' }).click()
   })
 
-  test('all-steps-completed — picker disabled with clear message, submit disabled', async ({ page, browserName }) => {
+  test('all-steps-completed — picker disabled with clear message, submit disabled', async ({
+    page,
+    browserName,
+  }) => {
     test.setTimeout(150_000)
     const stamp = Date.now()
     const shortMat = `ShortD-${browserName}-${stamp}`

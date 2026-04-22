@@ -49,10 +49,16 @@ export function DashboardReminderCard({ reminder }: DashboardReminderCardProps) 
       <Link href={projectUrl} className="block flex-1 min-w-0">
         <Card
           className="transition-opacity hover:opacity-90"
-          style={{ backgroundColor: reminder.isOverdue ? hobbyColorWithAlpha('hsl(35, 80%, 50%)', 0.1) : hobbyColorWithAlpha(reminder.hobby.color, 0.08) }}
+          style={{
+            backgroundColor: reminder.isOverdue
+              ? hobbyColorWithAlpha('hsl(35, 80%, 50%)', 0.1)
+              : hobbyColorWithAlpha(reminder.hobby.color, 0.08),
+          }}
         >
           <CardContent className="flex items-center gap-3">
-            <CalendarDays className={`h-5 w-5 shrink-0 ${reminder.isOverdue ? 'text-step-in-progress' : 'text-muted-foreground'}`} />
+            <CalendarDays
+              className={`h-5 w-5 shrink-0 ${reminder.isOverdue ? 'text-step-in-progress' : 'text-muted-foreground'}`}
+            />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{reminder.targetName}</p>
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -60,8 +66,7 @@ export function DashboardReminderCard({ reminder }: DashboardReminderCardProps) 
                 <span className="truncate">
                   {reminder.isOverdue
                     ? `Overdue: ${formatDistanceToNow(dueDate)} ago`
-                    : `Due ${format(dueDate, 'MMM d')}`
-                  }
+                    : `Due ${format(dueDate, 'MMM d')}`}
                 </span>
               </div>
             </div>
@@ -70,16 +75,29 @@ export function DashboardReminderCard({ reminder }: DashboardReminderCardProps) 
       </Link>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] shrink-0" disabled={isPending}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="min-h-[44px] min-w-[44px] shrink-0"
+            disabled={isPending}
+          >
             <MoreHorizontal className="h-4 w-4" />
             <span className="sr-only">Reminder actions</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem className="min-h-[44px]" onClick={handleDismiss}>Dismiss</DropdownMenuItem>
-          <DropdownMenuItem className="min-h-[44px]" onClick={() => handleSnooze(1)}>Snooze 1 day</DropdownMenuItem>
-          <DropdownMenuItem className="min-h-[44px]" onClick={() => handleSnooze(3)}>Snooze 3 days</DropdownMenuItem>
-          <DropdownMenuItem className="min-h-[44px]" onClick={() => handleSnooze(7)}>Snooze 1 week</DropdownMenuItem>
+          <DropdownMenuItem className="min-h-[44px]" onClick={handleDismiss}>
+            Dismiss
+          </DropdownMenuItem>
+          <DropdownMenuItem className="min-h-[44px]" onClick={() => handleSnooze(1)}>
+            Snooze 1 day
+          </DropdownMenuItem>
+          <DropdownMenuItem className="min-h-[44px]" onClick={() => handleSnooze(3)}>
+            Snooze 3 days
+          </DropdownMenuItem>
+          <DropdownMenuItem className="min-h-[44px]" onClick={() => handleSnooze(7)}>
+            Snooze 1 week
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

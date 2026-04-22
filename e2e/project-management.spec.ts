@@ -341,5 +341,4 @@ test.describe('Project Management', () => {
     await expect(page.getByLabel('Move step up')).not.toBeVisible()
     await expect(page.getByLabel('Move step down')).not.toBeVisible()
   })
-
 })

@@ -62,15 +62,17 @@ export default async function JourneyGalleryPage({ params }: JourneyGalleryPageP
 
   // Filter to only steps with images
   const stepsWithImages = project.steps
-    .filter(s => s.images.length > 0)
-    .map(s => ({
+    .filter((s) => s.images.length > 0)
+    .map((s) => ({
       name: s.name,
       notes: s.notes,
-      images: s.images.map(img => {
+      images: s.images.map((img) => {
         const isUpload = img.type === 'UPLOAD' && img.storageKey
         return {
-          displayUrl: isUpload ? getPublicImageUrl(img.storageKey!) : img.url ?? '',
-          thumbnailUrl: isUpload ? getThumbnailImageUrl(img.storageKey!, THUMBNAIL_WIDTH.GRID) : img.url ?? '',
+          displayUrl: isUpload ? getPublicImageUrl(img.storageKey!) : (img.url ?? ''),
+          thumbnailUrl: isUpload
+            ? getThumbnailImageUrl(img.storageKey!, THUMBNAIL_WIDTH.GRID)
+            : (img.url ?? ''),
           originalFilename: img.originalFilename,
         }
       }),

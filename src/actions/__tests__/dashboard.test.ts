@@ -49,11 +49,12 @@ describe('getDashboardData', () => {
     mockHobbyCount.mockResolvedValue(3)
     setProjectFindManyReturns([
       {
-        id: 'p1', name: 'Recent Project', hobbyId: 'h1', lastActivityAt: new Date(),
+        id: 'p1',
+        name: 'Recent Project',
+        hobbyId: 'h1',
+        lastActivityAt: new Date(),
         hobby: { id: 'h1', name: 'Woodworking', color: '#8B4513', icon: null },
-        steps: [
-          { id: 's1', name: 'Cut wood', state: 'IN_PROGRESS', sortOrder: 0 },
-        ],
+        steps: [{ id: 's1', name: 'Cut wood', state: 'IN_PROGRESS', sortOrder: 0 }],
       },
     ])
     mockBlockerFindMany.mockResolvedValue([])
@@ -135,14 +136,21 @@ describe('getDashboardData', () => {
     mockHobbyCount.mockResolvedValue(1)
     setProjectFindManyReturns([
       {
-        id: 'p1', name: 'Project', hobbyId: 'h1', lastActivityAt: new Date(),
+        id: 'p1',
+        name: 'Project',
+        hobbyId: 'h1',
+        lastActivityAt: new Date(),
         hobby: { id: 'h1', name: 'Hobby', color: '#000', icon: null },
         steps: [{ id: 's1', name: 'Step', state: 'NOT_STARTED', sortOrder: 0 }],
       },
     ])
     mockBlockerFindMany.mockResolvedValue([])
     mockStepImageFindMany.mockResolvedValue([
-      { storageKey: 'steps/s1/photo.jpg', originalFilename: 'photo.jpg', step: { projectId: 'p1' } },
+      {
+        storageKey: 'steps/s1/photo.jpg',
+        originalFilename: 'photo.jpg',
+        step: { projectId: 'p1' },
+      },
     ] as never)
 
     const result = await getDashboardData()

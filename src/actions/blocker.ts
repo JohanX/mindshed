@@ -2,7 +2,15 @@
 
 import { z } from 'zod/v4'
 import { prisma } from '@/lib/db'
-import { createBlockerSchema, type CreateBlockerInput, resolveBlockerSchema, type ResolveBlockerInput, updateBlockerSchema, type UpdateBlockerInput, type BlockerWithContext } from '@/lib/schemas/blocker'
+import {
+  createBlockerSchema,
+  type CreateBlockerInput,
+  resolveBlockerSchema,
+  type ResolveBlockerInput,
+  updateBlockerSchema,
+  type UpdateBlockerInput,
+  type BlockerWithContext,
+} from '@/lib/schemas/blocker'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -18,7 +26,13 @@ export async function createBlocker(
     const result = await prisma.$transaction(async (tx) => {
       const step = await tx.step.findUnique({
         where: { id: parsed.data.stepId },
-        select: { id: true, state: true, previousState: true, projectId: true, project: { select: { isCompleted: true } } },
+        select: {
+          id: true,
+          state: true,
+          previousState: true,
+          projectId: true,
+          project: { select: { isCompleted: true } },
+        },
       })
       if (!step) throw new Error('STEP_NOT_FOUND')
       if (step.project.isCompleted) throw new Error('PROJECT_COMPLETED')
@@ -26,7 +40,9 @@ export async function createBlocker(
 
       // Validate optional inventory item link
       if (parsed.data.inventoryItemId) {
-        const item = await tx.inventoryItem.findUnique({ where: { id: parsed.data.inventoryItemId } })
+        const item = await tx.inventoryItem.findUnique({
+          where: { id: parsed.data.inventoryItemId },
+        })
         if (!item) throw new Error('INVENTORY_ITEM_NOT_FOUND')
       }
 
@@ -77,9 +93,12 @@ export async function createBlocker(
     console.error('createBlocker failed:', error)
     if (error instanceof Error) {
       if (error.message === 'STEP_NOT_FOUND') return { success: false, error: 'Step not found.' }
-      if (error.message === 'PROJECT_COMPLETED') return { success: false, error: 'Cannot add blockers to a completed project.' }
-      if (error.message === 'STEP_COMPLETED') return { success: false, error: 'Cannot block a completed step.' }
-      if (error.message === 'INVENTORY_ITEM_NOT_FOUND') return { success: false, error: 'Linked inventory item not found.' }
+      if (error.message === 'PROJECT_COMPLETED')
+        return { success: false, error: 'Cannot add blockers to a completed project.' }
+      if (error.message === 'STEP_COMPLETED')
+        return { success: false, error: 'Cannot block a completed step.' }
+      if (error.message === 'INVENTORY_ITEM_NOT_FOUND')
+        return { success: false, error: 'Linked inventory item not found.' }
     }
     return { success: false, error: 'Failed to add blocker.' }
   }
@@ -128,9 +147,10 @@ export async function resolveBlocker(
         await tx.step.update({
           where: { id: blocker.step.id },
           data: {
-            state: blocker.step.previousState === 'COMPLETED'
-              ? 'IN_PROGRESS'
-              : (blocker.step.previousState ?? 'NOT_STARTED'),
+            state:
+              blocker.step.previousState === 'COMPLETED'
+                ? 'IN_PROGRESS'
+                : (blocker.step.previousState ?? 'NOT_STARTED'),
             previousState: null,
           },
         })
@@ -167,13 +187,16 @@ export async function resolveBlocker(
   } catch (error) {
     console.error('resolveBlocker failed:', error)
     if (error instanceof Error) {
-      if (error.message === 'BLOCKER_NOT_FOUND') return { success: false, error: 'Blocker not found.' }
+      if (error.message === 'BLOCKER_NOT_FOUND')
+        return { success: false, error: 'Blocker not found.' }
     }
     return { success: false, error: 'Failed to resolve blocker.' }
   }
 }
 
-export async function updateBlocker(input: UpdateBlockerInput): Promise<ActionResult<{ id: string }>> {
+export async function updateBlocker(
+  input: UpdateBlockerInput,
+): Promise<ActionResult<{ id: string }>> {
   const parsed = updateBlockerSchema.safeParse(input)
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
@@ -190,7 +213,10 @@ export async function updateBlocker(input: UpdateBlockerInput): Promise<ActionRe
       const blocker = await tx.blocker.update({
         where: { id: parsed.data.id },
         data: updateData,
-        select: { id: true, step: { select: { projectId: true, project: { select: { hobbyId: true } } } } },
+        select: {
+          id: true,
+          step: { select: { projectId: true, project: { select: { hobbyId: true } } } },
+        },
       })
 
       await tx.project.update({
@@ -198,7 +224,11 @@ export async function updateBlocker(input: UpdateBlockerInput): Promise<ActionRe
         data: { lastActivityAt: new Date() },
       })
 
-      return { id: blocker.id, hobbyId: blocker.step.project.hobbyId, projectId: blocker.step.projectId }
+      return {
+        id: blocker.id,
+        hobbyId: blocker.step.project.hobbyId,
+        projectId: blocker.step.projectId,
+      }
     })
 
     revalidatePath(`/hobbies/${result.hobbyId}/projects/${result.projectId}`)
@@ -224,7 +254,12 @@ export async function deleteBlocker(blockerId: string): Promise<ActionResult<nul
     const result = await prisma.$transaction(async (tx) => {
       const blocker = await tx.blocker.findUnique({
         where: { id: parsed.data },
-        select: { id: true, isResolved: true, stepId: true, step: { select: { id: true, previousState: true, projectId: true } } },
+        select: {
+          id: true,
+          isResolved: true,
+          stepId: true,
+          step: { select: { id: true, previousState: true, projectId: true } },
+        },
       })
       if (!blocker) throw new Error('BLOCKER_NOT_FOUND')
 
@@ -239,9 +274,10 @@ export async function deleteBlocker(blockerId: string): Promise<ActionResult<nul
           await tx.step.update({
             where: { id: blocker.step.id },
             data: {
-              state: blocker.step.previousState === 'COMPLETED'
-              ? 'IN_PROGRESS'
-              : (blocker.step.previousState ?? 'NOT_STARTED'),
+              state:
+                blocker.step.previousState === 'COMPLETED'
+                  ? 'IN_PROGRESS'
+                  : (blocker.step.previousState ?? 'NOT_STARTED'),
               previousState: null,
             },
           })

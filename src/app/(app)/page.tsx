@@ -31,7 +31,8 @@ export default async function DashboardPage() {
     )
   }
 
-  const { totalHobbies, recentProjects, activeBlockers, idleProjects, publicGalleries } = result.data
+  const { totalHobbies, recentProjects, activeBlockers, idleProjects, publicGalleries } =
+    result.data
   const reminders = remindersResult.success ? remindersResult.data : []
   const maintenanceDue = maintenanceResult.success ? maintenanceResult.data : []
 

@@ -63,7 +63,9 @@ test.describe('Settings — Hobby Management', () => {
     await page.getByPlaceholder('e.g., Woodworking').fill(hobbyName)
     await page.getByTitle('Terracotta').click()
     await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) })).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) }),
+    ).toBeVisible()
   })
 
   test('can edit a hobby from settings', async ({ page }) => {
@@ -74,7 +76,9 @@ test.describe('Settings — Hobby Management', () => {
     await page.getByPlaceholder('e.g., Woodworking').fill(hobbyName)
     await page.getByTitle('Sage').click()
     await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) })).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) }),
+    ).toBeVisible()
 
     await hobbyActionsButton(page, new RegExp(hobbyName)).click()
     await page.getByRole('menuitem', { name: 'Edit' }).click()
@@ -84,7 +88,9 @@ test.describe('Settings — Hobby Management', () => {
     await page.getByRole('button', { name: 'Save' }).click()
     await page.waitForTimeout(1000)
     await page.goto('/settings')
-    await expect(page.getByRole('link', { name: new RegExp(`${editedName}.*projects`) })).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: new RegExp(`${editedName}.*projects`) }),
+    ).toBeVisible()
   })
 
   test('can delete a hobby from settings', async ({ page }) => {
@@ -94,13 +100,17 @@ test.describe('Settings — Hobby Management', () => {
     await page.getByPlaceholder('e.g., Woodworking').fill(hobbyName)
     await page.getByTitle('Plum').click()
     await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) })).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) }),
+    ).toBeVisible()
 
     await hobbyActionsButton(page, new RegExp(hobbyName)).click()
     await page.getByRole('menuitem', { name: 'Delete' }).click()
     await page.getByRole('button', { name: 'Delete' }).click()
     await page.waitForTimeout(1000)
 
-    await expect(page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) })).not.toBeVisible()
+    await expect(
+      page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) }),
+    ).not.toBeVisible()
   })
 })

@@ -6,10 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { updateIdleThreshold } from '@/actions/settings'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
-import {
-  MIN_IDLE_THRESHOLD_DAYS,
-  MAX_IDLE_THRESHOLD_DAYS,
-} from '@/lib/schemas/settings'
+import { MIN_IDLE_THRESHOLD_DAYS, MAX_IDLE_THRESHOLD_DAYS } from '@/lib/schemas/settings'
 
 interface IdleThresholdSettingProps {
   initialDays: number

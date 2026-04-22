@@ -39,7 +39,10 @@ export function DashboardMaintenanceCard({ item }: DashboardMaintenanceCardProps
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{item.name}</p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Badge variant="outline" className="text-xs text-step-in-progress border-step-in-progress">
+              <Badge
+                variant="outline"
+                className="text-xs text-step-in-progress border-step-in-progress"
+              >
                 Overdue by {item.daysOverdue} day{item.daysOverdue !== 1 ? 's' : ''}
               </Badge>
               <span>Last: {format(new Date(item.lastMaintenanceDate), 'MMM d')}</span>

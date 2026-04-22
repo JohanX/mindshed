@@ -141,9 +141,7 @@ export function InventoryCombobox({
             >
               <span aria-hidden>{TYPE_EMOJI[o.type]}</span>
               <span className="flex-1 truncate">{o.name}</span>
-              <span className="text-xs text-muted-foreground">
-                {formatQty(o.quantity, o.unit)}
-              </span>
+              <span className="text-xs text-muted-foreground">{formatQty(o.quantity, o.unit)}</span>
               <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
                 {o.type}
               </span>

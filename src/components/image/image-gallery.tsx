@@ -51,9 +51,7 @@ export function ImageGallery({ images, stepId }: ImageGalleryProps) {
         data-testid="image-gallery-empty"
       >
         <Camera className="h-10 w-10 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">
-          Add photos to document your progress
-        </p>
+        <p className="text-sm text-muted-foreground">Add photos to document your progress</p>
         <div className="flex flex-wrap items-center gap-2">
           <ImageUploadButton stepId={stepId} />
           <ImageLinkInput stepId={stepId} />
@@ -104,11 +102,7 @@ export function ImageGallery({ images, stepId }: ImageGalleryProps) {
       </div>
 
       {lightboxIndex !== null && (
-        <ImageLightbox
-          images={images}
-          initialIndex={lightboxIndex}
-          onClose={closeLightbox}
-        />
+        <ImageLightbox images={images} initialIndex={lightboxIndex} onClose={closeLightbox} />
       )}
     </>
   )

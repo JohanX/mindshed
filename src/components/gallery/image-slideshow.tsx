@@ -18,23 +18,27 @@ export function ImageSlideshow({ images, onImageClick }: ImageSlideshowProps) {
   const total = images.length
 
   const goNext = useCallback(() => {
-    setCurrent(i => (i + 1) % total)
+    setCurrent((i) => (i + 1) % total)
   }, [total])
 
   const goPrev = useCallback(() => {
-    setCurrent(i => (i - 1 + total) % total)
+    setCurrent((i) => (i - 1 + total) % total)
   }, [total])
 
   // Auto-advance every 5s, pause on interaction
   useEffect(() => {
     if (paused || total <= 1) return
     intervalRef.current = setInterval(goNext, 5000)
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
   }, [paused, goNext, total])
 
   // Cleanup resume timeout on unmount
   useEffect(() => {
-    return () => { if (resumeRef.current) clearTimeout(resumeRef.current) }
+    return () => {
+      if (resumeRef.current) clearTimeout(resumeRef.current)
+    }
   }, [])
 
   function handleInteraction() {
@@ -55,8 +59,21 @@ export function ImageSlideshow({ images, onImageClick }: ImageSlideshowProps) {
         onClick={() => onImageClick?.(current)}
         role={onImageClick ? 'button' : undefined}
         tabIndex={onImageClick ? 0 : undefined}
-        aria-label={onImageClick ? `View ${img.originalFilename ?? `image ${current + 1}`} fullscreen` : undefined}
-        onKeyDown={onImageClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onImageClick(current) } } : undefined}
+        aria-label={
+          onImageClick
+            ? `View ${img.originalFilename ?? `image ${current + 1}`} fullscreen`
+            : undefined
+        }
+        onKeyDown={
+          onImageClick
+            ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onImageClick(current)
+                }
+              }
+            : undefined
+        }
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -72,7 +89,11 @@ export function ImageSlideshow({ images, onImageClick }: ImageSlideshowProps) {
               variant="ghost"
               size="icon"
               className="absolute left-2 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-black/40 text-white hover:bg-black/60"
-              onClick={(e) => { e.stopPropagation(); goPrev(); handleInteraction() }}
+              onClick={(e) => {
+                e.stopPropagation()
+                goPrev()
+                handleInteraction()
+              }}
               aria-label="Previous image"
               data-testid="slideshow-prev"
             >
@@ -82,7 +103,11 @@ export function ImageSlideshow({ images, onImageClick }: ImageSlideshowProps) {
               variant="ghost"
               size="icon"
               className="absolute right-2 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-black/40 text-white hover:bg-black/60"
-              onClick={(e) => { e.stopPropagation(); goNext(); handleInteraction() }}
+              onClick={(e) => {
+                e.stopPropagation()
+                goNext()
+                handleInteraction()
+              }}
               aria-label="Next image"
               data-testid="slideshow-next"
             >
@@ -100,7 +125,10 @@ export function ImageSlideshow({ images, onImageClick }: ImageSlideshowProps) {
               key={i}
               type="button"
               className={`h-2 w-2 rounded-full transition-colors ${i === current ? 'bg-foreground' : 'bg-foreground/25'}`}
-              onClick={() => { setCurrent(i); handleInteraction() }}
+              onClick={() => {
+                setCurrent(i)
+                handleInteraction()
+              }}
               aria-label={`Go to image ${i + 1}`}
             />
           ))}

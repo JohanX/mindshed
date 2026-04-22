@@ -20,8 +20,8 @@ export default function GalleryError({ error, reset }: GalleryErrorProps) {
       <AlertTriangle aria-hidden className="h-8 w-8 text-amber-600" />
       <h1 className="text-2xl font-semibold">Gallery unavailable</h1>
       <p className="text-muted-foreground">
-        We couldn&apos;t load this gallery. It may have been disabled, or the
-        link might be outdated.
+        We couldn&apos;t load this gallery. It may have been disabled, or the link might be
+        outdated.
       </p>
       <div className="flex gap-2">
         <Button onClick={reset} className="min-h-[44px]">

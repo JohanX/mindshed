@@ -48,13 +48,12 @@ export default async function ResultGalleryPage({ params }: ResultGalleryPagePro
 
   // Determine result step: explicit or last completed
   const resultStep = project.resultStepId
-    ? project.steps.find(s => s.id === project.resultStepId)
+    ? project.steps.find((s) => s.id === project.resultStepId)
     : project.steps[0] // Already sorted desc by sortOrder, first = last completed
 
-  const images = (resultStep?.images ?? []).map(img => ({
-    displayUrl: img.type === 'UPLOAD' && img.storageKey
-      ? getPublicImageUrl(img.storageKey)
-      : img.url ?? '',
+  const images = (resultStep?.images ?? []).map((img) => ({
+    displayUrl:
+      img.type === 'UPLOAD' && img.storageKey ? getPublicImageUrl(img.storageKey) : (img.url ?? ''),
     originalFilename: img.originalFilename,
   }))
 

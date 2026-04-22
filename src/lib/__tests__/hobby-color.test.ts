@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { generateHobbyPalette, generateHobbyStyleVars, hobbyColorWithAlpha, getContrastTextColor } from '@/lib/hobby-color'
+import {
+  generateHobbyPalette,
+  generateHobbyStyleVars,
+  hobbyColorWithAlpha,
+  getContrastTextColor,
+} from '@/lib/hobby-color'
 
 describe('generateHobbyPalette', () => {
   it('returns all four palette properties', () => {
@@ -32,28 +37,28 @@ describe('generateHobbyPalette', () => {
   it('works with all curated hobby colors', () => {
     const curatedColors = [
       // Rich band
-      'hsl(25, 45%, 40%)',   // Walnut
-      'hsl(150, 40%, 35%)',  // Forest
-      'hsl(225, 45%, 38%)',  // Navy
-      'hsl(100, 25%, 40%)',  // Moss
-      'hsl(220, 25%, 45%)',  // Storm
-      'hsl(140, 25%, 45%)',  // Sage
-      'hsl(175, 35%, 45%)',  // Teal
+      'hsl(25, 45%, 40%)', // Walnut
+      'hsl(150, 40%, 35%)', // Forest
+      'hsl(225, 45%, 38%)', // Navy
+      'hsl(100, 25%, 40%)', // Moss
+      'hsl(220, 25%, 45%)', // Storm
+      'hsl(140, 25%, 45%)', // Sage
+      'hsl(175, 35%, 45%)', // Teal
       // Vibrant band
-      'hsl(15, 55%, 55%)',   // Terracotta
-      'hsl(25, 70%, 55%)',   // Copper
-      'hsl(215, 40%, 50%)',  // Denim
-      'hsl(280, 30%, 50%)',  // Plum
-      'hsl(45, 60%, 50%)',   // Ochre
-      'hsl(210, 15%, 50%)',  // Slate
+      'hsl(15, 55%, 55%)', // Terracotta
+      'hsl(25, 70%, 55%)', // Copper
+      'hsl(215, 40%, 50%)', // Denim
+      'hsl(280, 30%, 50%)', // Plum
+      'hsl(45, 60%, 50%)', // Ochre
+      'hsl(210, 15%, 50%)', // Slate
       // Fresh band
-      'hsl(5, 50%, 60%)',    // Coral
-      'hsl(340, 45%, 60%)',  // Rose
-      'hsl(200, 55%, 65%)',  // Sky
-      'hsl(265, 40%, 65%)',  // Lavender
-      'hsl(160, 45%, 60%)',  // Mint
-      'hsl(20, 65%, 68%)',   // Peach
-      'hsl(48, 70%, 62%)',   // Sunshine
+      'hsl(5, 50%, 60%)', // Coral
+      'hsl(340, 45%, 60%)', // Rose
+      'hsl(200, 55%, 65%)', // Sky
+      'hsl(265, 40%, 65%)', // Lavender
+      'hsl(160, 45%, 60%)', // Mint
+      'hsl(20, 65%, 68%)', // Peach
+      'hsl(48, 70%, 62%)', // Sunshine
     ]
 
     for (const color of curatedColors) {
@@ -126,32 +131,32 @@ describe('hobbyColorWithAlpha', () => {
 
 describe('getContrastTextColor', () => {
   it('returns white for dark/mid hobby colors (lightness <= 55%)', () => {
-    expect(getContrastTextColor('hsl(25, 45%, 40%)')).toBe('white')   // Walnut
-    expect(getContrastTextColor('hsl(140, 25%, 45%)')).toBe('white')  // Sage
-    expect(getContrastTextColor('hsl(175, 35%, 45%)')).toBe('white')  // Teal
-    expect(getContrastTextColor('hsl(100, 25%, 40%)')).toBe('white')  // Moss
-    expect(getContrastTextColor('hsl(220, 25%, 45%)')).toBe('white')  // Storm
-    expect(getContrastTextColor('hsl(215, 40%, 50%)')).toBe('white')  // Denim
-    expect(getContrastTextColor('hsl(210, 15%, 50%)')).toBe('white')  // Slate
-    expect(getContrastTextColor('hsl(280, 30%, 50%)')).toBe('white')  // Plum
-    expect(getContrastTextColor('hsl(45, 60%, 50%)')).toBe('white')   // Ochre
-    expect(getContrastTextColor('hsl(15, 55%, 55%)')).toBe('white')   // Terracotta
-    expect(getContrastTextColor('hsl(25, 70%, 55%)')).toBe('white')   // Copper
+    expect(getContrastTextColor('hsl(25, 45%, 40%)')).toBe('white') // Walnut
+    expect(getContrastTextColor('hsl(140, 25%, 45%)')).toBe('white') // Sage
+    expect(getContrastTextColor('hsl(175, 35%, 45%)')).toBe('white') // Teal
+    expect(getContrastTextColor('hsl(100, 25%, 40%)')).toBe('white') // Moss
+    expect(getContrastTextColor('hsl(220, 25%, 45%)')).toBe('white') // Storm
+    expect(getContrastTextColor('hsl(215, 40%, 50%)')).toBe('white') // Denim
+    expect(getContrastTextColor('hsl(210, 15%, 50%)')).toBe('white') // Slate
+    expect(getContrastTextColor('hsl(280, 30%, 50%)')).toBe('white') // Plum
+    expect(getContrastTextColor('hsl(45, 60%, 50%)')).toBe('white') // Ochre
+    expect(getContrastTextColor('hsl(15, 55%, 55%)')).toBe('white') // Terracotta
+    expect(getContrastTextColor('hsl(25, 70%, 55%)')).toBe('white') // Copper
   })
 
   it('returns black for light hobby colors (lightness > 55%)', () => {
-    expect(getContrastTextColor('hsl(5, 50%, 60%)')).toBe('black')    // Coral
-    expect(getContrastTextColor('hsl(340, 45%, 60%)')).toBe('black')  // Rose
-    expect(getContrastTextColor('hsl(200, 55%, 65%)')).toBe('black')  // Sky
-    expect(getContrastTextColor('hsl(265, 40%, 65%)')).toBe('black')  // Lavender
-    expect(getContrastTextColor('hsl(160, 45%, 60%)')).toBe('black')  // Mint
-    expect(getContrastTextColor('hsl(20, 65%, 68%)')).toBe('black')   // Peach
-    expect(getContrastTextColor('hsl(48, 70%, 62%)')).toBe('black')   // Sunshine
+    expect(getContrastTextColor('hsl(5, 50%, 60%)')).toBe('black') // Coral
+    expect(getContrastTextColor('hsl(340, 45%, 60%)')).toBe('black') // Rose
+    expect(getContrastTextColor('hsl(200, 55%, 65%)')).toBe('black') // Sky
+    expect(getContrastTextColor('hsl(265, 40%, 65%)')).toBe('black') // Lavender
+    expect(getContrastTextColor('hsl(160, 45%, 60%)')).toBe('black') // Mint
+    expect(getContrastTextColor('hsl(20, 65%, 68%)')).toBe('black') // Peach
+    expect(getContrastTextColor('hsl(48, 70%, 62%)')).toBe('black') // Sunshine
   })
 
   it('returns white for new dark hobby colors', () => {
-    expect(getContrastTextColor('hsl(150, 40%, 35%)')).toBe('white')  // Forest
-    expect(getContrastTextColor('hsl(225, 45%, 38%)')).toBe('white')  // Navy
+    expect(getContrastTextColor('hsl(150, 40%, 35%)')).toBe('white') // Forest
+    expect(getContrastTextColor('hsl(225, 45%, 38%)')).toBe('white') // Navy
   })
 
   it('returns white for hex black', () => {

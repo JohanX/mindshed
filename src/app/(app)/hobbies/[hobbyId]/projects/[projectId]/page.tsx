@@ -74,37 +74,42 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   const isCompleted = derivedStatus === 'COMPLETED'
 
   const remindersResult = await getRemindersForTarget('PROJECT', projectId)
-  const projectReminder = remindersResult.success ? remindersResult.data[0] ?? null : null
+  const projectReminder = remindersResult.success ? (remindersResult.data[0] ?? null) : null
 
   // Compute current step (first IN_PROGRESS or NOT_STARTED)
-  const currentStepId = project.steps.find(s => s.state === 'IN_PROGRESS')?.id
-    ?? project.steps.find(s => s.state === 'NOT_STARTED')?.id
-    ?? null
+  const currentStepId =
+    project.steps.find((s) => s.state === 'IN_PROGRESS')?.id ??
+    project.steps.find((s) => s.state === 'NOT_STARTED')?.id ??
+    null
 
   // Map steps with nested data for StepCard
-  const stepCards: StepCardData[] = project.steps.map(s => ({
+  const stepCards: StepCardData[] = project.steps.map((s) => ({
     id: s.id,
     name: s.name,
     state: s.state as StepState,
     previousState: (s.previousState as StepState | null) ?? null,
     sortOrder: s.sortOrder,
-    notes: s.notes.map(n => ({ id: n.id, text: n.text, createdAt: n.createdAt })),
+    notes: s.notes.map((n) => ({ id: n.id, text: n.text, createdAt: n.createdAt })),
     images: s.images.map((img): StepCardImage => {
       const isUpload = img.type === 'UPLOAD' && img.storageKey
       const fallback = img.url ?? ''
       return {
         id: img.id,
         displayUrl: isUpload ? getPublicImageUrl(img.storageKey!) : fallback,
-        thumbnailUrl: isUpload ? getThumbnailImageUrl(img.storageKey!, THUMBNAIL_WIDTH.GRID) : fallback,
-        stripThumbnailUrl: isUpload ? getThumbnailImageUrl(img.storageKey!, THUMBNAIL_WIDTH.STRIP) : fallback,
+        thumbnailUrl: isUpload
+          ? getThumbnailImageUrl(img.storageKey!, THUMBNAIL_WIDTH.GRID)
+          : fallback,
+        stripThumbnailUrl: isUpload
+          ? getThumbnailImageUrl(img.storageKey!, THUMBNAIL_WIDTH.STRIP)
+          : fallback,
         originalFilename: img.originalFilename,
       }
     }),
-    blockers: s.blockers.map(b => ({ id: b.id, description: b.description })),
+    blockers: s.blockers.map((b) => ({ id: b.id, description: b.description })),
   }))
 
   // Gallery data
-  const gallerySteps = project.steps.map(s => ({
+  const gallerySteps = project.steps.map((s) => ({
     id: s.id,
     name: s.name,
     state: s.state as string,
@@ -112,9 +117,11 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     excludeFromGallery: s.excludeFromGallery,
   }))
 
-  const stepKey = stepCards.map(s => `${s.id}:${s.state}:${s.notes.length}:${s.images.length}:${s.blockers.length}`).join(',')
+  const stepKey = stepCards
+    .map((s) => `${s.id}:${s.state}:${s.notes.length}:${s.images.length}:${s.blockers.length}`)
+    .join(',')
 
-  const bomRows: BomItemData[] = project.bomItems.map(b => ({
+  const bomRows: BomItemData[] = project.bomItems.map((b) => ({
     id: b.id,
     label: b.label,
     requiredQuantity: b.requiredQuantity,
@@ -135,7 +142,11 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         title={project.name}
         breadcrumbs={[
           { label: 'Hobbies', href: '/hobbies' },
-          { label: project.hobby.name, href: `/hobbies/${hobbyId}`, hobbyColor: project.hobby.color },
+          {
+            label: project.hobby.name,
+            href: `/hobbies/${hobbyId}`,
+            hobbyColor: project.hobby.color,
+          },
           { label: project.name },
         ]}
       >
@@ -143,20 +154,24 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           <ProjectStatusBadge status={derivedStatus} />
           {projectReminder && <ReminderBadge reminder={projectReminder} />}
           {!isCompleted && (
-            <ReminderDatePicker targetType="PROJECT" targetId={projectId} existingReminder={projectReminder} />
+            <ReminderDatePicker
+              targetType="PROJECT"
+              targetId={projectId}
+              existingReminder={projectReminder}
+            />
           )}
-          <ProjectActions project={{
-            id: project.id,
-            name: project.name,
-            description: project.description,
-            hobbyId: project.hobbyId,
-          }} />
+          <ProjectActions
+            project={{
+              id: project.id,
+              name: project.name,
+              description: project.description,
+              hobbyId: project.hobbyId,
+            }}
+          />
         </div>
       </PageHeader>
 
-      {project.description && (
-        <p className="text-muted-foreground">{project.description}</p>
-      )}
+      {project.description && <p className="text-muted-foreground">{project.description}</p>}
 
       {stepCards.length > 0 ? (
         <StepCardList
@@ -168,9 +183,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         />
       ) : null}
 
-      {!isCompleted && (
-        <AddStepForm projectId={project.id} />
-      )}
+      {!isCompleted && <AddStepForm projectId={project.id} />}
 
       <BomSection
         projectId={project.id}

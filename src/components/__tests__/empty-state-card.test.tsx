@@ -12,7 +12,7 @@ describe('EmptyStateCard', () => {
     render(
       <EmptyStateCard message="Empty">
         <button>Add Item</button>
-      </EmptyStateCard>
+      </EmptyStateCard>,
     )
     expect(screen.getByText('Add Item')).toBeInTheDocument()
   })

@@ -55,23 +55,32 @@ export default async function GalleryIndexPage() {
                   <span className="font-medium">{project.name}</span>
                 </div>
                 {project.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-2">
+                    {project.description}
+                  </p>
                 )}
                 <div className="flex flex-wrap gap-2">
                   {project.journeyGalleryEnabled && (
                     <Link href={`/gallery/${project.gallerySlug}`}>
-                      <Badge variant="outline" className="text-xs hover:bg-accent cursor-pointer">Journey</Badge>
+                      <Badge variant="outline" className="text-xs hover:bg-accent cursor-pointer">
+                        Journey
+                      </Badge>
                     </Link>
                   )}
                   {project.resultGalleryEnabled && (
                     <Link href={`/gallery/${project.gallerySlug}/result`}>
-                      <Badge variant="outline" className="text-xs hover:bg-accent cursor-pointer">Result</Badge>
+                      <Badge variant="outline" className="text-xs hover:bg-accent cursor-pointer">
+                        Result
+                      </Badge>
                     </Link>
                   )}
                 </div>
               </CardContent>
               {watermarkIcon && (
-                <div className="absolute bottom-2 right-2 z-10 pointer-events-none" aria-hidden="true">
+                <div
+                  className="absolute bottom-2 right-2 z-10 pointer-events-none"
+                  aria-hidden="true"
+                >
                   {watermarkIcon}
                 </div>
               )}

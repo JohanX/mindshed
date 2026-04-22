@@ -59,7 +59,9 @@ export async function getStepImages(
         sizeBytes: img.sizeBytes,
         createdAt: img.createdAt,
         displayUrl: isUpload ? adapter.getPublicUrl(img.storageKey!) : fallbackUrl(img),
-        thumbnailUrl: isUpload ? adapter.getThumbnailUrl(img.storageKey!, THUMBNAIL_WIDTH.GRID) : fallbackUrl(img),
+        thumbnailUrl: isUpload
+          ? adapter.getThumbnailUrl(img.storageKey!, THUMBNAIL_WIDTH.GRID)
+          : fallbackUrl(img),
       }
     })
 
@@ -82,7 +84,10 @@ export async function addStepImageLink(
     const { image, hobbyId, projectId } = await prisma.$transaction(async (tx) => {
       const step = await tx.step.findUnique({
         where: { id: parsed.data.stepId },
-        select: { projectId: true, project: { select: { id: true, hobbyId: true, isCompleted: true } } },
+        select: {
+          projectId: true,
+          project: { select: { id: true, hobbyId: true, isCompleted: true } },
+        },
       })
       if (!step) throw new Error('STEP_NOT_FOUND')
       if (step.project.isCompleted) throw new Error('PROJECT_COMPLETED')
@@ -109,7 +114,8 @@ export async function addStepImageLink(
     console.error('addStepImageLink failed:', error)
     if (error instanceof Error) {
       if (error.message === 'STEP_NOT_FOUND') return { success: false, error: 'Step not found.' }
-      if (error.message === 'PROJECT_COMPLETED') return { success: false, error: 'Cannot add images to a completed project.' }
+      if (error.message === 'PROJECT_COMPLETED')
+        return { success: false, error: 'Cannot add images to a completed project.' }
     }
     return { success: false, error: 'Failed to add image link.' }
   }
@@ -128,7 +134,10 @@ export async function addStepImage(
     const { image, hobbyId, projectId } = await prisma.$transaction(async (tx) => {
       const step = await tx.step.findUnique({
         where: { id: parsed.data.stepId },
-        select: { projectId: true, project: { select: { id: true, hobbyId: true, isCompleted: true } } },
+        select: {
+          projectId: true,
+          project: { select: { id: true, hobbyId: true, isCompleted: true } },
+        },
       })
       if (!step) throw new Error('STEP_NOT_FOUND')
       if (step.project.isCompleted) throw new Error('PROJECT_COMPLETED')
@@ -179,7 +188,8 @@ export async function addStepImage(
     console.error('addStepImage failed:', error)
     if (error instanceof Error) {
       if (error.message === 'STEP_NOT_FOUND') return { success: false, error: 'Step not found.' }
-      if (error.message === 'PROJECT_COMPLETED') return { success: false, error: 'Cannot add images to a completed project.' }
+      if (error.message === 'PROJECT_COMPLETED')
+        return { success: false, error: 'Cannot add images to a completed project.' }
     }
     return { success: false, error: 'Failed to add image. Please try again.' }
   }
@@ -225,7 +235,10 @@ export async function uploadImageCloudinary(
       const { image, hobbyId, projectId } = await prisma.$transaction(async (tx) => {
         const step = await tx.step.findUnique({
           where: { id: parsedStepId.data },
-          select: { projectId: true, project: { select: { id: true, hobbyId: true, isCompleted: true } } },
+          select: {
+            projectId: true,
+            project: { select: { id: true, hobbyId: true, isCompleted: true } },
+          },
         })
         if (!step) throw new Error('STEP_NOT_FOUND')
         if (step.project.isCompleted) throw new Error('PROJECT_COMPLETED')
@@ -273,7 +286,8 @@ export async function uploadImageCloudinary(
     console.error('uploadImageCloudinary failed:', error)
     if (error instanceof Error) {
       if (error.message === 'STEP_NOT_FOUND') return { success: false, error: 'Step not found.' }
-      if (error.message === 'PROJECT_COMPLETED') return { success: false, error: 'Cannot add images to a completed project.' }
+      if (error.message === 'PROJECT_COMPLETED')
+        return { success: false, error: 'Cannot add images to a completed project.' }
     }
     return { success: false, error: 'Failed to upload image. Please try again.' }
   }

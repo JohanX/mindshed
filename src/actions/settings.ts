@@ -15,7 +15,9 @@ export async function getIdleThreshold(): Promise<ActionResult<{ days: number }>
   }
 }
 
-export async function updateIdleThreshold(input: { days: number }): Promise<ActionResult<{ days: number }>> {
+export async function updateIdleThreshold(input: {
+  days: number
+}): Promise<ActionResult<{ days: number }>> {
   const parsed = idleThresholdSchema.safeParse(input)
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }

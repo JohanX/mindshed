@@ -19,10 +19,7 @@ export interface ImageStorageAdapter {
    * Generate a presigned URL for direct client-to-storage upload (S3 mode only).
    * Cloudinary does not use presigned URLs — throws if called on Cloudinary adapter.
    */
-  generatePresignedUrl(
-    key: string,
-    contentType: string,
-  ): Promise<{ url: string; key: string }>
+  generatePresignedUrl(key: string, contentType: string): Promise<{ url: string; key: string }>
 
   /**
    * Upload a file from the server (Cloudinary mode).

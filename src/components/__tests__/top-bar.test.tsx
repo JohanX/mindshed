@@ -12,7 +12,19 @@ vi.mock('@/actions/hobby', () => ({
 }))
 
 const mockHobbies = [
-  { id: '1', name: 'Woodworking', color: 'hsl(25, 45%, 40%)', icon: 'hammer', sortOrder: 0, createdAt: new Date(), updatedAt: new Date(), projectCount: 0, activeCount: 0, blockedCount: 0, idleCount: 0 },
+  {
+    id: '1',
+    name: 'Woodworking',
+    color: 'hsl(25, 45%, 40%)',
+    icon: 'hammer',
+    sortOrder: 0,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    projectCount: 0,
+    activeCount: 0,
+    blockedCount: 0,
+    idleCount: 0,
+  },
 ]
 
 describe('TopBar', () => {

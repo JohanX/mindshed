@@ -62,19 +62,36 @@ export function IdeaEditDialog({ idea, open, onOpenChange }: IdeaEditDialogProps
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="edit-title">Title</Label>
-            <Input id="edit-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />
+            <Input
+              id="edit-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={200}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-desc">Description</Label>
-            <Textarea id="edit-desc" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={2000} />
+            <Textarea
+              id="edit-desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={2000}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-link">Reference Link</Label>
-            <Input id="edit-link" value={referenceLink} onChange={(e) => setReferenceLink(e.target.value)} placeholder="https://..." />
+            <Input
+              id="edit-link"
+              value={referenceLink}
+              onChange={(e) => setReferenceLink(e.target.value)}
+              placeholder="https://..."
+            />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
             <Button type="submit" disabled={!title.trim() || isPending}>
               {isPending ? 'Saving...' : 'Save'}
             </Button>

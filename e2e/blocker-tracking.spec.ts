@@ -56,7 +56,9 @@ test.describe('Blocker Tracking', () => {
     await expect(addBlockerBtn).toBeVisible({ timeout: 5000 })
     await addBlockerBtn.click()
 
-    await page.getByPlaceholder("Describe what's blocking this step...").fill('Waiting for materials')
+    await page
+      .getByPlaceholder("Describe what's blocking this step...")
+      .fill('Waiting for materials')
     await page.getByRole('button', { name: 'Save' }).first().click()
     await page.waitForTimeout(1000)
 
