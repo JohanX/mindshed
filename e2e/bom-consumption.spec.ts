@@ -109,7 +109,7 @@ test.describe('BOM Consumption (Mark / Undo) + Clone Integration', () => {
 
     // === Scenario 1: Mark consumed on the MATERIAL row ===
     const matRow = page.locator('table tbody tr').filter({ hasText: matName })
-    await matRow.getByRole('button', { name: 'BOM row actions' }).click()
+    await matRow.getByRole('button', { name: /Actions for / }).click()
     await page.getByRole('menuitem', { name: 'Mark consumed' }).click()
     await expect(page.getByText(`Marked ${matName} as consumed`)).toBeVisible({ timeout: 5000 })
     // Available cell shows "Consumed"
@@ -138,7 +138,7 @@ test.describe('BOM Consumption (Mark / Undo) + Clone Integration', () => {
     await page.goto(projectUrl)
     await page.waitForLoadState('networkidle')
     const toolRow = page.locator('table tbody tr').filter({ hasText: toolName })
-    await toolRow.getByRole('button', { name: 'BOM row actions' }).click()
+    await toolRow.getByRole('button', { name: /Actions for / }).click()
     await expect(page.getByRole('menuitem', { name: 'Mark consumed' })).toHaveCount(0)
     // Close the menu
     await page.keyboard.press('Escape')

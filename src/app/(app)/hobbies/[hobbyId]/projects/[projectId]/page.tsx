@@ -161,7 +161,12 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         projectId={project.id}
         initialRows={bomRows}
         initialInventoryOptions={inventoryOptions}
-        firstStepName={project.steps[0]?.name ?? null}
+        projectSteps={project.steps.map((s) => ({
+          id: s.id,
+          name: s.name,
+          state: s.state as StepState,
+          sortOrder: s.sortOrder,
+        }))}
       />
 
       {!project.isArchived && (

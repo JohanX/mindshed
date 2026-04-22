@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { MoreHorizontal, Trash2, CheckSquare, Undo2, Loader2 } from 'lucide-react'
+import { MoreHorizontal, Trash2, CheckSquare, Undo2, Loader2, AlertCircle } from 'lucide-react'
 import {
   updateBomItem,
   deleteBomItem,
@@ -20,6 +20,7 @@ import {
 import { showErrorToast, showSuccessToast } from '@/lib/toast'
 import {
   renderAvailable,
+  isRowShort,
   type BomConsumptionState,
   type BomItemData,
 } from '@/lib/bom'
@@ -39,6 +40,7 @@ interface BomRowProps {
     },
   ) => void
   onDelete: (id: string) => void
+  onRequestCreateBlocker?: (row: BomItemData) => void
 }
 
 function AvailableCell({ row }: { row: BomItemData }) {
@@ -56,7 +58,7 @@ function AvailableCell({ row }: { row: BomItemData }) {
   return <span className={className}>{label}</span>
 }
 
-export function BomRow({ row, variant, onUpdate, onDelete }: BomRowProps) {
+export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocker }: BomRowProps) {
   const [required, setRequired] = useState<string>(String(row.requiredQuantity))
   const [unit, setUnit] = useState<string>(row.unit ?? '')
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -72,6 +74,11 @@ export function BomRow({ row, variant, onUpdate, onDelete }: BomRowProps) {
     !row.inventoryItem.isDeleted &&
     row.inventoryItem.type === 'MATERIAL'
   const canUndo = row.consumptionState === 'CONSUMED'
+  const canCreateBlocker =
+    isRowShort(row) &&
+    row.inventoryItem !== null &&
+    !row.inventoryItem.isDeleted &&
+    !!onRequestCreateBlocker
   const nameIsMuted = !!row.inventoryItem?.isDeleted
   const nameClass = nameIsMuted
     ? 'italic text-muted-foreground'
@@ -193,7 +200,7 @@ export function BomRow({ row, variant, onUpdate, onDelete }: BomRowProps) {
             variant="ghost"
             size="icon"
             className="min-h-[44px] min-w-[44px]"
-            aria-label="BOM row actions"
+            aria-label={`Actions for ${displayName}`}
           >
             <MoreHorizontal className="h-4 w-4" />
           </Button>
@@ -209,6 +216,15 @@ export function BomRow({ row, variant, onUpdate, onDelete }: BomRowProps) {
               Mark consumed
             </DropdownMenuItem>
           )}
+          {canCreateBlocker && (
+            <DropdownMenuItem
+              className="min-h-[44px]"
+              onClick={() => onRequestCreateBlocker?.(row)}
+            >
+              <AlertCircle className="mr-2 h-4 w-4" />
+              Create blocker…
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             className="min-h-[44px] text-destructive focus:text-destructive"
             onClick={() => setDeleteOpen(true)}
@@ -222,8 +238,8 @@ export function BomRow({ row, variant, onUpdate, onDelete }: BomRowProps) {
     </div>
   )
 
-  // Mobile: header has only the dropdown (Delete); Mark-consumed and Undo
-  // surface as full-width buttons at the bottom of the card per UX spec.
+  // Mobile: header has only the dropdown (Delete + Create blocker…);
+  // Mark-consumed and Undo surface as full-width buttons at the bottom.
   const mobileHeaderActions = (
     <>
       <DropdownMenu>
@@ -232,12 +248,21 @@ export function BomRow({ row, variant, onUpdate, onDelete }: BomRowProps) {
             variant="ghost"
             size="icon"
             className="min-h-[44px] min-w-[44px]"
-            aria-label="BOM row actions"
+            aria-label={`Actions for ${displayName}`}
           >
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          {canCreateBlocker && (
+            <DropdownMenuItem
+              className="min-h-[44px]"
+              onClick={() => onRequestCreateBlocker?.(row)}
+            >
+              <AlertCircle className="mr-2 h-4 w-4" />
+              Create blocker…
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             className="min-h-[44px] text-destructive focus:text-destructive"
             onClick={() => setDeleteOpen(true)}

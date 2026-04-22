@@ -49,11 +49,11 @@ export type AddBomItemWithNewInventoryInput = z.infer<
   typeof addBomItemWithNewInventorySchema
 >
 
-export const createShortageBlockersSchema = z.object({
-  projectId: z.uuid(),
+export const createBomShortageBlockerSchema = z.object({
+  bomItemId: z.uuid(),
+  stepId: z.uuid(),
 })
-
-export type CreateShortageBlockersInput = z.infer<typeof createShortageBlockersSchema>
+export type CreateBomShortageBlockerInput = z.infer<typeof createBomShortageBlockerSchema>
 
 export const markBomItemConsumedSchema = z.object({
   id: z.uuid(),

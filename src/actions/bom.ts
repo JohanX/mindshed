@@ -6,13 +6,13 @@ import {
   addBomItemSchema,
   updateBomItemSchema,
   addBomItemWithNewInventorySchema,
-  createShortageBlockersSchema,
+  createBomShortageBlockerSchema,
   markBomItemConsumedSchema,
   undoBomItemConsumptionSchema,
   type AddBomItemInput,
   type UpdateBomItemInput,
   type AddBomItemWithNewInventoryInput,
-  type CreateShortageBlockersInput,
+  type CreateBomShortageBlockerInput,
   type MarkBomItemConsumedInput,
   type UndoBomItemConsumptionInput,
 } from '@/lib/schemas/bom'
@@ -308,110 +308,109 @@ export async function getBomItemsByProject(
   }
 }
 
-export async function createShortageBlockers(
-  input: CreateShortageBlockersInput,
+export async function createBomShortageBlocker(
+  input: CreateBomShortageBlockerInput,
 ): Promise<
   ActionResult<{
-    created: number
-    skipped: number
-    stepId: string
+    blockerId: string
     stepName: string
+    alreadyExisted: boolean
   }>
 > {
-  const parsed = createShortageBlockersSchema.safeParse(input)
+  const parsed = createBomShortageBlockerSchema.safeParse(input)
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
   }
-  const { projectId } = parsed.data
+  const { bomItemId, stepId } = parsed.data
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const project = await tx.project.findUnique({
-        where: { id: projectId },
-        select: { hobbyId: true, isCompleted: true },
-      })
-      if (!project) throw Object.assign(new Error('PROJECT_NOT_FOUND'), { code: 'P2025' })
-      if (project.isCompleted) throw new Error('PROJECT_COMPLETED')
-
-      const step = await tx.step.findFirst({
-        where: { projectId },
-        orderBy: { sortOrder: 'asc' },
-        select: { id: true, name: true, state: true, previousState: true },
-      })
-      if (!step) throw new Error('NO_STEPS')
-      if (step.state === 'COMPLETED') throw new Error('STEP_COMPLETED')
-
-      const bomRowsRaw = await tx.bomItem.findMany({
-        where: { projectId },
-        orderBy: { sortOrder: 'asc' },
-        include: {
+      const row = await tx.bomItem.findUnique({
+        where: { id: bomItemId },
+        select: {
+          id: true,
+          requiredQuantity: true,
+          unit: true,
+          projectId: true,
+          consumptionState: true,
+          label: true,
+          sortOrder: true,
           inventoryItem: {
             select: { id: true, name: true, type: true, quantity: true, isDeleted: true },
           },
+          project: { select: { hobbyId: true } },
         },
       })
-      const bomRows: BomItemData[] = bomRowsRaw.map((r) => ({
-        id: r.id,
-        label: r.label,
-        requiredQuantity: r.requiredQuantity,
-        unit: r.unit,
-        sortOrder: r.sortOrder,
-        consumptionState: r.consumptionState,
-        inventoryItem: r.inventoryItem,
-      }))
+      if (!row) throw Object.assign(new Error('BOM_NOT_FOUND'), { code: 'P2025' })
+      const inv = row.inventoryItem
+      if (!inv || inv.isDeleted) throw new Error('BOM_ITEM_UNAVAILABLE')
+      // Use the shared shortage predicate so server-side re-validation stays in
+      // lockstep with the UI's isRowShort() — any future tweak (unit
+      // normalization, threshold) applies to both paths without drift.
+      const shortRow: BomItemData = {
+        id: row.id,
+        label: row.label,
+        requiredQuantity: row.requiredQuantity,
+        unit: row.unit,
+        sortOrder: row.sortOrder,
+        consumptionState: row.consumptionState,
+        inventoryItem: inv,
+      }
+      if (!isRowShort(shortRow)) throw new Error('NOT_SHORT')
 
-      const shortages = bomRows.filter(isRowShort)
+      const step = await tx.step.findUnique({
+        where: { id: stepId },
+        select: { id: true, name: true, state: true, projectId: true },
+      })
+      if (!step) throw new Error('STEP_NOT_FOUND')
+      if (step.projectId !== row.projectId) throw new Error('STEP_WRONG_PROJECT')
+      if (step.state === 'COMPLETED') throw new Error('STEP_COMPLETED')
 
-      let created = 0
-      let skipped = 0
-      for (const row of shortages) {
-        const inventoryItemId = row.inventoryItem!.id
-        const existing = await tx.blocker.findFirst({
-          where: { stepId: step.id, inventoryItemId, isResolved: false },
-          select: { id: true },
-        })
-        if (existing) {
-          skipped += 1
-          continue
+      // Dedup: an unresolved blocker for this (step, inventory item) already
+      // exists — return it unchanged.
+      const existing = await tx.blocker.findFirst({
+        where: { stepId: step.id, inventoryItemId: inv.id, isResolved: false },
+        select: { id: true },
+      })
+      if (existing) {
+        return {
+          blockerId: existing.id,
+          stepName: step.name,
+          alreadyExisted: true,
+          hobbyId: row.project.hobbyId,
+          projectId: row.projectId,
         }
-        await tx.blocker.create({
-          data: {
-            stepId: step.id,
-            inventoryItemId,
-            description: buildShortageBlockerDescription(row),
-            isResolved: false,
-          },
-        })
-        created += 1
       }
 
-      // If at least one new blocker was created and the step was not already
-      // BLOCKED, cascade the state change (mirror createBlocker).
-      if (created > 0 && step.state !== 'BLOCKED') {
+      const description = buildShortageBlockerDescription(shortRow)
+
+      const blocker = await tx.blocker.create({
+        data: { stepId: step.id, inventoryItemId: inv.id, description },
+      })
+
+      // Cascade step state to BLOCKED (mirror createBlocker behavior).
+      if (step.state !== 'BLOCKED') {
         await tx.step.update({
           where: { id: step.id },
-          data: {
-            previousState: step.state,
-            state: 'BLOCKED',
-          },
+          data: { previousState: step.state, state: 'BLOCKED' },
         })
       }
 
       await tx.project.update({
-        where: { id: projectId },
+        where: { id: row.projectId },
         data: { lastActivityAt: new Date() },
       })
 
       return {
-        created,
-        skipped,
-        stepId: step.id,
+        blockerId: blocker.id,
         stepName: step.name,
-        hobbyId: project.hobbyId,
+        alreadyExisted: false,
+        hobbyId: row.project.hobbyId,
+        projectId: row.projectId,
       }
     })
 
-    revalidatePath(`/hobbies/${result.hobbyId}/projects/${projectId}`)
+    revalidatePath(`/hobbies/${result.hobbyId}/projects/${result.projectId}`)
     revalidatePath(`/hobbies/${result.hobbyId}`)
     revalidatePath('/projects')
     revalidatePath('/')
@@ -419,29 +418,37 @@ export async function createShortageBlockers(
     return {
       success: true,
       data: {
-        created: result.created,
-        skipped: result.skipped,
-        stepId: result.stepId,
+        blockerId: result.blockerId,
         stepName: result.stepName,
+        alreadyExisted: result.alreadyExisted,
       },
     }
   } catch (error) {
     if (isP2025(error)) {
-      return { success: false, error: 'Project not found.' }
+      return { success: false, error: 'BOM item not found.' }
     }
     if (error instanceof Error) {
-      if (error.message === 'PROJECT_COMPLETED') {
-        return { success: false, error: 'Cannot add blockers to a completed project.' }
+      if (error.message === 'BOM_NOT_FOUND') {
+        return { success: false, error: 'BOM item not found.' }
       }
-      if (error.message === 'NO_STEPS') {
-        return { success: false, error: 'Add a step before creating blockers' }
+      if (error.message === 'BOM_ITEM_UNAVAILABLE') {
+        return { success: false, error: 'Cannot create blocker for this row.' }
+      }
+      if (error.message === 'NOT_SHORT') {
+        return { success: false, error: 'This row is no longer short — reload.' }
+      }
+      if (error.message === 'STEP_NOT_FOUND') {
+        return { success: false, error: 'Step not found.' }
+      }
+      if (error.message === 'STEP_WRONG_PROJECT') {
+        return { success: false, error: 'Step does not belong to this project.' }
       }
       if (error.message === 'STEP_COMPLETED') {
         return { success: false, error: 'Cannot block a completed step.' }
       }
     }
-    console.error('createShortageBlockers failed:', error)
-    return { success: false, error: 'Failed to create shortage blockers.' }
+    console.error('createBomShortageBlocker failed:', error)
+    return { success: false, error: 'Failed to create blocker.' }
   }
 }
 

@@ -105,7 +105,7 @@ test.describe('BOM Basic CRUD', () => {
     await expect(page.locator('table').getByLabel('Required quantity').first()).toHaveValue('10')
 
     // Delete the second row via actions menu (desktop table scope)
-    await page.locator('table').getByRole('button', { name: 'BOM row actions' }).last().click()
+    await page.locator('table').getByRole('button', { name: /Actions for / }).last().click()
     await page.getByRole('menuitem', { name: 'Delete row' }).click()
     await page.getByRole('button', { name: 'Delete' }).click()
     await page.waitForTimeout(1000)

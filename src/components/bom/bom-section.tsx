@@ -16,12 +16,13 @@ import { BomRow } from '@/components/bom/bom-row'
 import { InventoryCombobox } from '@/components/bom/inventory-combobox'
 import { BomNewInventoryForm } from '@/components/bom/bom-new-inventory-form'
 import { ShortageBanner } from '@/components/bom/shortage-banner'
+import { CreateBlockerDialog, type PickerStep } from '@/components/bom/create-blocker-dialog'
 
 interface BomSectionProps {
   projectId: string
   initialRows: BomItemData[]
   initialInventoryOptions: InventoryOption[]
-  firstStepName: string | null
+  projectSteps: PickerStep[]
 }
 
 function BomStatusPill({ rows }: { rows: BomItemData[] }) {
@@ -52,12 +53,13 @@ export function BomSection({
   projectId,
   initialRows,
   initialInventoryOptions,
-  firstStepName,
+  projectSteps,
 }: BomSectionProps) {
   const [rows, setRows] = useState<BomItemData[]>(initialRows)
   const [options, setOptions] = useState<InventoryOption[]>(initialInventoryOptions)
   const [addState, setAddState] = useState<AddState>({ phase: 'closed' })
   const [expanded, setExpanded] = useState(true)
+  const [blockerDialogRow, setBlockerDialogRow] = useState<BomItemData | null>(null)
 
   const pillMemo = useMemo(() => <BomStatusPill rows={rows} />, [rows])
 
@@ -180,7 +182,7 @@ export function BomSection({
       </summary>
 
       <div className="space-y-3 px-4 pb-4">
-        <ShortageBanner projectId={projectId} rows={rows} firstStepName={firstStepName} />
+        <ShortageBanner rows={rows} />
 
         {rows.length === 0 && addState.phase === 'closed' && (
           <p className="text-sm text-muted-foreground">
@@ -209,6 +211,7 @@ export function BomSection({
                     variant="desktop"
                     onUpdate={handleRowUpdate}
                     onDelete={handleRowDelete}
+                    onRequestCreateBlocker={setBlockerDialogRow}
                   />
                 ))}
               </tbody>
@@ -225,6 +228,7 @@ export function BomSection({
                 variant="mobile"
                 onUpdate={handleRowUpdate}
                 onDelete={handleRowDelete}
+                onRequestCreateBlocker={setBlockerDialogRow}
               />
             ))}
           </div>
@@ -281,6 +285,13 @@ export function BomSection({
           />
         )}
       </div>
+
+      <CreateBlockerDialog
+        open={blockerDialogRow !== null}
+        row={blockerDialogRow}
+        steps={projectSteps}
+        onClose={() => setBlockerDialogRow(null)}
+      />
     </details>
   )
 }

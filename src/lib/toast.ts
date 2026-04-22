@@ -17,3 +17,12 @@ export function showSuccessToast(message: string) {
 export function showErrorToast(message: string) {
   toast.error(message, { duration: 5000, closeButton: true })
 }
+
+/**
+ * Show a neutral informational toast — 3 seconds.
+ * Use for benign no-ops where success/error framing would be misleading.
+ * Examples: "Already blocked on Step Prep."
+ */
+export function showInfoToast(message: string) {
+  toast(message, { duration: 3000 })
+}
