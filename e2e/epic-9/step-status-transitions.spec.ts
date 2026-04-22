@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { seedHobby, seedProject, deleteHobbyCascade } from '../helpers/db-seed'
 
 test.describe.configure({ mode: 'serial' })
 
@@ -9,36 +10,23 @@ test.describe('Bidirectional Step Status Transitions', () => {
 
   test.beforeAll(async ({ browserName }) => {
     testPrefix = `ST-${browserName}-${Date.now()}`
+
+    const hobby = await seedHobby({
+      name: `${testPrefix} Hobby`,
+      color: 'hsl(15, 55%, 55%)' /* Terracotta */,
+    })
+    hobbyId = hobby.id
+
+    const { project } = await seedProject({
+      hobbyId,
+      name: `${testPrefix} Project`,
+      steps: [{ name: 'Step Alpha', state: 'NOT_STARTED' }],
+    })
+    projectUrl = `/hobbies/${hobbyId}/projects/${project.id}`
   })
 
-  test('setup: create hobby and project with steps', async ({ page }) => {
-    // Create a hobby
-    await page.goto('/settings')
-    await page.waitForLoadState('networkidle')
-    await page.locator('main').getByRole('button', { name: 'Add Hobby' }).first().click()
-    await page.getByPlaceholder('e.g., Woodworking').fill(`${testPrefix} Hobby`)
-    await page.getByTitle('Terracotta').click()
-    await page.getByRole('button', { name: 'Save' }).click()
-    await page.waitForTimeout(1000)
-
-    // Get hobby ID
-    await page.goto('/settings')
-    await page.waitForLoadState('networkidle')
-    const hobbyLink = page.getByRole('link', { name: new RegExp(`${testPrefix} Hobby`) }).first()
-    const href = await hobbyLink.getAttribute('href')
-    hobbyId = href?.replace('/hobbies/', '') ?? ''
-
-    // Create a project with a step
-    await page.goto(`/hobbies/${hobbyId}`)
-    await page.waitForLoadState('networkidle')
-    await page.getByRole('button', { name: 'Create Project' }).first().click()
-    await page.getByPlaceholder('e.g., Walnut Side Table').fill(`${testPrefix} Project`)
-    await page.getByPlaceholder('Step 1 name').fill('Step Alpha')
-    await page.getByRole('button', { name: 'Save' }).click()
-    await page.waitForTimeout(2000)
-
-    // Store project URL
-    projectUrl = page.url()
+  test.afterAll(async () => {
+    if (hobbyId) await deleteHobbyCascade(hobbyId)
   })
 
   test('status dropdown is visible on step card', async ({ page }) => {

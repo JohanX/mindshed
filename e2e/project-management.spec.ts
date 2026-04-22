@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { seedHobby, deleteHobbyCascade } from './helpers/db-seed'
 
 test.describe.configure({ mode: 'serial' })
 
@@ -6,47 +7,14 @@ test.describe('Project Management', () => {
   let hobbyId: string
   let hobbyName: string
 
-  test.beforeAll(async ({ browser, browserName }) => {
+  test.beforeAll(async ({ browserName }) => {
     hobbyName = `PM-${browserName}-${Date.now()}`
-    const page = await browser.newPage({ storageState: 'e2e/.auth/state.json' })
-    await page.goto('/settings')
-    await page.waitForLoadState('networkidle')
-
-    // Create a test hobby (scoped to main to avoid top bar button)
-    await page.locator('main').getByRole('button', { name: 'Add Hobby' }).first().click()
-    await page.getByPlaceholder('e.g., Woodworking').fill(hobbyName)
-    await page.getByTitle('Walnut').click()
-    await page.getByRole('button', { name: 'Save' }).click()
-    await page.waitForTimeout(1000)
-
-    // Get hobby ID from the created hobby link
-    await page.goto('/settings')
-    await page.waitForLoadState('networkidle')
-    const hobbyLink = page.getByRole('link', { name: new RegExp(hobbyName) }).first()
-    const href = await hobbyLink.getAttribute('href')
-    hobbyId = href?.replace('/hobbies/', '') ?? ''
-    await page.close()
+    const hobby = await seedHobby({ name: hobbyName, color: 'hsl(25, 45%, 40%)' /* Walnut */ })
+    hobbyId = hobby.id
   })
 
-  test.afterAll(async ({ browser }) => {
-    // Clean up: delete the specific hobby we created
-    const page = await browser.newPage({ storageState: 'e2e/.auth/state.json' })
-    await page.goto('/settings')
-    await page.waitForLoadState('networkidle')
-
-    // Find our specific hobby's action button using robust selector
-    const actionButton = page
-      .locator('div.relative')
-      .filter({ has: page.getByRole('link', { name: new RegExp(hobbyName) }) })
-      .getByRole('button', { name: 'Hobby actions' })
-
-    if (await actionButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await actionButton.click()
-      await page.getByRole('menuitem', { name: 'Delete' }).click()
-      await page.getByRole('button', { name: 'Delete' }).click()
-      await page.waitForTimeout(1000)
-    }
-    await page.close()
+  test.afterAll(async () => {
+    if (hobbyId) await deleteHobbyCascade(hobbyId)
   })
 
   test('hobby detail page shows empty state with create button', async ({ page }) => {

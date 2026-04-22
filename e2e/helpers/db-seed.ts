@@ -98,6 +98,13 @@ export async function seedHobby(opts: {
  * `lastActivityAt` defaults to now so the project appears in Continue sections
  * without being flagged as idle. Override with `idleDaysAgo` to backdate for
  * idle-detection tests.
+ *
+ * **Caveat on seeded BLOCKED steps**: step.previous_state is left NULL on
+ * every seeded step regardless of `state`. Production uses the blocker
+ * workflow (createBlocker → step.state=BLOCKED with previous_state preserved)
+ * to drive the restore-on-unblock behavior. If a test needs to exercise
+ * unblock-restores-previousState, either transition the step via the UI first
+ * or extend this helper to accept `previousState`.
  */
 export async function seedProject(opts: {
   hobbyId: string

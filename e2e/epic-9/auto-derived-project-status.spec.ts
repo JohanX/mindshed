@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { seedHobby, seedProject, deleteHobbyCascade } from '../helpers/db-seed'
 
 test.describe.configure({ mode: 'serial' })
 
@@ -9,38 +10,26 @@ test.describe('Auto-Derived Project Status', () => {
 
   test.beforeAll(async ({ browserName }) => {
     testPrefix = `PS-${browserName}-${Date.now()}`
+
+    const hobby = await seedHobby({
+      name: `${testPrefix} Hobby`,
+      color: 'hsl(15, 55%, 55%)' /* Terracotta */,
+    })
+    hobbyId = hobby.id
+
+    const { project } = await seedProject({
+      hobbyId,
+      name: `${testPrefix} Status Project`,
+      steps: [
+        { name: 'Step One', state: 'NOT_STARTED' },
+        { name: 'Step Two', state: 'NOT_STARTED' },
+      ],
+    })
+    projectUrl = `/hobbies/${hobbyId}/projects/${project.id}`
   })
 
-  test('setup: create hobby and project with two steps', async ({ page }) => {
-    await page.goto('/settings')
-    await page.waitForLoadState('networkidle')
-    await page.locator('main').getByRole('button', { name: 'Add Hobby' }).first().click()
-    await page.getByPlaceholder('e.g., Woodworking').fill(`${testPrefix} Hobby`)
-    await page.getByTitle('Terracotta').click()
-    await page.getByRole('button', { name: 'Save' }).click()
-    await page.waitForTimeout(1000)
-
-    await page.goto('/settings')
-    await page.waitForLoadState('networkidle')
-    const hobbyLink = page.getByRole('link', { name: new RegExp(`${testPrefix} Hobby`) }).first()
-    const href = await hobbyLink.getAttribute('href')
-    hobbyId = href?.replace('/hobbies/', '') ?? ''
-
-    await page.goto(`/hobbies/${hobbyId}`)
-    await page.waitForLoadState('networkidle')
-    await page.getByRole('button', { name: 'Create Project' }).first().click()
-    await page.getByPlaceholder('e.g., Walnut Side Table').fill(`${testPrefix} Status Project`)
-    await page.getByPlaceholder('Step 1 name').fill('Step One')
-    await page.getByRole('button', { name: 'Save' }).click()
-    await page.waitForTimeout(2000)
-
-    projectUrl = page.url()
-
-    // Add a second step
-    await page.getByRole('button', { name: 'Add Step' }).click()
-    await page.getByPlaceholder('Step name').fill('Step Two')
-    await page.getByRole('button', { name: 'Add', exact: true }).click()
-    await page.waitForTimeout(1000)
+  test.afterAll(async () => {
+    if (hobbyId) await deleteHobbyCascade(hobbyId)
   })
 
   test('project with all NOT_STARTED steps shows "Not Started" badge', async ({ page }) => {
