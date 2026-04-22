@@ -172,7 +172,6 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       {!project.isArchived && (
         <GallerySection
           projectId={project.id}
-          projectName={project.name}
           journeyEnabled={project.journeyGalleryEnabled}
           resultEnabled={project.resultGalleryEnabled}
           gallerySlug={project.gallerySlug}

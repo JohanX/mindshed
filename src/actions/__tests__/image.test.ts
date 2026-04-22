@@ -224,6 +224,61 @@ describe('addStepImage', () => {
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toBe('Failed to add image. Please try again.')
   })
+
+  it('cleans up S3 orphan when DB insert fails after client PUT (Story 18.1)', async () => {
+    // Simulate: client already PUT to S3 via presigned URL, then the DB
+    // transaction fails. Action must call adapter.deleteObject to avoid an
+    // orphaned blob in storage — parity with uploadImageCloudinary.
+    const mockDeleteObject = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(getImageStorageAdapter).mockReturnValueOnce({
+      name: 's3',
+      getPublicUrl: vi.fn((key: string) => `https://r2.example.com/bucket/${key}`),
+      deleteObject: mockDeleteObject,
+      generatePresignedUrl: vi.fn(),
+      upload: vi.fn(),
+    } as never)
+
+    mockTransaction.mockRejectedValue(new Error('DB connection failed'))
+
+    const result = await addStepImage(validUploadInput)
+    expect(result.success).toBe(false)
+    expect(mockDeleteObject).toHaveBeenCalledOnce()
+    expect(mockDeleteObject).toHaveBeenCalledWith(validUploadInput.storageKey)
+  })
+
+  it('swallows cleanup failure and still returns the original DB error', async () => {
+    const mockDeleteObject = vi.fn().mockRejectedValue(new Error('S3 unavailable'))
+    vi.mocked(getImageStorageAdapter).mockReturnValueOnce({
+      name: 's3',
+      getPublicUrl: vi.fn((key: string) => `https://r2.example.com/bucket/${key}`),
+      deleteObject: mockDeleteObject,
+      generatePresignedUrl: vi.fn(),
+      upload: vi.fn(),
+    } as never)
+
+    mockTransaction.mockRejectedValue(new Error('DB connection failed'))
+
+    const result = await addStepImage(validUploadInput)
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Failed to add image. Please try again.')
+    expect(mockDeleteObject).toHaveBeenCalledOnce()
+  })
+
+  it('does NOT call deleteObject on validation failure (client never PUT)', async () => {
+    const mockDeleteObject = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(getImageStorageAdapter).mockReturnValueOnce({
+      name: 's3',
+      getPublicUrl: vi.fn((key: string) => `https://r2.example.com/bucket/${key}`),
+      deleteObject: mockDeleteObject,
+      generatePresignedUrl: vi.fn(),
+      upload: vi.fn(),
+    } as never)
+
+    // Validation rejects before any work → storageKey empty → nothing to clean up
+    const result = await addStepImage({ ...validUploadInput, storageKey: '' })
+    expect(result.success).toBe(false)
+    expect(mockDeleteObject).not.toHaveBeenCalled()
+  })
 })
 
 const mockStepImageFindMany = vi.mocked(prisma.stepImage.findMany)

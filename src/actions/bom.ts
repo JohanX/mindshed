@@ -310,6 +310,9 @@ export async function getBomItemsByProject(
 
 export async function createBomShortageBlocker(
   input: CreateBomShortageBlockerInput,
+  // Internal — bounded retry after P2002 from the partial unique index.
+  // Not part of the public signature; callers must not pass this.
+  _retryOnRace: boolean = true,
 ): Promise<
   ActionResult<{
     blockerId: string
@@ -384,6 +387,11 @@ export async function createBomShortageBlocker(
 
       const description = buildShortageBlockerDescription(shortRow)
 
+      // If a concurrent call raced past our findFirst check and committed
+      // first, the partial unique index blocker_step_inv_unresolved_unique
+      // will raise P2002 here. We let it bubble to the outer catch, which
+      // retries the whole action once — on retry the findFirst above sees
+      // the now-committed raced blocker and returns alreadyExisted=true.
       const blocker = await tx.blocker.create({
         data: { stepId: step.id, inventoryItemId: inv.id, description },
       })
@@ -424,6 +432,14 @@ export async function createBomShortageBlocker(
       },
     }
   } catch (error) {
+    // P2002 from the partial unique index on Blocker means a concurrent call
+    // committed first. The failed statement leaves the PG tx aborted, so we
+    // can't safely re-query inside the same tx — retry the whole action once
+    // with a fresh tx. On retry, the dedup findFirst sees the committed raced
+    // row and returns alreadyExisted=true (same UX as the non-racing dedup).
+    if (isP2002(error) && _retryOnRace) {
+      return createBomShortageBlocker(input, false)
+    }
     if (isP2025(error)) {
       return { success: false, error: 'BOM item not found.' }
     }

@@ -92,6 +92,11 @@ model StepNote {
   @@map("step_note")
 }
 
+// NOTE: A partial unique index `blocker_step_inv_unresolved_unique` on
+// (step_id, inventory_item_id) WHERE is_resolved = false AND inventory_item_id
+// IS NOT NULL is applied via prisma/post-push.mjs. Prisma cannot express
+// partial indexes in schema.prisma. See Story 18.1 — closes the TOCTOU race
+// between dedup check and insert in createBomShortageBlocker.
 model Blocker {
   id              String         @id @default(uuid())
   stepId          String         @map("step_id")

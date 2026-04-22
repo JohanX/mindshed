@@ -117,6 +117,7 @@ export async function addStepImage(
     return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
   }
 
+  let dbSuccess = false
   try {
     const { image, hobbyId, projectId } = await prisma.$transaction(async (tx) => {
       const step = await tx.step.findUnique({
@@ -145,6 +146,8 @@ export async function addStepImage(
       return { image: created, hobbyId: step.project.hobbyId, projectId: step.projectId }
     })
 
+    dbSuccess = true
+
     revalidatePath(`/hobbies/${hobbyId}/projects/${projectId}`)
     revalidatePath(`/hobbies/${hobbyId}`)
     revalidatePath('/projects')
@@ -152,6 +155,21 @@ export async function addStepImage(
 
     return { success: true, data: { id: image.id } }
   } catch (error) {
+    // Storage orphan cleanup — client already PUT the blob via presigned URL
+    // before calling this action. If the DB insert failed (validation, race
+    // with project deletion, etc.), the object sits orphaned in S3/R2/MinIO.
+    // Mirror the cleanup done in uploadImageCloudinary (see below).
+    if (!dbSuccess) {
+      try {
+        const adapter = getImageStorageAdapter()
+        if (adapter) {
+          await adapter.deleteObject(parsed.data.storageKey)
+        }
+      } catch (cleanupErr) {
+        console.error('Failed to clean up orphaned upload:', cleanupErr)
+      }
+    }
+
     console.error('addStepImage failed:', error)
     if (error instanceof Error) {
       if (error.message === 'STEP_NOT_FOUND') return { success: false, error: 'Step not found.' }

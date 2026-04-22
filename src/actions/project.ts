@@ -298,48 +298,6 @@ export async function archiveProject(id: string): Promise<ActionResult<null>> {
   }
 }
 
-// @deprecated - project completion is now auto-derived from step states (Story 9.3)
-export async function completeProject(id: string): Promise<ActionResult<null>> {
-  const parsed = z.uuid().safeParse(id)
-  if (!parsed.success) {
-    return { success: false, error: 'Invalid project ID' }
-  }
-
-  try {
-    await prisma.$transaction(async (tx) => {
-      const project = await tx.project.findUnique({
-        where: { id: parsed.data },
-        include: { steps: true },
-      })
-      if (!project) throw new Error('PROJECT_NOT_FOUND')
-
-      const allCompleted = project.steps.every(s => s.state === 'COMPLETED')
-      if (!allCompleted) throw new Error('STEPS_NOT_COMPLETED')
-
-      await tx.project.update({
-        where: { id: parsed.data },
-        data: { isCompleted: true },
-      })
-    })
-
-    // Get hobbyId for revalidation
-    const project = await prisma.project.findUnique({ where: { id: parsed.data }, select: { hobbyId: true } })
-    if (project) {
-      revalidatePath(`/hobbies/${project.hobbyId}`)
-    }
-    revalidatePath('/projects')
-    revalidatePath('/')
-    return { success: true, data: null }
-  } catch (error: unknown) {
-    console.error('completeProject failed:', error)
-    if (error instanceof Error) {
-      if (error.message === 'PROJECT_NOT_FOUND') return { success: false, error: 'Project not found.' }
-      if (error.message === 'STEPS_NOT_COMPLETED') return { success: false, error: 'All steps must be completed first.' }
-    }
-    return { success: false, error: 'Failed to complete project.' }
-  }
-}
-
 export interface IdleProjectData extends ProjectCardData {
   hobby: { name: string; color: string; icon: string | null }
   lastActivityAt: Date // Needed for idle duration display

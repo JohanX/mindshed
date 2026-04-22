@@ -745,6 +745,38 @@ describe('createBomShortageBlocker', () => {
     expect(tx.project.update).not.toHaveBeenCalled()
   })
 
+  it('race — blocker.create throws P2002 → outer retry hits dedup and returns alreadyExisted (Story 18.1)', async () => {
+    // Simulate: first tx has findFirst → null, create → P2002 (raced); outer
+    // catch retries with a fresh tx; second tx's findFirst sees the raced
+    // blocker (now committed) and returns alreadyExisted=true.
+    // The failed statement poisons the PG tx so in-tx re-query is unsafe —
+    // this test asserts the outer-retry contract.
+    const firstTx = buildPerRowTx({})
+    firstTx.blocker.create = vi.fn(async () => {
+      throw Object.assign(new Error('Unique constraint violated'), { code: 'P2002' })
+    })
+    const secondTx = buildPerRowTx({ existingBlockerId: 'raced-blocker' })
+    let txCall = 0
+    mockTransaction.mockImplementation(async (fn) => {
+      txCall += 1
+      return fn((txCall === 1 ? firstTx : secondTx) as never)
+    })
+
+    const result = await createBomShortageBlocker({
+      bomItemId: BOM_ITEM_ID,
+      stepId: STEP_ID,
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.alreadyExisted).toBe(true)
+      expect(result.data.blockerId).toBe('raced-blocker')
+    }
+    // Both txs were entered; second resolved via dedup findFirst.
+    expect(txCall).toBe(2)
+    expect(secondTx.step.update).not.toHaveBeenCalled()
+    expect(secondTx.project.update).not.toHaveBeenCalled()
+  })
+
   it('rejects NOT_SHORT when required <= available', async () => {
     const tx = buildPerRowTx({
       row: { ...defaultRow(), requiredQuantity: 50 },

@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { StepStateBadge } from '@/components/step-state-badge'
-import { STEP_STATES, STEP_STATE_CONFIG, type StepState } from '@/lib/step-states'
+import { STEP_STATES, type StepState } from '@/lib/step-states'
 
 interface StepStatusSelectProps {
   currentState: StepState

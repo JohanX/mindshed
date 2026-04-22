@@ -19,7 +19,6 @@ export interface GalleryStep {
 
 interface GallerySectionProps {
   projectId: string
-  projectName: string
   journeyEnabled: boolean
   resultEnabled: boolean
   gallerySlug: string | null
@@ -54,7 +53,6 @@ function CopyLinkButton({ url }: { url: string }) {
 
 export function GallerySection({
   projectId,
-  projectName,
   journeyEnabled,
   resultEnabled,
   gallerySlug,

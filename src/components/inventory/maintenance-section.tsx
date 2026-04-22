@@ -22,7 +22,6 @@ interface MaintenanceSectionProps {
 
 export function MaintenanceSection({ item }: MaintenanceSectionProps) {
   const [isPending, startTransition] = useTransition()
-  const [editing, setEditing] = useState(false)
   const [intervalInput, setIntervalInput] = useState(item.maintenanceIntervalDays?.toString() ?? '')
 
   if (item.type !== 'TOOL') return null
@@ -51,7 +50,6 @@ export function MaintenanceSection({ item }: MaintenanceSectionProps) {
       })
       if (result.success) {
         showSuccessToast('Maintenance schedule set')
-        setEditing(false)
       } else {
         showErrorToast(result.error)
       }
