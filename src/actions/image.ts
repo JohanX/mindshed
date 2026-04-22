@@ -9,6 +9,8 @@ import {
   type AddStepImageInput,
 } from '@/lib/schemas/image'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
+import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
+import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES } from '@/lib/constants/image-upload'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 
@@ -57,7 +59,7 @@ export async function getStepImages(
         sizeBytes: img.sizeBytes,
         createdAt: img.createdAt,
         displayUrl: isUpload ? adapter.getPublicUrl(img.storageKey!) : fallbackUrl(img),
-        thumbnailUrl: isUpload ? adapter.getThumbnailUrl(img.storageKey!, 400) : fallbackUrl(img),
+        thumbnailUrl: isUpload ? adapter.getThumbnailUrl(img.storageKey!, THUMBNAIL_WIDTH.GRID) : fallbackUrl(img),
       }
     })
 
@@ -198,13 +200,11 @@ export async function uploadImageCloudinary(
     return { success: false, error: 'Invalid step ID.' }
   }
 
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
-  if (!allowedTypes.includes(file.type)) {
+  if (!(ACCEPTED_IMAGE_TYPES as readonly string[]).includes(file.type)) {
     return { success: false, error: 'Only JPEG, PNG, and WebP images are allowed.' }
   }
 
-  const maxSize = 10 * 1024 * 1024 // 10 MB
-  if (file.size > maxSize) {
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
     return { success: false, error: 'Image must be under 10 MB.' }
   }
 

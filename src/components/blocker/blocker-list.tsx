@@ -39,7 +39,7 @@ function DashboardBlockerItem({ blocker }: { blocker: BlockerWithContext }) {
       >
         <div
           className="relative overflow-hidden flex items-center gap-3 rounded-lg p-3 transition-opacity hover:opacity-90"
-          style={{ backgroundColor: hobbyColorWithAlpha(hobby.color, 0.12) }}
+          style={{ backgroundColor: hobbyColorWithAlpha(hobby.color) }}
         >
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{blocker.description}</p>

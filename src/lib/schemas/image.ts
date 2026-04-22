@@ -1,4 +1,5 @@
 import { z } from 'zod/v4'
+import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES } from '@/lib/constants/image-upload'
 
 export const addImageLinkSchema = z.object({
   stepId: z.uuid(),
@@ -16,8 +17,8 @@ export const addStepImageSchema = z.object({
   stepId: z.uuid(),
   storageKey: z.string().regex(/^steps\/[a-f0-9-]+\/[a-f0-9-]+\.\w+$/, 'Invalid storage key format'),
   originalFilename: z.string().min(1, 'Original filename is required').max(255),
-  contentType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
-  sizeBytes: z.number().int().positive().max(10 * 1024 * 1024, 'File too large'),
+  contentType: z.enum(ACCEPTED_IMAGE_TYPES),
+  sizeBytes: z.number().int().positive().max(MAX_IMAGE_SIZE_BYTES, 'File too large'),
 })
 
 export type AddStepImageInput = z.infer<typeof addStepImageSchema>

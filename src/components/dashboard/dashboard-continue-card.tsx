@@ -6,6 +6,7 @@ import { hobbyColorWithAlpha } from '@/lib/hobby-color'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
 import type { RecentProject } from '@/lib/schemas/dashboard'
 import { getImageStorageAdapter, isImageProviderSelfOptimized } from '@/lib/image-storage/adapter'
+import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
 
 export interface DashboardContinueCardProps {
   project: RecentProject
@@ -17,7 +18,7 @@ function resolvePhotoUrl(storageKey: string | null | undefined): string | null {
   try {
     const adapter = getImageStorageAdapter()
     if (!adapter) return null
-    return adapter.getThumbnailUrl(storageKey, 64)
+    return adapter.getThumbnailUrl(storageKey, THUMBNAIL_WIDTH.DASHBOARD_CARD)
   } catch {
     return null
   }
@@ -48,7 +49,7 @@ export function DashboardContinueCard({ project, variant }: DashboardContinueCar
         <Card
           size="sm"
           className="relative overflow-hidden transition-opacity hover:opacity-90"
-          style={{ backgroundColor: hobbyColorWithAlpha(project.hobby.color, 0.12) }}
+          style={{ backgroundColor: hobbyColorWithAlpha(project.hobby.color) }}
         >
           <CardContent className="flex items-center gap-3">
             <HobbyIdentity hobby={project.hobby} variant="dot" />
@@ -74,7 +75,7 @@ export function DashboardContinueCard({ project, variant }: DashboardContinueCar
     >
       <Card
         className="relative overflow-hidden transition-opacity hover:opacity-90"
-        style={{ backgroundColor: hobbyColorWithAlpha(project.hobby.color, 0.12) }}
+        style={{ backgroundColor: hobbyColorWithAlpha(project.hobby.color) }}
       >
         <CardContent className="flex items-start gap-4">
           {photoUrl && (

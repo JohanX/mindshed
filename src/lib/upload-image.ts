@@ -1,9 +1,7 @@
 import { addStepImage, uploadImageCloudinary } from '@/actions/image'
+import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES } from '@/lib/constants/image-upload'
 
-const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
-const MAX_SIZE_BYTES = 10 * 1024 * 1024 // 10 MB
-
-export { ACCEPTED_TYPES, MAX_SIZE_BYTES }
+export { ACCEPTED_IMAGE_TYPES as ACCEPTED_TYPES, MAX_IMAGE_SIZE_BYTES }
 
 export async function uploadImageToStorage(params: {
   stepId: string
@@ -11,11 +9,11 @@ export async function uploadImageToStorage(params: {
 }): Promise<{ success: true; key: string } | { success: false; error: string }> {
   const { stepId, file } = params
 
-  if (!ACCEPTED_TYPES.includes(file.type)) {
+  if (!(ACCEPTED_IMAGE_TYPES as readonly string[]).includes(file.type)) {
     return { success: false, error: 'Only JPEG, PNG, and WebP images are allowed.' }
   }
 
-  if (file.size > MAX_SIZE_BYTES) {
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
     return { success: false, error: 'Image must be under 10 MB.' }
   }
 

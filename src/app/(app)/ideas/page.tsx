@@ -40,7 +40,7 @@ export default async function IdeasPage() {
               <Card
                 key={idea.id}
                 className="relative overflow-hidden"
-                style={{ backgroundColor: hobbyColorWithAlpha(idea.hobby.color, 0.12) }}
+                style={{ backgroundColor: hobbyColorWithAlpha(idea.hobby.color) }}
               >
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">

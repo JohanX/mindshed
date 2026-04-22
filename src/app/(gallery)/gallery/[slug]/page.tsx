@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/db'
 import { JourneyGalleryView } from '@/components/gallery/journey-gallery-view'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
+import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
 
 interface JourneyGalleryPageProps {
   params: Promise<{ slug: string }>
@@ -69,7 +70,7 @@ export default async function JourneyGalleryPage({ params }: JourneyGalleryPageP
         const isUpload = img.type === 'UPLOAD' && img.storageKey
         return {
           displayUrl: isUpload ? getPublicImageUrl(img.storageKey!) : img.url ?? '',
-          thumbnailUrl: isUpload ? getThumbnailImageUrl(img.storageKey!, 400) : img.url ?? '',
+          thumbnailUrl: isUpload ? getThumbnailImageUrl(img.storageKey!, THUMBNAIL_WIDTH.GRID) : img.url ?? '',
           originalFilename: img.originalFilename,
         }
       }),

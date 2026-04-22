@@ -44,7 +44,7 @@ export function DashboardIdleSection({ projects }: DashboardIdleSectionProps) {
               <Card
                 size="sm"
                 className="relative overflow-hidden transition-opacity hover:opacity-90"
-                style={{ backgroundColor: hobbyColorWithAlpha(p.hobby.color, 0.12) }}
+                style={{ backgroundColor: hobbyColorWithAlpha(p.hobby.color) }}
               >
                 <CardContent className="space-y-1">
                   <div className="flex items-center gap-2">

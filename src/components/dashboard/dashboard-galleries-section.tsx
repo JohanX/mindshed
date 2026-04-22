@@ -66,7 +66,7 @@ export function DashboardGalleriesSection({ galleries }: DashboardGalleriesSecti
             <Card
               key={gallery.id}
               className="relative overflow-hidden transition-opacity hover:opacity-90"
-              style={{ backgroundColor: hobbyColorWithAlpha(gallery.hobby.color, 0.12) }}
+              style={{ backgroundColor: hobbyColorWithAlpha(gallery.hobby.color) }}
             >
               <CardContent className="space-y-2">
                 <div className="flex items-center gap-2">

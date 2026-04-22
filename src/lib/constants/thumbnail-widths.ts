@@ -1,0 +1,6 @@
+export const THUMBNAIL_WIDTH = {
+  DASHBOARD_CARD: 64,
+  STRIP: 80,
+  GALLERY_SECTION: 80,
+  GRID: 400,
+} as const

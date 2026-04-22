@@ -13,6 +13,7 @@ import { getRemindersForTarget } from '@/actions/reminder'
 import { ReminderBadge } from '@/components/reminder/reminder-badge'
 import { ReminderDatePicker } from '@/components/reminder/reminder-date-picker'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
+import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
 import { GallerySection } from '@/components/gallery/gallery-section'
 import { BomSection } from '@/components/bom/bom-section'
 import type { BomItemData, InventoryOption } from '@/lib/bom'
@@ -94,8 +95,8 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       return {
         id: img.id,
         displayUrl: isUpload ? getPublicImageUrl(img.storageKey!) : fallback,
-        thumbnailUrl: isUpload ? getThumbnailImageUrl(img.storageKey!, 400) : fallback,
-        stripThumbnailUrl: isUpload ? getThumbnailImageUrl(img.storageKey!, 80) : fallback,
+        thumbnailUrl: isUpload ? getThumbnailImageUrl(img.storageKey!, THUMBNAIL_WIDTH.GRID) : fallback,
+        stripThumbnailUrl: isUpload ? getThumbnailImageUrl(img.storageKey!, THUMBNAIL_WIDTH.STRIP) : fallback,
         originalFilename: img.originalFilename,
       }
     }),

@@ -5,6 +5,8 @@ import { getIdleThresholdDays } from '@/lib/settings'
 import type { ActionResult } from '@/lib/action-result'
 import type { DashboardData, RecentProject, ActiveBlocker, IdleProject, PublicGallery } from '@/lib/schemas/dashboard'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
+import { DASHBOARD_LIMITS } from '@/lib/constants/dashboard-limits'
+import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
 
 export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
   try {
@@ -19,7 +21,7 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
       prisma.project.findMany({
         where: { isArchived: false, isCompleted: false },
         orderBy: { lastActivityAt: 'desc' },
-        take: 5,
+        take: DASHBOARD_LIMITS.RECENT_PROJECTS,
         include: {
           hobby: { select: { id: true, name: true, color: true, icon: true } },
           steps: {
@@ -62,7 +64,7 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
           lastActivityAt: { lt: idleThresholdDate },
         },
         orderBy: { lastActivityAt: 'asc' },
-        take: 20,
+        take: DASHBOARD_LIMITS.IDLE_PROJECTS,
         include: {
           hobby: { select: { id: true, name: true, color: true, icon: true } },
           steps: {
@@ -80,7 +82,7 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
         gallerySlug: { not: null },
       },
       orderBy: { updatedAt: 'desc' },
-      take: 3,
+      take: DASHBOARD_LIMITS.PUBLIC_GALLERIES,
       select: {
         id: true,
         name: true,
@@ -94,7 +96,7 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
           orderBy: { sortOrder: 'asc' },
           select: {
             images: {
-              take: 6,
+              take: DASHBOARD_LIMITS.GALLERY_THUMBNAILS,
               orderBy: { createdAt: 'desc' },
               select: { storageKey: true, url: true, type: true },
             },
@@ -111,11 +113,11 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
       journeyGalleryEnabled: g.journeyGalleryEnabled,
       resultGalleryEnabled: g.resultGalleryEnabled,
       hobby: g.hobby,
-      thumbnails: g.steps.flatMap(s => s.images).slice(0, 6).map(img => {
+      thumbnails: g.steps.flatMap(s => s.images).slice(0, DASHBOARD_LIMITS.GALLERY_THUMBNAILS).map(img => {
         if (img.type === 'UPLOAD' && img.storageKey) {
           const adapter = getImageStorageAdapter()
           if (adapter) {
-            try { return adapter.getThumbnailUrl(img.storageKey, 80) } catch { /* fall through */ }
+            try { return adapter.getThumbnailUrl(img.storageKey, THUMBNAIL_WIDTH.GALLERY_SECTION) } catch { /* fall through */ }
           }
         }
         return img.url ?? ''

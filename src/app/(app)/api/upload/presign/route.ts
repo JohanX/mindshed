@@ -2,8 +2,7 @@ import { cookies } from 'next/headers'
 import { isAuthEnabled } from '@/lib/auth'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 import { z } from 'zod/v4'
-
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
+import { ACCEPTED_IMAGE_TYPES } from '@/lib/constants/image-upload'
 
 const EXT_MAP: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -14,7 +13,7 @@ const EXT_MAP: Record<string, string> = {
 const presignRequestSchema = z.object({
   stepId: z.uuid(),
   filename: z.string().min(1),
-  contentType: z.enum(ALLOWED_TYPES),
+  contentType: z.enum(ACCEPTED_IMAGE_TYPES),
 })
 
 export async function POST(request: Request) {

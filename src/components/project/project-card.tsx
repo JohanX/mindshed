@@ -32,7 +32,7 @@ export function ProjectCard({ project, hobby, showHobbyBadge }: ProjectCardProps
     <Link href={`/hobbies/${project.hobbyId}/projects/${project.id}`} className="block">
       <Card
         className="relative overflow-hidden min-h-[44px]"
-        style={hobby ? { backgroundColor: hobbyColorWithAlpha(hobby.color, 0.12) } : undefined}
+        style={hobby ? { backgroundColor: hobbyColorWithAlpha(hobby.color) } : undefined}
       >
         <CardContent className="space-y-2">
           <div className="flex items-center justify-between">

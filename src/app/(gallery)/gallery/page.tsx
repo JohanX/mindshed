@@ -47,7 +47,7 @@ export default async function GalleryIndexPage() {
             <Card
               key={project.id}
               className="relative overflow-hidden"
-              style={{ backgroundColor: hobbyColorWithAlpha(project.hobby.color, 0.12) }}
+              style={{ backgroundColor: hobbyColorWithAlpha(project.hobby.color) }}
             >
               <CardContent className="space-y-2">
                 <div className="flex items-center gap-2">

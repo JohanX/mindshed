@@ -57,7 +57,7 @@ export function ImageLinkInput({ stepId }: ImageLinkInputProps) {
   }
 
   async function handlePastedFile(file: File) {
-    if (!ACCEPTED_TYPES.includes(file.type)) {
+    if (!(ACCEPTED_TYPES as readonly string[]).includes(file.type)) {
       setError('Only JPEG, PNG, and WebP images can be pasted.')
       return
     }

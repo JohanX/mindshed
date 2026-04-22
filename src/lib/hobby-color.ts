@@ -79,7 +79,7 @@ function generateHobbyPaletteDark(color: string): HobbyPalette {
 }
 
 /** Convert a hobby color to a version with alpha transparency (for subtle tints). */
-export function hobbyColorWithAlpha(color: string, alpha: number): string {
+export function hobbyColorWithAlpha(color: string, alpha: number = 0.12): string {
   const hslMatch = color.match(/hsl\(\s*(\d+),\s*(\d+)%,\s*(\d+)%\s*\)/)
   if (hslMatch) {
     return `hsla(${hslMatch[1]}, ${hslMatch[2]}%, ${hslMatch[3]}%, ${alpha})`
