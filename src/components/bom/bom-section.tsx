@@ -16,11 +16,13 @@ import {
 import { BomRow } from '@/components/bom/bom-row'
 import { InventoryCombobox } from '@/components/bom/inventory-combobox'
 import { BomNewInventoryForm } from '@/components/bom/bom-new-inventory-form'
+import { ShortageBanner } from '@/components/bom/shortage-banner'
 
 interface BomSectionProps {
   projectId: string
   initialRows: BomItemData[]
   initialInventoryOptions: InventoryOption[]
+  firstStepName: string | null
 }
 
 function BomStatusPill({ rows }: { rows: BomItemData[] }) {
@@ -52,6 +54,7 @@ export function BomSection({
   projectId,
   initialRows,
   initialInventoryOptions,
+  firstStepName,
 }: BomSectionProps) {
   const [rows, setRows] = useState<BomItemData[]>(initialRows)
   const [options, setOptions] = useState<InventoryOption[]>(initialInventoryOptions)
@@ -129,6 +132,8 @@ export function BomSection({
       </summary>
 
       <div className="space-y-3 px-4 pb-4">
+        <ShortageBanner projectId={projectId} rows={rows} firstStepName={firstStepName} />
+
         {rows.length === 0 && addState.phase === 'closed' && (
           <p className="text-sm text-muted-foreground">
             Plan your materials before you start. List what this project needs — we&apos;ll

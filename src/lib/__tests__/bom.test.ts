@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { summarizeBomRows, renderAvailable, type BomItemData } from '../bom'
+import {
+  summarizeBomRows,
+  renderAvailable,
+  isRowShort,
+  shortageRows,
+  shortageFingerprint,
+  buildShortageBlockerDescription,
+  type BomItemData,
+} from '../bom'
 
 function linked(overrides: Partial<BomItemData> & { required: number; available: number | null; isDeleted?: boolean }): BomItemData {
   return {
@@ -151,5 +159,99 @@ describe('renderAvailable', () => {
       label: '3',
       variant: 'ok',
     })
+  })
+})
+
+describe('isRowShort', () => {
+  it('linked NOT_CONSUMED row with required > available → true', () => {
+    expect(isRowShort(linked({ required: 500, available: 100 }))).toBe(true)
+  })
+  it('linked sufficient row → false', () => {
+    expect(isRowShort(linked({ required: 100, available: 500 }))).toBe(false)
+  })
+  it('exact equality → false', () => {
+    expect(isRowShort(linked({ required: 100, available: 100 }))).toBe(false)
+  })
+  it('CONSUMED row → false', () => {
+    expect(isRowShort(linked({ required: 500, available: 0, consumptionState: 'CONSUMED' }))).toBe(false)
+  })
+  it('UNDONE row → false', () => {
+    expect(isRowShort(linked({ required: 500, available: 0, consumptionState: 'UNDONE' }))).toBe(false)
+  })
+  it('free-form row → false', () => {
+    expect(isRowShort(freeForm({ required: 500 }))).toBe(false)
+  })
+  it('soft-deleted inventory → false', () => {
+    expect(isRowShort(linked({ required: 500, available: 0, isDeleted: true }))).toBe(false)
+  })
+  it('null quantity → false', () => {
+    expect(isRowShort(linked({ required: 500, available: null }))).toBe(false)
+  })
+})
+
+describe('shortageRows', () => {
+  it('preserves input order while filtering to short rows only', () => {
+    const rows = [
+      linked({ id: 'a', required: 500, available: 100 }),
+      linked({ id: 'b', required: 100, available: 500 }),
+      linked({ id: 'c', required: 200, available: 50 }),
+      freeForm({ id: 'd', required: 999 }),
+    ]
+    expect(shortageRows(rows).map((r) => r.id)).toEqual(['a', 'c'])
+  })
+
+  it('empty array → empty array', () => {
+    expect(shortageRows([])).toEqual([])
+  })
+})
+
+describe('shortageFingerprint', () => {
+  it('empty set → empty string', () => {
+    expect(shortageFingerprint([])).toBe('')
+  })
+
+  it('is stable across input reordering', () => {
+    const a = linked({ id: 'a', required: 500, available: 100 })
+    const b = linked({ id: 'b', required: 300, available: 50 })
+    expect(shortageFingerprint([a, b])).toBe(shortageFingerprint([b, a]))
+  })
+
+  it('differs when shortage set membership changes', () => {
+    const a = linked({ id: 'a', required: 500, available: 100 })
+    const b = linked({ id: 'b', required: 300, available: 50 })
+    const c = linked({ id: 'c', required: 200, available: 50 })
+    expect(shortageFingerprint([a, b])).not.toBe(shortageFingerprint([a, b, c]))
+  })
+
+  it('matches when the same rows are included even with unrelated changes', () => {
+    const a = linked({ id: 'a', required: 500, available: 100 })
+    const b = linked({ id: 'b', required: 300, available: 50 })
+    const sufficient = linked({ id: 'c', required: 100, available: 200 })
+    // Adding a sufficient row does not change the fingerprint
+    expect(shortageFingerprint([a, b])).toBe(shortageFingerprint([a, b, sufficient]))
+  })
+})
+
+describe('buildShortageBlockerDescription', () => {
+  it('includes unit when present', () => {
+    expect(buildShortageBlockerDescription(linked({ required: 500, available: 50 }))).toBe(
+      'Need 500 g of Kaolin (have 50)',
+    )
+  })
+
+  it('omits unit when row.unit is null', () => {
+    expect(
+      buildShortageBlockerDescription(linked({ required: 1, available: 0, unit: null })),
+    ).toBe('Need 1 of Kaolin (have 0)')
+  })
+
+  it('treats null inventory.quantity as 0', () => {
+    expect(buildShortageBlockerDescription(linked({ required: 5, available: null }))).toBe(
+      'Need 5 g of Kaolin (have 0)',
+    )
+  })
+
+  it('throws when called on a free-form row', () => {
+    expect(() => buildShortageBlockerDescription(freeForm({ required: 1 }))).toThrow()
   })
 })

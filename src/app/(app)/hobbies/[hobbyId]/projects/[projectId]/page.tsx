@@ -161,6 +161,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         projectId={project.id}
         initialRows={bomRows}
         initialInventoryOptions={inventoryOptions}
+        firstStepName={project.steps[0]?.name ?? null}
       />
 
       {!project.isArchived && (

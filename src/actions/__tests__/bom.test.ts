@@ -4,6 +4,8 @@ vi.mock('@/lib/db', () => ({
   prisma: {
     bomItem: { findMany: vi.fn() },
     $transaction: vi.fn(),
+    blocker: { findFirst: vi.fn(), create: vi.fn() },
+    step: { findFirst: vi.fn(), update: vi.fn() },
   },
 }))
 
@@ -17,6 +19,7 @@ import {
   deleteBomItem,
   getBomItemsByProject,
   addBomItemWithNewInventory,
+  createShortageBlockers,
 } from '../bom'
 import { prisma } from '@/lib/db'
 import { revalidatePath } from 'next/cache'
@@ -584,4 +587,288 @@ describe('addBomItemWithNewInventory', () => {
     if (!result.success) expect(result.error).toBe('Item name collided — please retry.')
   })
 })
+
+// ========================================================================
+// createShortageBlockers — Story 16.4
+// ========================================================================
+
+type ShortageTxMock = {
+  project: {
+    findUnique: ReturnType<typeof vi.fn>
+    update: ReturnType<typeof vi.fn>
+  }
+  step: {
+    findFirst: ReturnType<typeof vi.fn>
+    update: ReturnType<typeof vi.fn>
+  }
+  bomItem: {
+    findMany: ReturnType<typeof vi.fn>
+  }
+  blocker: {
+    findFirst: ReturnType<typeof vi.fn>
+    create: ReturnType<typeof vi.fn>
+  }
+}
+
+type ShortageBomRow = {
+  id: string
+  label: string | null
+  requiredQuantity: number
+  unit: string | null
+  sortOrder: number
+  consumptionState: 'NOT_CONSUMED' | 'CONSUMED' | 'UNDONE'
+  inventoryItem: {
+    id: string
+    name: string
+    type: 'MATERIAL' | 'CONSUMABLE' | 'TOOL'
+    quantity: number | null
+    isDeleted: boolean
+  } | null
+}
+
+function buildShortageTx(opts: {
+  project?: { hobbyId: string; isCompleted: boolean } | null
+  step?: { id: string; name: string; state: string; previousState: string | null } | null
+  bomRows?: ShortageBomRow[]
+  existingBlockerIds?: Set<string> // inventoryItemIds that already have unresolved blockers
+}): ShortageTxMock {
+  const existingSet = opts.existingBlockerIds ?? new Set<string>()
+  return {
+    project: {
+      findUnique: vi.fn(async () =>
+        opts.project !== undefined ? opts.project : { hobbyId: HOBBY_ID, isCompleted: false },
+      ),
+      update: vi.fn(async () => ({ id: PROJECT_ID })),
+    },
+    step: {
+      findFirst: vi.fn(async () =>
+        opts.step !== undefined
+          ? opts.step
+          : { id: 'step-1', name: 'Prep', state: 'NOT_STARTED', previousState: null },
+      ),
+      update: vi.fn(async () => ({ id: 'step-1' })),
+    },
+    bomItem: {
+      findMany: vi.fn(async () => opts.bomRows ?? []),
+    },
+    blocker: {
+      findFirst: vi.fn(async (args: unknown) => {
+        const where = (args as { where: { inventoryItemId: string } }).where
+        return existingSet.has(where.inventoryItemId) ? { id: 'existing' } : null
+      }),
+      create: vi.fn(async () => ({ id: 'new-blocker' })),
+    },
+  }
+}
+
+function shortRow(
+  id: string,
+  inventoryItemId: string,
+  name: string,
+  required: number,
+  available: number,
+  unit: string | null = 'g',
+): ShortageBomRow {
+  return {
+    id,
+    label: null,
+    requiredQuantity: required,
+    unit,
+    sortOrder: 0,
+    consumptionState: 'NOT_CONSUMED',
+    inventoryItem: {
+      id: inventoryItemId,
+      name,
+      type: 'MATERIAL',
+      quantity: available,
+      isDeleted: false,
+    },
+  }
+}
+
+describe('createShortageBlockers', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('rejects invalid UUID before entering transaction', async () => {
+    const result = await createShortageBlockers({ projectId: 'bad' } as never)
+    expect(result.success).toBe(false)
+    expect(mockTransaction).not.toHaveBeenCalled()
+  })
+
+  it('returns "Add a step before creating blockers" when project has zero steps', async () => {
+    const tx = buildShortageTx({ step: null })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await createShortageBlockers({ projectId: PROJECT_ID })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Add a step before creating blockers')
+  })
+
+  it('returns "Project not found." when project does not exist', async () => {
+    const tx = buildShortageTx({ project: null })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await createShortageBlockers({ projectId: PROJECT_ID })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Project not found.')
+  })
+
+  it('returns "Cannot add blockers to a completed project." when isCompleted', async () => {
+    const tx = buildShortageTx({ project: { hobbyId: HOBBY_ID, isCompleted: true } })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await createShortageBlockers({ projectId: PROJECT_ID })
+    expect(result.success).toBe(false)
+    if (!result.success)
+      expect(result.error).toBe('Cannot add blockers to a completed project.')
+  })
+
+  it('returns "Cannot block a completed step." when the first step is completed', async () => {
+    const tx = buildShortageTx({
+      step: { id: 'step-1', name: 'Done', state: 'COMPLETED', previousState: null },
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await createShortageBlockers({ projectId: PROJECT_ID })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Cannot block a completed step.')
+  })
+
+  it('creates one blocker per shortage with correct description template', async () => {
+    const tx = buildShortageTx({
+      bomRows: [
+        shortRow('b1', 'inv-1', 'Kaolin', 500, 100, 'g'),
+        shortRow('b2', 'inv-2', 'Silica', 200, 50, 'g'),
+        // sufficient row — should NOT create a blocker
+        { ...shortRow('b3', 'inv-3', 'Feldspar', 50, 500, 'g') },
+      ],
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await createShortageBlockers({ projectId: PROJECT_ID })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.created).toBe(2)
+      expect(result.data.skipped).toBe(0)
+      expect(result.data.stepName).toBe('Prep')
+    }
+
+    expect(tx.blocker.create).toHaveBeenCalledTimes(2)
+    const first = tx.blocker.create.mock.calls[0][0] as { data: Record<string, unknown> }
+    expect(first.data).toEqual({
+      stepId: 'step-1',
+      inventoryItemId: 'inv-1',
+      description: 'Need 500 g of Kaolin (have 100)',
+      isResolved: false,
+    })
+    const second = tx.blocker.create.mock.calls[1][0] as { data: Record<string, unknown> }
+    expect(second.data.description).toBe('Need 200 g of Silica (have 50)')
+  })
+
+  it('skips shortages that already have an unresolved blocker on the same step', async () => {
+    const tx = buildShortageTx({
+      bomRows: [
+        shortRow('b1', 'inv-1', 'Kaolin', 500, 100),
+        shortRow('b2', 'inv-2', 'Silica', 200, 50),
+      ],
+      existingBlockerIds: new Set(['inv-1']),
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await createShortageBlockers({ projectId: PROJECT_ID })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.created).toBe(1)
+      expect(result.data.skipped).toBe(1)
+    }
+    expect(tx.blocker.create).toHaveBeenCalledTimes(1)
+    const payload = tx.blocker.create.mock.calls[0][0] as { data: Record<string, unknown> }
+    expect(payload.data.inventoryItemId).toBe('inv-2')
+  })
+
+  it('all shortages already blocked → created=0, skipped=N, no state transition', async () => {
+    const tx = buildShortageTx({
+      bomRows: [
+        shortRow('b1', 'inv-1', 'Kaolin', 500, 100),
+        shortRow('b2', 'inv-2', 'Silica', 200, 50),
+      ],
+      existingBlockerIds: new Set(['inv-1', 'inv-2']),
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await createShortageBlockers({ projectId: PROJECT_ID })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.created).toBe(0)
+      expect(result.data.skipped).toBe(2)
+    }
+    // Step state must NOT change when no blockers are created
+    expect(tx.step.update).not.toHaveBeenCalled()
+    expect(tx.blocker.create).not.toHaveBeenCalled()
+  })
+
+  it('cascades step state NOT_STARTED → BLOCKED with previousState on first blocker', async () => {
+    const tx = buildShortageTx({
+      step: { id: 'step-1', name: 'Prep', state: 'NOT_STARTED', previousState: null },
+      bomRows: [shortRow('b1', 'inv-1', 'Kaolin', 500, 100)],
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    await createShortageBlockers({ projectId: PROJECT_ID })
+    expect(tx.step.update).toHaveBeenCalledOnce()
+    const payload = tx.step.update.mock.calls[0][0] as {
+      data: { state: string; previousState: string }
+    }
+    expect(payload.data.state).toBe('BLOCKED')
+    expect(payload.data.previousState).toBe('NOT_STARTED')
+  })
+
+  it('does not overwrite step state when step was already BLOCKED', async () => {
+    const tx = buildShortageTx({
+      step: { id: 'step-1', name: 'Prep', state: 'BLOCKED', previousState: 'IN_PROGRESS' },
+      bomRows: [shortRow('b1', 'inv-1', 'Kaolin', 500, 100)],
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    await createShortageBlockers({ projectId: PROJECT_ID })
+    expect(tx.step.update).not.toHaveBeenCalled()
+  })
+
+  it('bumps lastActivityAt even when no new blockers were created', async () => {
+    const tx = buildShortageTx({ bomRows: [] })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    await createShortageBlockers({ projectId: PROJECT_ID })
+    expect(tx.project.update).toHaveBeenCalledOnce()
+    const payload = tx.project.update.mock.calls[0][0] as {
+      data: { lastActivityAt: Date }
+    }
+    expect(payload.data.lastActivityAt).toBeInstanceOf(Date)
+  })
+
+  it('description omits unit when row.unit is null', async () => {
+    const tx = buildShortageTx({
+      bomRows: [shortRow('b1', 'inv-1', 'Wheel', 1, 0, null)],
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    await createShortageBlockers({ projectId: PROJECT_ID })
+    const payload = tx.blocker.create.mock.calls[0][0] as { data: { description: string } }
+    expect(payload.data.description).toBe('Need 1 of Wheel (have 0)')
+  })
+
+  it('revalidates all affected routes on success', async () => {
+    const tx = buildShortageTx({
+      bomRows: [shortRow('b1', 'inv-1', 'Kaolin', 500, 100)],
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    await createShortageBlockers({ projectId: PROJECT_ID })
+    expect(mockRevalidatePath).toHaveBeenCalledWith(`/hobbies/${HOBBY_ID}/projects/${PROJECT_ID}`)
+    expect(mockRevalidatePath).toHaveBeenCalledWith(`/hobbies/${HOBBY_ID}`)
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/projects')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/')
+  })
+})
+
 
