@@ -8,7 +8,10 @@ vi.mock('@/lib/db', () => ({
     idea: {
       create: vi.fn(),
       findMany: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
     },
+    $transaction: vi.fn(),
   },
 }))
 
@@ -16,12 +19,13 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { createIdea, getIdeasByHobby, getAllIdeas } from '../idea'
+import { createIdea, getIdeasByHobby, getAllIdeas, promoteIdea } from '../idea'
 import { prisma } from '@/lib/db'
 
 const mockHobbyFindUnique = vi.mocked(prisma.hobby.findUnique)
 const mockIdeaCreate = vi.mocked(prisma.idea.create)
 const mockIdeaFindMany = vi.mocked(prisma.idea.findMany)
+const mockTransaction = vi.mocked(prisma.$transaction)
 
 const validUuid = '550e8400-e29b-41d4-a716-446655440000'
 
@@ -209,5 +213,113 @@ describe('getAllIdeas', () => {
     const result = await getAllIdeas()
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toBe('Failed to load ideas.')
+  })
+})
+
+// ==========================================================================
+// promoteIdea — Story 18.4
+// ==========================================================================
+
+describe('promoteIdea', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  function buildPromoteTx(opts: {
+    idea?: {
+      id: string
+      title: string
+      description: string | null
+      hobbyId: string
+      isPromoted: boolean
+    } | null
+    hobby?: { id: string } | null
+    projectId?: string
+  }) {
+    return {
+      idea: {
+        findUnique: vi.fn(async () =>
+          opts.idea === null ? null : (opts.idea ?? defaultIdea()),
+        ),
+        update: vi.fn(async () => ({ id: opts.idea?.id ?? defaultIdea().id })),
+      },
+      hobby: {
+        findUnique: vi.fn(async () =>
+          opts.hobby === null ? null : (opts.hobby ?? { id: 'hobby-1' }),
+        ),
+      },
+      project: {
+        create: vi.fn(async () => ({ id: opts.projectId ?? 'new-project' })),
+      },
+    }
+  }
+
+  function defaultIdea() {
+    return {
+      id: validUuid,
+      title: 'Curved bookends',
+      description: 'Walnut with resin inlays',
+      hobbyId: 'hobby-1',
+      isPromoted: false,
+    }
+  }
+
+  it('rejects invalid UUID', async () => {
+    const result = await promoteIdea('bad')
+    expect(result.success).toBe(false)
+    expect(mockTransaction).not.toHaveBeenCalled()
+  })
+
+  it('happy path — creates a project and marks idea promoted', async () => {
+    const tx = buildPromoteTx({ projectId: 'p-new' })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await promoteIdea(validUuid)
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.projectId).toBe('p-new')
+
+    expect(tx.project.create).toHaveBeenCalledOnce()
+    const createArg = tx.project.create.mock.calls[0][0] as {
+      data: { name: string; description: string | null; hobbyId: string; lastActivityAt: Date }
+    }
+    expect(createArg.data.name).toBe('Curved bookends')
+    expect(createArg.data.description).toBe('Walnut with resin inlays')
+    expect(createArg.data.hobbyId).toBe('hobby-1')
+    expect(createArg.data.lastActivityAt).toBeInstanceOf(Date)
+
+    expect(tx.idea.update).toHaveBeenCalledOnce()
+    const updateArg = tx.idea.update.mock.calls[0][0] as {
+      data: { isPromoted: boolean }
+    }
+    expect(updateArg.data.isPromoted).toBe(true)
+  })
+
+  it('rejects when idea not found', async () => {
+    const tx = buildPromoteTx({ idea: null })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await promoteIdea(validUuid)
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Idea not found.')
+  })
+
+  it('rejects when idea already promoted', async () => {
+    const tx = buildPromoteTx({
+      idea: { ...defaultIdea(), isPromoted: true },
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await promoteIdea(validUuid)
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Idea already promoted.')
+    expect(tx.project.create).not.toHaveBeenCalled()
+  })
+
+  it('rejects when parent hobby missing (soft-deleted race)', async () => {
+    const tx = buildPromoteTx({ hobby: null })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await promoteIdea(validUuid)
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Hobby not found.')
+    expect(tx.project.create).not.toHaveBeenCalled()
   })
 })

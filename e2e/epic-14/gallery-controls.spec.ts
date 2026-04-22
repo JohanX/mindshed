@@ -100,4 +100,50 @@ test.describe('Gallery Controls on Project Detail Page', () => {
     }
     expect(foundResultLink).toBe(true)
   })
+
+  test('gallery toggles persist across hard reload and navigation (Story 18.4)', async ({ page }) => {
+    test.setTimeout(60_000)
+
+    // After the previous tests, Journey is OFF and Result is ON. Start from a
+    // known state by enabling Journey so both are ON.
+    await page.goto(projectUrl)
+    await page.waitForLoadState('networkidle')
+    const journeySwitch = page.locator('#journey-toggle')
+    const resultSwitch = page.locator('#result-toggle')
+
+    if (!(await journeySwitch.isChecked())) {
+      await journeySwitch.click()
+      await page.waitForTimeout(800)
+    }
+    if (!(await resultSwitch.isChecked())) {
+      await resultSwitch.click()
+      await page.waitForTimeout(800)
+    }
+
+    await expect(journeySwitch).toBeChecked()
+    await expect(resultSwitch).toBeChecked()
+
+    // Navigate away, then navigate back — server-side state should match.
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    await page.goto(projectUrl)
+    await page.waitForLoadState('networkidle')
+    await expect(page.locator('#journey-toggle')).toBeChecked()
+    await expect(page.locator('#result-toggle')).toBeChecked()
+
+    // Hard reload — same assertion after a full page refresh.
+    await page.reload()
+    await page.waitForLoadState('networkidle')
+    await expect(page.locator('#journey-toggle')).toBeChecked()
+    await expect(page.locator('#result-toggle')).toBeChecked()
+
+    // Toggle Journey OFF, reload, assert OFF persists.
+    await page.locator('#journey-toggle').click()
+    await page.waitForTimeout(800)
+    await page.reload()
+    await page.waitForLoadState('networkidle')
+    await expect(page.locator('#journey-toggle')).not.toBeChecked()
+    // Result remains ON — toggling one doesn't cascade.
+    await expect(page.locator('#result-toggle')).toBeChecked()
+  })
 })

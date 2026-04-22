@@ -4,6 +4,8 @@ vi.mock('@/lib/db', () => ({
   prisma: {
     inventoryItem: {
       findMany: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
     },
     $transaction: vi.fn(),
   },
@@ -20,10 +22,14 @@ import {
   deleteInventoryItem,
   getInventoryItemOptions,
   getOverdueMaintenanceItems,
+  recordMaintenance,
+  updateMaintenanceData,
 } from '../inventory'
 import { prisma } from '@/lib/db'
 
 const mockFindMany = vi.mocked(prisma.inventoryItem.findMany)
+const mockFindUnique = vi.mocked(prisma.inventoryItem.findUnique)
+const mockUpdate = vi.mocked(prisma.inventoryItem.update)
 const mockTransaction = vi.mocked(prisma.$transaction)
 
 const validId = '550e8400-e29b-41d4-a716-446655440000'
@@ -331,5 +337,165 @@ describe('getOverdueMaintenanceItems', () => {
     const callArg = mockFindMany.mock.calls[0][0] as { where: Record<string, unknown> }
     expect(callArg.where.isDeleted).toBe(false)
     expect(callArg.where.type).toBe('TOOL')
+  })
+})
+
+// ==========================================================================
+// updateMaintenanceData — Story 18.4
+// ==========================================================================
+
+describe('updateMaintenanceData', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('rejects invalid UUID', async () => {
+    const result = await updateMaintenanceData({
+      id: 'bad',
+      lastMaintenanceDate: new Date(),
+      maintenanceIntervalDays: 30,
+    } as never)
+    expect(result.success).toBe(false)
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  it('rejects interval < 1', async () => {
+    const result = await updateMaintenanceData({
+      id: validId,
+      lastMaintenanceDate: new Date(),
+      maintenanceIntervalDays: 0,
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects interval > 365', async () => {
+    const result = await updateMaintenanceData({
+      id: validId,
+      lastMaintenanceDate: new Date(),
+      maintenanceIntervalDays: 400,
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects when item not found', async () => {
+    mockFindUnique.mockResolvedValue(null)
+    const result = await updateMaintenanceData({
+      id: validId,
+      lastMaintenanceDate: new Date(),
+      maintenanceIntervalDays: 30,
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Item not found.')
+  })
+
+  it('rejects when item is soft-deleted', async () => {
+    mockFindUnique.mockResolvedValue({ type: 'TOOL', isDeleted: true } as never)
+    const result = await updateMaintenanceData({
+      id: validId,
+      lastMaintenanceDate: new Date(),
+      maintenanceIntervalDays: 30,
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Item not found.')
+  })
+
+  it('rejects when item is not a TOOL', async () => {
+    mockFindUnique.mockResolvedValue({ type: 'MATERIAL', isDeleted: false } as never)
+    const result = await updateMaintenanceData({
+      id: validId,
+      lastMaintenanceDate: new Date(),
+      maintenanceIntervalDays: 30,
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Maintenance only applies to tools.')
+  })
+
+  it('updates maintenance data on a valid TOOL', async () => {
+    mockFindUnique.mockResolvedValue({ type: 'TOOL', isDeleted: false } as never)
+    mockUpdate.mockResolvedValue({ id: validId } as never)
+
+    const when = new Date('2026-04-01T00:00:00Z')
+    const result = await updateMaintenanceData({
+      id: validId,
+      lastMaintenanceDate: when,
+      maintenanceIntervalDays: 60,
+    })
+    expect(result.success).toBe(true)
+
+    const call = mockUpdate.mock.calls[0][0] as {
+      data: { lastMaintenanceDate: Date; maintenanceIntervalDays: number }
+    }
+    expect(call.data.lastMaintenanceDate).toEqual(when)
+    expect(call.data.maintenanceIntervalDays).toBe(60)
+  })
+})
+
+// ==========================================================================
+// recordMaintenance — Story 18.4
+// ==========================================================================
+
+describe('recordMaintenance', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('rejects invalid UUID', async () => {
+    const result = await recordMaintenance('bad')
+    expect(result.success).toBe(false)
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  it('rejects when item not found', async () => {
+    mockFindUnique.mockResolvedValue(null)
+    const result = await recordMaintenance(validId)
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Item not found.')
+  })
+
+  it('rejects when soft-deleted', async () => {
+    mockFindUnique.mockResolvedValue({
+      type: 'TOOL',
+      maintenanceIntervalDays: 30,
+      isDeleted: true,
+    } as never)
+    const result = await recordMaintenance(validId)
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Item not found.')
+  })
+
+  it('rejects when item is not a TOOL', async () => {
+    mockFindUnique.mockResolvedValue({
+      type: 'MATERIAL',
+      maintenanceIntervalDays: 30,
+      isDeleted: false,
+    } as never)
+    const result = await recordMaintenance(validId)
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Maintenance only applies to tools.')
+  })
+
+  it('rejects when no interval configured', async () => {
+    mockFindUnique.mockResolvedValue({
+      type: 'TOOL',
+      maintenanceIntervalDays: null,
+      isDeleted: false,
+    } as never)
+    const result = await recordMaintenance(validId)
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('No maintenance interval configured.')
+  })
+
+  it('stamps lastMaintenanceDate to now on success', async () => {
+    mockFindUnique.mockResolvedValue({
+      type: 'TOOL',
+      maintenanceIntervalDays: 30,
+      isDeleted: false,
+    } as never)
+    mockUpdate.mockResolvedValue({ id: validId } as never)
+
+    const before = Date.now()
+    const result = await recordMaintenance(validId)
+    expect(result.success).toBe(true)
+
+    const call = mockUpdate.mock.calls[0][0] as {
+      data: { lastMaintenanceDate: Date }
+    }
+    expect(call.data.lastMaintenanceDate.getTime()).toBeGreaterThanOrEqual(before)
   })
 })

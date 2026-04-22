@@ -100,4 +100,58 @@ test.describe('Reminders', () => {
     await page.waitForLoadState('networkidle')
     await expect(page.getByRole('button', { name: 'Remind' })).toBeVisible()
   })
+
+  test('snooze hides the reminder from the dashboard (Story 18.4)', async ({ page }) => {
+    test.setTimeout(60_000)
+
+    // 1. Set a reminder inside the 7-day dashboard window. Compute tomorrow's
+    //    aria-label (react-day-picker format: "Tuesday, April 22, 2026") and
+    //    click that exact day button — unambiguous across leading/trailing
+    //    month cells.
+    await page.goto(projectUrl)
+    await page.waitForLoadState('networkidle')
+    await page.getByRole('button', { name: 'Remind' }).click()
+    await expect(page.getByRole('grid').first()).toBeVisible({ timeout: 5000 })
+    await page.waitForTimeout(300)
+
+    // CalendarDayButton adds `data-day={day.date.toLocaleDateString(locale)}`.
+    // The browser locale is the page's default (en-US for Playwright). Match
+    // it exactly with `'en-US'` to avoid Node-default-locale drift on CI.
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const dataDay = tomorrow.toLocaleDateString('en-US')
+    await page.locator(`[data-day="${dataDay}"]`).first().click()
+    await page.waitForTimeout(1000)
+
+    // 2. Verify the reminder shows on the dashboard.
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    const reminderCard = page
+      .locator('a')
+      .filter({ hasText: `${testPrefix} Reminder Project` })
+      .first()
+    await expect(reminderCard).toBeVisible({ timeout: 5000 })
+
+    // 3. Open the reminder's action menu and click "Snooze 1 day".
+    //    The trigger has an sr-only "Reminder actions" label.
+    await page.getByRole('button', { name: 'Reminder actions' }).first().click()
+    await page.waitForTimeout(300)
+    await page.getByRole('menuitem', { name: 'Snooze 1 day' }).click()
+    await expect(page.getByText(/Snoozed for 1 day/i)).toBeVisible({ timeout: 5000 })
+
+    // 4. Reload dashboard — the reminder is hidden while snoozed (snoozedUntil > now).
+    //    Scope to the reminder card specifically via its "Reminder actions"
+    //    button — the project name also appears in the Continue section and
+    //    we only care about the reminder-card entry here.
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByRole('button', { name: 'Reminder actions' })).toHaveCount(0)
+
+    // 5. The reminder itself still exists on the project — the Remind button
+    //    still shows a date (not "Remind"). Snooze is a hide-from-dashboard
+    //    action, not a delete.
+    await page.goto(projectUrl)
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByRole('button', { name: /\w+ \d+/ })).toBeVisible()
+  })
 })
