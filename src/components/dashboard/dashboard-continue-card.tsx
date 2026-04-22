@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
 import { hobbyColorWithAlpha } from '@/lib/hobby-color'
@@ -77,11 +78,13 @@ export function DashboardContinueCard({ project, variant }: DashboardContinueCar
       >
         <CardContent className="flex items-start gap-4">
           {photoUrl && (
-            <img
+            <Image
               src={photoUrl}
               alt={`Latest photo for ${project.name}`}
+              width={64}
+              height={64}
               className="h-16 w-16 shrink-0 rounded-lg object-cover"
-              loading="lazy"
+              unoptimized={photoUrl.includes('localhost') || photoUrl.includes('127.0.0.1')}
             />
           )}
           <div className="min-w-0 flex-1 space-y-1">

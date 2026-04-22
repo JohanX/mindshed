@@ -144,6 +144,7 @@ export async function getDashboardReminders(): Promise<ActionResult<DashboardRem
     const now = new Date()
     const weekFromNow = new Date(Date.now() + 7 * 86400000)
 
+    // Query 1: upcoming undismissed reminders within the next week.
     const reminders = await prisma.reminder.findMany({
       where: {
         isDismissed: false,
@@ -156,32 +157,88 @@ export async function getDashboardReminders(): Promise<ActionResult<DashboardRem
       orderBy: { dueDate: 'asc' },
     })
 
+    // Partition target IDs by targetType so each kind is fetched in a single
+    // batched findMany. This replaces the previous 1+N pattern (one findUnique
+    // per reminder) with a constant 3 queries regardless of N.
+    const stepIds: string[] = []
+    const projectIds: string[] = []
+    for (const r of reminders) {
+      if (r.targetType === 'STEP') {
+        stepIds.push(r.targetId)
+      } else if (r.targetType === 'PROJECT') {
+        projectIds.push(r.targetId)
+      } else {
+        // Future-proof: if ReminderTargetType gains a variant without updating
+        // this partition, surface a warning instead of silently misrouting.
+        console.warn('getDashboardReminders: unhandled targetType', r.targetType)
+      }
+    }
+
+    const hobbySelect = { id: true, name: true, color: true, icon: true } as const
+    const [stepRows, projectRows] = await Promise.all([
+      stepIds.length > 0
+        ? prisma.step.findMany({
+            where: { id: { in: stepIds } },
+            select: {
+              id: true,
+              name: true,
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                  hobbyId: true,
+                  hobby: { select: hobbySelect },
+                },
+              },
+            },
+          })
+        : Promise.resolve([]),
+      projectIds.length > 0
+        ? prisma.project.findMany({
+            where: { id: { in: projectIds } },
+            select: {
+              id: true,
+              name: true,
+              hobbyId: true,
+              hobby: { select: hobbySelect },
+            },
+          })
+        : Promise.resolve([]),
+    ])
+
+    const stepMap = new Map(stepRows.map((s) => [s.id, s]))
+    const projectMap = new Map(projectRows.map((p) => [p.id, p]))
+
     const enriched: DashboardReminder[] = []
     for (const r of reminders) {
       if (r.targetType === 'STEP') {
-        const step = await prisma.step.findUnique({
-          where: { id: r.targetId },
-          select: { name: true, project: { select: { id: true, name: true, hobbyId: true, hobby: { select: { id: true, name: true, color: true, icon: true } } } } },
+        const step = stepMap.get(r.targetId)
+        if (!step) continue
+        enriched.push({
+          id: r.id,
+          targetType: 'STEP',
+          targetId: r.targetId,
+          targetName: step.name,
+          dueDate: r.dueDate,
+          isOverdue: r.dueDate < now,
+          hobby: step.project.hobby,
+          hobbyId: step.project.hobbyId,
+          projectId: step.project.id,
         })
-        if (step) {
-          enriched.push({
-            id: r.id, targetType: 'STEP', targetId: r.targetId, targetName: step.name,
-            dueDate: r.dueDate, isOverdue: r.dueDate < now,
-            hobby: step.project.hobby, hobbyId: step.project.hobbyId, projectId: step.project.id,
-          })
-        }
       } else {
-        const project = await prisma.project.findUnique({
-          where: { id: r.targetId },
-          select: { id: true, name: true, hobbyId: true, hobby: { select: { id: true, name: true, color: true, icon: true } } },
+        const project = projectMap.get(r.targetId)
+        if (!project) continue
+        enriched.push({
+          id: r.id,
+          targetType: 'PROJECT',
+          targetId: r.targetId,
+          targetName: project.name,
+          dueDate: r.dueDate,
+          isOverdue: r.dueDate < now,
+          hobby: project.hobby,
+          hobbyId: project.hobbyId,
+          projectId: project.id,
         })
-        if (project) {
-          enriched.push({
-            id: r.id, targetType: 'PROJECT', targetId: r.targetId, targetName: project.name,
-            dueDate: r.dueDate, isOverdue: r.dueDate < now,
-            hobby: project.hobby, hobbyId: project.hobbyId, projectId: project.id,
-          })
-        }
       }
     }
 

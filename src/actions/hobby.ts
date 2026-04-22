@@ -40,45 +40,66 @@ export async function createHobby(input: CreateHobbyInput): Promise<ActionResult
 
 export async function getHobbies(): Promise<ActionResult<HobbyWithCounts[]>> {
   try {
-    const hobbies = await prisma.hobby.findMany({
-      orderBy: { sortOrder: 'asc' },
-      include: {
-        projects: {
-          select: {
-            id: true,
-            isArchived: true,
-            isCompleted: true,
-            lastActivityAt: true,
-            steps: { select: { state: true } },
-          },
-        },
-      },
-    })
-
     const idleThresholdDays = await getIdleThresholdDays()
     const idleThreshold = new Date()
     idleThreshold.setDate(idleThreshold.getDate() - idleThresholdDays)
 
+    // 4 parallel DB-side aggregates. Replaces the previous nested-include
+    // pattern that pulled every project + every step into app memory just
+    // to compute counts.
+    //   1. hobbies + total project count per hobby
+    //   2. active (non-archived, non-completed) project count per hobby
+    //   3. blocked (active AND has a BLOCKED step) project count per hobby
+    //   4. idle (active AND lastActivityAt < threshold) project count per hobby
+    const [hobbies, activeCounts, blockedCounts, idleCounts] = await Promise.all([
+      prisma.hobby.findMany({
+        orderBy: { sortOrder: 'asc' },
+        include: { _count: { select: { projects: true } } },
+      }),
+      prisma.project.groupBy({
+        by: ['hobbyId'],
+        where: { isArchived: false, isCompleted: false },
+        _count: { _all: true },
+      }),
+      prisma.project.groupBy({
+        by: ['hobbyId'],
+        where: {
+          isArchived: false,
+          isCompleted: false,
+          steps: { some: { state: 'BLOCKED' } },
+        },
+        _count: { _all: true },
+      }),
+      prisma.project.groupBy({
+        by: ['hobbyId'],
+        where: {
+          isArchived: false,
+          isCompleted: false,
+          lastActivityAt: { lt: idleThreshold },
+        },
+        _count: { _all: true },
+      }),
+    ])
+
+    const activeMap = new Map(activeCounts.map((r) => [r.hobbyId, r._count._all]))
+    const blockedMap = new Map(blockedCounts.map((r) => [r.hobbyId, r._count._all]))
+    const idleMap = new Map(idleCounts.map((r) => [r.hobbyId, r._count._all]))
+
     return {
       success: true,
-      data: hobbies.map(h => {
-        const active = h.projects.filter(p => !p.isArchived && !p.isCompleted)
-        const blocked = active.filter(p => p.steps.some(s => s.state === 'BLOCKED'))
-        const idle = active.filter(p => p.lastActivityAt < idleThreshold)
-        return {
-          id: h.id,
-          name: h.name,
-          color: h.color,
-          icon: h.icon,
-          sortOrder: h.sortOrder,
-          createdAt: h.createdAt,
-          updatedAt: h.updatedAt,
-          projectCount: h.projects.length,
-          activeCount: active.length,
-          blockedCount: blocked.length,
-          idleCount: idle.length,
-        }
-      }),
+      data: hobbies.map((h) => ({
+        id: h.id,
+        name: h.name,
+        color: h.color,
+        icon: h.icon,
+        sortOrder: h.sortOrder,
+        createdAt: h.createdAt,
+        updatedAt: h.updatedAt,
+        projectCount: h._count.projects,
+        activeCount: activeMap.get(h.id) ?? 0,
+        blockedCount: blockedMap.get(h.id) ?? 0,
+        idleCount: idleMap.get(h.id) ?? 0,
+      })),
     }
   } catch (error) {
     console.error('getHobbies failed:', error)

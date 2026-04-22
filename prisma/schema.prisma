@@ -50,6 +50,9 @@ model Project {
   resultStep Step?     @relation("ResultStep", fields: [resultStepId], references: [id], onDelete: SetNull)
   bomItems   BomItem[]
 
+  // Supports dashboard continue-section, hobby project list, and idle detection
+  // queries that filter by hobbyId and sort/filter by lastActivityAt. Story 18.2.
+  @@index([hobbyId, lastActivityAt])
   @@map("project")
 }
 
@@ -78,6 +81,9 @@ model Step {
   blockers         Blocker[]
   images           StepImage[]
 
+  // Supports the project detail page's ordered step list (WHERE project_id = ?
+  // ORDER BY sort_order). Story 18.2.
+  @@index([projectId, sortOrder])
   @@map("step")
 }
 
@@ -109,6 +115,9 @@ model Blocker {
   step          Step           @relation(fields: [stepId], references: [id], onDelete: Cascade)
   inventoryItem InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
 
+  // Supports the dashboard Active Blockers section (WHERE is_resolved = false
+  // ORDER BY created_at DESC). Story 18.2.
+  @@index([isResolved, createdAt])
   @@map("blocker")
 }
 
