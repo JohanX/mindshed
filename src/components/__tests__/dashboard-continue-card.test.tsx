@@ -24,6 +24,7 @@ vi.mock('@/lib/image-storage/adapter', () => ({
     getPublicUrl: (key: string) => `https://r2.example.com/bucket/${key}`,
     getThumbnailUrl: (key: string, width: number) => `https://r2.example.com/bucket/${key}?w=${width}`,
   }),
+  isImageProviderSelfOptimized: () => true,
 }))
 
 const baseProject: RecentProject = {

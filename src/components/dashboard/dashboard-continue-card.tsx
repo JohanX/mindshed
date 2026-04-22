@@ -5,7 +5,7 @@ import { HobbyIdentity } from '@/components/hobby/hobby-identity'
 import { hobbyColorWithAlpha } from '@/lib/hobby-color'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
 import type { RecentProject } from '@/lib/schemas/dashboard'
-import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
+import { getImageStorageAdapter, isImageProviderSelfOptimized } from '@/lib/image-storage/adapter'
 
 export interface DashboardContinueCardProps {
   project: RecentProject
@@ -84,7 +84,7 @@ export function DashboardContinueCard({ project, variant }: DashboardContinueCar
               width={64}
               height={64}
               className="h-16 w-16 shrink-0 rounded-lg object-cover"
-              unoptimized={photoUrl.includes('res.cloudinary.com') || photoUrl.includes('localhost') || photoUrl.includes('127.0.0.1')}
+              unoptimized={isImageProviderSelfOptimized()}
             />
           )}
           <div className="min-w-0 flex-1 space-y-1">

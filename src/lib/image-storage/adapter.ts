@@ -68,6 +68,16 @@ export function getImageStorageAdapter(): ImageStorageAdapter | null {
 }
 
 /**
+ * Whether the image provider handles its own optimization (format, quality, resize).
+ * Cloudinary: true — URLs already include f_auto,q_auto,w_N transforms.
+ * S3: true — dev uses private IPs unreachable by Next.js optimizer; prod R2 same.
+ * Use this to set `unoptimized` on next/image components.
+ */
+export function isImageProviderSelfOptimized(): boolean {
+  return !!getImageStorageAdapter()
+}
+
+/**
  * Reset the cached adapter instance (for testing only).
  * @internal
  */
