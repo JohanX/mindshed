@@ -25,6 +25,21 @@ const mockProjectFindMany = vi.mocked(prisma.project.findMany)
 const mockBlockerFindMany = vi.mocked(prisma.blocker.findMany)
 const mockStepImageFindMany = vi.mocked(prisma.stepImage.findMany)
 
+// getDashboardData calls prisma.project.findMany 3 times:
+//   1. recentProjects — include: { hobby, steps }
+//   2. idleProjects   — include: { hobby, steps }
+//   3. rawGalleries   — select: { gallerySlug, ... }  (disambiguated via select.gallerySlug)
+// setProjectFindManyReturns wires a single mockImplementation that returns
+// the provided list for the include-shape calls and an empty list for the
+// gallery select-shape call (so `steps.flatMap(s => s.images)` is a no-op).
+function setProjectFindManyReturns(data: unknown[]) {
+  mockProjectFindMany.mockImplementation(async (args: unknown) => {
+    const a = args as { select?: { gallerySlug?: boolean } } | undefined
+    if (a?.select?.gallerySlug) return [] as never
+    return data as never
+  })
+}
+
 describe('getDashboardData', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -32,7 +47,7 @@ describe('getDashboardData', () => {
 
   it('returns dashboard data with all sections', async () => {
     mockHobbyCount.mockResolvedValue(3)
-    mockProjectFindMany.mockResolvedValue([
+    setProjectFindManyReturns([
       {
         id: 'p1', name: 'Recent Project', hobbyId: 'h1', lastActivityAt: new Date(),
         hobby: { id: 'h1', name: 'Woodworking', color: '#8B4513', icon: null },
@@ -40,7 +55,7 @@ describe('getDashboardData', () => {
           { id: 's1', name: 'Cut wood', state: 'IN_PROGRESS', sortOrder: 0 },
         ],
       },
-    ] as never)
+    ])
     mockBlockerFindMany.mockResolvedValue([])
     mockStepImageFindMany.mockResolvedValue([])
 
@@ -58,7 +73,7 @@ describe('getDashboardData', () => {
 
   it('returns empty arrays when no data exists', async () => {
     mockHobbyCount.mockResolvedValue(0)
-    mockProjectFindMany.mockResolvedValue([])
+    setProjectFindManyReturns([])
     mockBlockerFindMany.mockResolvedValue([])
     mockStepImageFindMany.mockResolvedValue([])
 
@@ -86,7 +101,7 @@ describe('getDashboardData', () => {
 
   it('includes blocker context data', async () => {
     mockHobbyCount.mockResolvedValue(1)
-    mockProjectFindMany.mockResolvedValue([])
+    setProjectFindManyReturns([])
     mockBlockerFindMany.mockResolvedValue([
       {
         id: 'b1',
@@ -118,13 +133,13 @@ describe('getDashboardData', () => {
 
   it('batches latest photo fetch per project', async () => {
     mockHobbyCount.mockResolvedValue(1)
-    mockProjectFindMany.mockResolvedValue([
+    setProjectFindManyReturns([
       {
         id: 'p1', name: 'Project', hobbyId: 'h1', lastActivityAt: new Date(),
         hobby: { id: 'h1', name: 'Hobby', color: '#000', icon: null },
         steps: [{ id: 's1', name: 'Step', state: 'NOT_STARTED', sortOrder: 0 }],
       },
-    ] as never)
+    ])
     mockBlockerFindMany.mockResolvedValue([])
     mockStepImageFindMany.mockResolvedValue([
       { storageKey: 'steps/s1/photo.jpg', originalFilename: 'photo.jpg', step: { projectId: 'p1' } },

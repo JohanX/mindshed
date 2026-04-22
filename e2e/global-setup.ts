@@ -52,6 +52,15 @@ export default async function globalSetup() {
         WHERE "inventory_item_id" IS NOT NULL
     `)
 
+    // Partial unique index for blocker (Story 18.1) — mirrors post-push.mjs
+    // so E2E tests exercise the same TOCTOU guard as production.
+    await client.query('DROP INDEX IF EXISTS "blocker_step_inv_unresolved_unique"')
+    await client.query(`
+      CREATE UNIQUE INDEX "blocker_step_inv_unresolved_unique"
+        ON "blocker" ("step_id", "inventory_item_id")
+        WHERE "is_resolved" = false AND "inventory_item_id" IS NOT NULL
+    `)
+
     await client.query(`
       TRUNCATE TABLE setting, reminder, bom_item, inventory_item, step_image, step_note, blocker, idea, step, project, hobby RESTART IDENTITY CASCADE
     `)
