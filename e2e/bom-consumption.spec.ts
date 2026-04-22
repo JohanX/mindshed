@@ -89,16 +89,12 @@ test.describe('BOM Consumption (Mark / Undo) + Clone Integration', () => {
     await expect(combobox).toBeVisible()
     await combobox.fill(itemName)
     await page.getByRole('option', { name: new RegExp(itemName) }).first().click()
-    const requiredInput = page.getByLabel('Required', { exact: true })
-    await expect(requiredInput).toBeVisible()
-    await requiredInput.fill(required)
-    await page
-      .locator('form')
-      .filter({ has: page.getByLabel('Required', { exact: true }) })
-      .getByRole('button', { name: /^Save$/ })
-      .click()
-    await expect(page.getByLabel('Required', { exact: true })).toHaveCount(0, { timeout: 5000 })
     await expect(page.getByText(itemName).first()).toBeVisible({ timeout: 5000 })
+    const row = page.locator('table tbody tr').filter({ hasText: itemName })
+    const requiredInput = row.getByLabel('Required quantity')
+    await requiredInput.fill(required)
+    await requiredInput.blur()
+    await expect(page.getByText('BOM item updated').first()).toBeVisible({ timeout: 5000 })
   }
 
   test('Mark consumed → Undo cycle for a MATERIAL row, TOOL row hides the action', async ({ page }) => {

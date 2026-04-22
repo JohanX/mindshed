@@ -6,7 +6,9 @@ export const addBomItemSchema = z
     projectId: z.uuid(),
     label: z.string().trim().min(1).max(100).optional(),
     inventoryItemId: z.uuid().optional(),
-    requiredQuantity: z.number().positive('Required quantity must be greater than 0'),
+    // Allow 0 on add — picking from the combobox creates a row with 0 required
+    // and the user edits the real value in-row. Update path enforces positive.
+    requiredQuantity: z.number().min(0, 'Required quantity must be 0 or more'),
     unit: z.string().trim().max(50).optional(),
   })
   .refine(

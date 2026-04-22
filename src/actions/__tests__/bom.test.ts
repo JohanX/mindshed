@@ -138,10 +138,15 @@ describe('addBomItem', () => {
     expect(result.success).toBe(false)
   })
 
-  it('rejects zero or negative requiredQuantity', async () => {
-    let r = await addBomItem({ projectId: PROJECT_ID, label: 'X', requiredQuantity: 0 })
-    expect(r.success).toBe(false)
-    r = await addBomItem({ projectId: PROJECT_ID, label: 'X', requiredQuantity: -5 })
+  it('accepts zero requiredQuantity (combobox-pick creates rows at 0; user edits in-row)', async () => {
+    const tx = buildTx({ maxSortOrder: null })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+    const r = await addBomItem({ projectId: PROJECT_ID, label: 'X', requiredQuantity: 0 })
+    expect(r.success).toBe(true)
+  })
+
+  it('rejects negative requiredQuantity', async () => {
+    const r = await addBomItem({ projectId: PROJECT_ID, label: 'X', requiredQuantity: -5 })
     expect(r.success).toBe(false)
   })
 

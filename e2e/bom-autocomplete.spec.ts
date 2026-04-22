@@ -73,7 +73,7 @@ test.describe('BOM Autocomplete + Inline Inventory Creation', () => {
     await page.close()
   })
 
-  test('pick existing inventory item via combobox', async ({ page }) => {
+  test('pick existing inventory item via combobox — row added immediately with 0 required', async ({ page }) => {
     await page.goto(projectUrl)
     await page.waitForLoadState('networkidle')
 
@@ -82,21 +82,19 @@ test.describe('BOM Autocomplete + Inline Inventory Creation', () => {
     await expect(combobox).toBeVisible()
     await combobox.fill(materialName.slice(0, 8)) // partial prefix
 
-    // The matching option should be visible in the listbox
     const option = page.getByRole('option', { name: new RegExp(materialName) })
     await expect(option).toBeVisible()
     await option.click()
 
-    // Pick-required inline form appears
-    await expect(page.getByLabel('Required', { exact: true })).toBeVisible()
-    await page.getByLabel('Required', { exact: true }).fill('50')
-    await page.getByRole('button', { name: /^Save$/ }).click()
-
+    // Row is added immediately with required=0 — no intermediate form
     await expect(page.getByText(materialName).first()).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('table').getByLabel('Required quantity').first()).toHaveValue('0')
+    // Pill reads "1 items · 1 short" because 0 required with available 100 is not short
+    // — but item is linked with qty. Actually required=0 < available=100, so NOT short.
     await expect(page.getByText('1 item · ready')).toBeVisible()
   })
 
-  test('same item cannot be added twice → "Already in this BOM" toast', async ({ page }) => {
+  test('already-linked item is hidden from subsequent combobox', async ({ page }) => {
     await page.goto(projectUrl)
     await page.waitForLoadState('networkidle')
 
@@ -104,18 +102,11 @@ test.describe('BOM Autocomplete + Inline Inventory Creation', () => {
     const combobox = page.getByPlaceholder('Type to search inventory…')
     await combobox.fill(materialName.slice(0, 8))
 
-    // Linked items ARE shown in the combobox (UI doesn't hide them) — AC #4
-    // requires the duplicate-add attempt to surface the "Already in this BOM"
-    // toast rather than silently filter the option away.
-    await page.getByRole('option', { name: new RegExp(materialName) }).click()
-    await page.getByLabel('Required', { exact: true }).fill('25')
-    await page.getByRole('button', { name: /^Save$/ }).click()
+    // Already-linked items are filtered out of the combobox (post-Epic-16 UX fix)
+    const option = page.getByRole('option', { name: new RegExp(`^${materialName}$`) })
+    await expect(option).toHaveCount(0)
 
-    await expect(page.getByText('Already in this BOM')).toBeVisible({ timeout: 5000 })
-
-    // No second row was added — only the single linked row from test 1 remains
-    const linkedRows = page.locator('table').getByText(materialName)
-    await expect(linkedRows).toHaveCount(1)
+    await page.keyboard.press('Escape')
   })
 
   test('add new inventory item via combobox → persists to /inventory and BOM', async ({ page }) => {

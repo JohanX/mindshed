@@ -66,24 +66,20 @@ test.describe('BOM Shortage Banner + Auto-Blocker', () => {
   })
 
   async function addBomLinkedRow(page: Parameters<Parameters<typeof test>[1]>[0]['page'], itemName: string, required: string) {
-    // Ensure no stale combobox / pick-required form from a prior add
     await expect(page.getByPlaceholder('Type to search inventory…')).toHaveCount(0)
     await page.getByRole('button', { name: /Add row/ }).click()
     const combobox = page.getByPlaceholder('Type to search inventory…')
     await expect(combobox).toBeVisible()
     await combobox.fill(itemName)
     await page.getByRole('option', { name: new RegExp(itemName) }).first().click()
-    const requiredInput = page.getByLabel('Required', { exact: true })
-    await expect(requiredInput).toBeVisible()
-    await requiredInput.fill(required)
-    await page
-      .locator('form')
-      .filter({ has: page.getByLabel('Required', { exact: true }) })
-      .getByRole('button', { name: /^Save$/ })
-      .click()
-    // Wait for the inline form to disappear before returning — signals server round-trip complete
-    await expect(page.getByLabel('Required', { exact: true })).toHaveCount(0, { timeout: 5000 })
+    // Row is added immediately with required=0; wait for it to appear, then
+    // edit the required qty via blur-save on the inline input.
     await expect(page.getByText(itemName).first()).toBeVisible({ timeout: 5000 })
+    const row = page.locator('table tbody tr').filter({ hasText: itemName })
+    const requiredInput = row.getByLabel('Required quantity')
+    await requiredInput.fill(required)
+    await requiredInput.blur()
+    await expect(page.getByText('BOM item updated').first()).toBeVisible({ timeout: 5000 })
   }
 
   test.afterAll(async ({ browser }) => {
