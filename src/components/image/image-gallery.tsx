@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 export interface GalleryImage {
   id: string
   displayUrl: string
+  thumbnailUrl?: string
   originalFilename: string | null
 }
 
@@ -84,7 +85,7 @@ export function ImageGallery({ images, stepId }: ImageGalleryProps) {
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={image.displayUrl}
+                  src={image.thumbnailUrl || image.displayUrl}
                   alt={image.originalFilename ?? ''}
                   loading="lazy"
                   className="h-full w-full object-cover"

@@ -23,6 +23,7 @@ export interface StepImageWithDisplayUrl {
   sizeBytes: number | null
   createdAt: Date
   displayUrl: string
+  thumbnailUrl: string
 }
 
 const stepIdSchema = z.object({ stepId: z.uuid() })
@@ -42,20 +43,23 @@ export async function getStepImages(
     })
 
     const adapter = getImageStorageAdapter()
-    const withDisplayUrl: StepImageWithDisplayUrl[] = images.map((img) => ({
-      id: img.id,
-      stepId: img.stepId,
-      type: img.type as 'UPLOAD' | 'LINK',
-      storageKey: img.storageKey,
-      url: img.url,
-      originalFilename: img.originalFilename,
-      contentType: img.contentType,
-      sizeBytes: img.sizeBytes,
-      createdAt: img.createdAt,
-      displayUrl: img.type === 'UPLOAD' && img.storageKey && adapter
-        ? adapter.getPublicUrl(img.storageKey)
-        : img.url ?? '',
-    }))
+    const fallbackUrl = (img: { url: string | null }) => img.url ?? ''
+    const withDisplayUrl: StepImageWithDisplayUrl[] = images.map((img) => {
+      const isUpload = img.type === 'UPLOAD' && img.storageKey && adapter
+      return {
+        id: img.id,
+        stepId: img.stepId,
+        type: img.type as 'UPLOAD' | 'LINK',
+        storageKey: img.storageKey,
+        url: img.url,
+        originalFilename: img.originalFilename,
+        contentType: img.contentType,
+        sizeBytes: img.sizeBytes,
+        createdAt: img.createdAt,
+        displayUrl: isUpload ? adapter.getPublicUrl(img.storageKey!) : fallbackUrl(img),
+        thumbnailUrl: isUpload ? adapter.getThumbnailUrl(img.storageKey!, 400) : fallbackUrl(img),
+      }
+    })
 
     return { success: true, data: { images: withDisplayUrl } }
   } catch (error) {

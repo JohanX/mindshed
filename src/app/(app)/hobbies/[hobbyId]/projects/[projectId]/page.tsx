@@ -32,6 +32,16 @@ function getPublicImageUrl(storageKey: string): string {
   }
 }
 
+function getThumbnailImageUrl(storageKey: string, width: number): string {
+  const adapter = getImageStorageAdapter()
+  if (!adapter) return ''
+  try {
+    return adapter.getThumbnailUrl(storageKey, width)
+  } catch {
+    return ''
+  }
+}
+
 export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const { hobbyId, projectId } = await params
   const project = await prisma.project.findUnique({
@@ -78,13 +88,15 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     previousState: (s.previousState as StepState | null) ?? null,
     sortOrder: s.sortOrder,
     notes: s.notes.map(n => ({ id: n.id, text: n.text, createdAt: n.createdAt })),
-    images: s.images.map(img => ({
-      id: img.id,
-      displayUrl: img.type === 'UPLOAD' && img.storageKey
-        ? getPublicImageUrl(img.storageKey)
-        : img.url ?? '',
-      originalFilename: img.originalFilename,
-    })),
+    images: s.images.map(img => {
+      const isUpload = img.type === 'UPLOAD' && img.storageKey
+      return {
+        id: img.id,
+        displayUrl: isUpload ? getPublicImageUrl(img.storageKey!) : img.url ?? '',
+        thumbnailUrl: isUpload ? getThumbnailImageUrl(img.storageKey!, 400) : img.url ?? '',
+        originalFilename: img.originalFilename,
+      }
+    }),
     blockers: s.blockers.map(b => ({ id: b.id, description: b.description })),
   }))
 

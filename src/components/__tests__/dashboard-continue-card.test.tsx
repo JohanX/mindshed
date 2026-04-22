@@ -22,6 +22,7 @@ vi.mock('next/image', () => ({
 vi.mock('@/lib/image-storage/adapter', () => ({
   getImageStorageAdapter: () => ({
     getPublicUrl: (key: string) => `https://r2.example.com/bucket/${key}`,
+    getThumbnailUrl: (key: string, width: number) => `https://r2.example.com/bucket/${key}?w=${width}`,
   }),
 }))
 
@@ -67,7 +68,7 @@ describe('DashboardContinueCard', () => {
       render(<DashboardContinueCard project={baseProject} variant="primary" />)
       const img = screen.getByAltText('Latest photo for Walnut Side Table')
       expect(img).toBeInTheDocument()
-      expect(img).toHaveAttribute('src', 'https://r2.example.com/bucket/images/photo-1.jpg')
+      expect(img).toHaveAttribute('src', 'https://r2.example.com/bucket/images/photo-1.jpg?w=64')
     })
 
     it('does not render photo when latestPhoto is null', () => {

@@ -55,6 +55,26 @@ describe('S3StorageAdapter', () => {
     })
   })
 
+  describe('getThumbnailUrl', () => {
+    it('returns same URL as getPublicUrl (no transforms for S3)', () => {
+      const adapter = createS3Adapter()
+      const storageKey = 'steps/abc/img.jpg'
+      expect(adapter.getThumbnailUrl(storageKey, 64)).toBe(adapter.getPublicUrl(storageKey))
+    })
+
+    it('ignores width parameter — S3 has no URL-based transforms', () => {
+      const adapter = createS3Adapter()
+      const key = 'steps/abc/img.jpg'
+      expect(adapter.getThumbnailUrl(key, 64)).toBe(adapter.getThumbnailUrl(key, 400))
+    })
+
+    it('uses R2_PUBLIC_URL when set', () => {
+      process.env.R2_PUBLIC_URL = 'https://cdn.example.com'
+      const adapter = createS3Adapter()
+      expect(adapter.getThumbnailUrl('key.jpg', 80)).toBe('https://cdn.example.com/test-bucket/key.jpg')
+    })
+  })
+
   describe('generatePresignedUrl', () => {
     it('returns presigned URL and key', async () => {
       const adapter = createS3Adapter()

@@ -37,6 +37,14 @@ class CloudinaryStorageAdapter implements ImageStorageAdapter {
     return `https://res.cloudinary.com/${cloudName}/image/upload/${storageKey}`
   }
 
+  getThumbnailUrl(storageKey: string, width: number): string {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME
+    if (!cloudName) {
+      throw new Error('Missing CLOUDINARY_CLOUD_NAME environment variable.')
+    }
+    return `https://res.cloudinary.com/${cloudName}/image/upload/f_auto,q_auto,w_${width}/${storageKey}`
+  }
+
   async deleteObject(storageKey: string): Promise<void> {
     await cloudinary.uploader.destroy(storageKey)
   }

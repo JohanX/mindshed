@@ -17,7 +17,7 @@ function resolvePhotoUrl(storageKey: string | null | undefined): string | null {
   try {
     const adapter = getImageStorageAdapter()
     if (!adapter) return null
-    return adapter.getPublicUrl(storageKey)
+    return adapter.getThumbnailUrl(storageKey, 64)
   } catch {
     return null
   }

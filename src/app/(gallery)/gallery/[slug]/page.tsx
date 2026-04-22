@@ -19,6 +19,16 @@ function getPublicImageUrl(storageKey: string): string {
   }
 }
 
+function getThumbnailImageUrl(storageKey: string, width: number): string {
+  const adapter = getImageStorageAdapter()
+  if (!adapter) return ''
+  try {
+    return adapter.getThumbnailUrl(storageKey, width)
+  } catch {
+    return ''
+  }
+}
+
 export default async function JourneyGalleryPage({ params }: JourneyGalleryPageProps) {
   const { slug } = await params
 
@@ -55,12 +65,14 @@ export default async function JourneyGalleryPage({ params }: JourneyGalleryPageP
     .map(s => ({
       name: s.name,
       notes: s.notes,
-      images: s.images.map(img => ({
-        displayUrl: img.type === 'UPLOAD' && img.storageKey
-          ? getPublicImageUrl(img.storageKey)
-          : img.url ?? '',
-        originalFilename: img.originalFilename,
-      })),
+      images: s.images.map(img => {
+        const isUpload = img.type === 'UPLOAD' && img.storageKey
+        return {
+          displayUrl: isUpload ? getPublicImageUrl(img.storageKey!) : img.url ?? '',
+          thumbnailUrl: isUpload ? getThumbnailImageUrl(img.storageKey!, 400) : img.url ?? '',
+          originalFilename: img.originalFilename,
+        }
+      }),
     }))
 
   return (

@@ -59,6 +59,10 @@ class S3StorageAdapter implements ImageStorageAdapter {
     return `${endpoint}/${bucket}/${storageKey}`
   }
 
+  getThumbnailUrl(storageKey: string, _width: number): string {
+    return this.getPublicUrl(storageKey)
+  }
+
   async deleteObject(storageKey: string): Promise<void> {
     const client = getClient()
     const bucket = getBucket()

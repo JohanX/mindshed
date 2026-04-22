@@ -115,7 +115,7 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
         if (img.type === 'UPLOAD' && img.storageKey) {
           const adapter = getImageStorageAdapter()
           if (adapter) {
-            try { return adapter.getPublicUrl(img.storageKey) } catch { /* fall through */ }
+            try { return adapter.getThumbnailUrl(img.storageKey, 80) } catch { /* fall through */ }
           }
         }
         return img.url ?? ''

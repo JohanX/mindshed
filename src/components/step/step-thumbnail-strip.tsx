@@ -2,7 +2,7 @@ import { ImageOff } from 'lucide-react'
 import { useState } from 'react'
 
 interface StepThumbnailStripProps {
-  images: { id: string; displayUrl: string }[]
+  images: { id: string; displayUrl: string; thumbnailUrl?: string }[]
   maxVisible?: number
 }
 
@@ -45,7 +45,7 @@ export function StepThumbnailStrip({ images, maxVisible = 4 }: StepThumbnailStri
       aria-label={`Step has ${images.length} photos`}
     >
       {visible.map((img) => (
-        <Thumbnail key={img.id} src={img.displayUrl} alt="" />
+        <Thumbnail key={img.id} src={img.thumbnailUrl || img.displayUrl} alt="" />
       ))}
       {overflow > 0 && (
         <span className="text-xs text-muted-foreground font-medium px-1">

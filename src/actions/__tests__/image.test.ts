@@ -25,6 +25,7 @@ vi.mock('next/cache', () => ({
 vi.mock('@/lib/image-storage/adapter', () => ({
   getImageStorageAdapter: vi.fn(() => ({
     getPublicUrl: vi.fn((key: string) => `https://r2.example.com/bucket/${key}`),
+    getThumbnailUrl: vi.fn((key: string, width: number) => `https://r2.example.com/bucket/${key}?w=${width}`),
     deleteObject: vi.fn().mockResolvedValue(undefined),
     generatePresignedUrl: vi.fn().mockResolvedValue({ url: 'https://presigned.url', key: 'test-key' }),
     upload: vi.fn().mockResolvedValue({ publicUrl: 'https://cdn.example.com/img.jpg', storageKey: 'test-key' }),
@@ -324,6 +325,7 @@ describe('getStepImages', () => {
     if (result.success) {
       expect(result.data.images).toHaveLength(1)
       expect(result.data.images[0].displayUrl).toBe('https://r2.example.com/bucket/steps/abc/def.jpg')
+      expect(result.data.images[0].thumbnailUrl).toBe('https://r2.example.com/bucket/steps/abc/def.jpg?w=400')
     }
   })
 
@@ -347,6 +349,7 @@ describe('getStepImages', () => {
     if (result.success) {
       expect(result.data.images).toHaveLength(1)
       expect(result.data.images[0].displayUrl).toBe('https://example.com/photo.jpg')
+      expect(result.data.images[0].thumbnailUrl).toBe('https://example.com/photo.jpg')
     }
   })
 

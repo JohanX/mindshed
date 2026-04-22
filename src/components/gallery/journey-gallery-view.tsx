@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 interface JourneyStep {
   name: string
   notes: { text: string }[]
-  images: { displayUrl: string; originalFilename: string | null }[]
+  images: { displayUrl: string; thumbnailUrl?: string; originalFilename: string | null }[]
 }
 
 interface JourneyGalleryViewProps {
@@ -80,7 +80,7 @@ export function JourneyGalleryView({ project, steps }: JourneyGalleryViewProps) 
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={img.displayUrl}
+                    src={img.thumbnailUrl || img.displayUrl}
                     alt={img.originalFilename ?? `${step.name} image ${imgIdx + 1}`}
                     className="h-full w-full object-cover"
                     loading="lazy"

@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('../s3', () => ({
   createS3Adapter: vi.fn(() => ({
     getPublicUrl: vi.fn(),
+    getThumbnailUrl: vi.fn(),
     deleteObject: vi.fn(),
     generatePresignedUrl: vi.fn(),
     upload: vi.fn(),
@@ -13,6 +14,7 @@ vi.mock('../s3', () => ({
 vi.mock('../cloudinary', () => ({
   createCloudinaryAdapter: vi.fn(() => ({
     getPublicUrl: vi.fn(),
+    getThumbnailUrl: vi.fn(),
     deleteObject: vi.fn(),
     generatePresignedUrl: vi.fn(),
     upload: vi.fn(),

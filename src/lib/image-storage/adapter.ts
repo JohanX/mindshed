@@ -2,8 +2,15 @@ import { createS3Adapter } from './s3'
 import { createCloudinaryAdapter } from './cloudinary'
 
 export interface ImageStorageAdapter {
-  /** Get the public display URL for a stored image */
+  /** Get the public display URL for a stored image (full resolution) */
   getPublicUrl(storageKey: string): string
+
+  /**
+   * Get an optimized thumbnail URL for a stored image.
+   * Cloudinary: injects f_auto,q_auto,w_<width> transforms.
+   * S3/R2: falls through to getPublicUrl (no URL-based transforms).
+   */
+  getThumbnailUrl(storageKey: string, width: number): string
 
   /** Delete a stored image by its storage key */
   deleteObject(storageKey: string): Promise<void>
