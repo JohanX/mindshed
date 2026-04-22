@@ -7,12 +7,20 @@ import { Label } from '@/components/ui/label'
 import { Plus, ChevronDown, Loader2 } from 'lucide-react'
 import { addBomItem } from '@/actions/bom'
 import { showErrorToast, showSuccessToast } from '@/lib/toast'
-import { summarizeBomRows, type BomItemData } from '@/lib/bom'
+import {
+  summarizeBomRows,
+  type BomItemData,
+  type InventoryOption,
+  type BomConsumptionState,
+} from '@/lib/bom'
 import { BomRow } from '@/components/bom/bom-row'
+import { InventoryCombobox } from '@/components/bom/inventory-combobox'
+import { BomNewInventoryForm } from '@/components/bom/bom-new-inventory-form'
 
 interface BomSectionProps {
   projectId: string
   initialRows: BomItemData[]
+  initialInventoryOptions: InventoryOption[]
 }
 
 function BomStatusPill({ rows }: { rows: BomItemData[] }) {
@@ -34,56 +42,31 @@ function BomStatusPill({ rows }: { rows: BomItemData[] }) {
   )
 }
 
-export function BomSection({ projectId, initialRows }: BomSectionProps) {
+type AddState =
+  | { phase: 'closed' }
+  | { phase: 'combobox' }
+  | { phase: 'pick-required'; picked: InventoryOption }
+  | { phase: 'new-inventory'; query: string }
+
+export function BomSection({
+  projectId,
+  initialRows,
+  initialInventoryOptions,
+}: BomSectionProps) {
   const [rows, setRows] = useState<BomItemData[]>(initialRows)
-  const [addOpen, setAddOpen] = useState(false)
+  const [options, setOptions] = useState<InventoryOption[]>(initialInventoryOptions)
+  const [addState, setAddState] = useState<AddState>({ phase: 'closed' })
   const [expanded, setExpanded] = useState(true)
-  const [label, setLabel] = useState('')
-  const [required, setRequired] = useState('')
-  const [unit, setUnit] = useState('')
-  const [isPending, startTransition] = useTransition()
 
   const pillMemo = useMemo(() => <BomStatusPill rows={rows} />, [rows])
 
-  function resetForm() {
-    setLabel('')
-    setRequired('')
-    setUnit('')
-    setAddOpen(false)
-  }
+  // NOTE: we deliberately do NOT filter out already-linked inventory items from
+  // the combobox. AC #4 wants the user to be able to attempt a duplicate add and
+  // receive the "Already in this BOM" toast — that signals the mistake clearly
+  // and is handled by PickRequiredForm's P2002 → toast remap.
 
-  function handleAdd(e: React.FormEvent) {
-    e.preventDefault()
-    const reqNum = Number(required)
-    if (!label.trim() || !Number.isFinite(reqNum) || reqNum <= 0) return
-
-    startTransition(async () => {
-      const result = await addBomItem({
-        projectId,
-        label: label.trim(),
-        requiredQuantity: reqNum,
-        unit: unit.trim() || undefined,
-      })
-      if (!result.success) {
-        showErrorToast(result.error)
-        return
-      }
-      const nextSort = (rows[rows.length - 1]?.sortOrder ?? -1) + 1
-      setRows((prev) => [
-        ...prev,
-        {
-          id: result.data.id,
-          label: label.trim(),
-          requiredQuantity: reqNum,
-          unit: unit.trim() || null,
-          sortOrder: nextSort,
-          consumptionState: 'NOT_CONSUMED',
-          inventoryItem: null,
-        },
-      ])
-      showSuccessToast('BOM item added')
-      resetForm()
-    })
+  function appendRow(row: BomItemData) {
+    setRows((prev) => [...prev, row])
   }
 
   function handleRowUpdate(
@@ -137,7 +120,7 @@ export function BomSection({ projectId, initialRows }: BomSectionProps) {
             e.preventDefault()
             e.stopPropagation()
             setExpanded(true)
-            setAddOpen(true)
+            setAddState({ phase: 'combobox' })
           }}
         >
           <Plus className="mr-1 h-4 w-4" />
@@ -146,7 +129,7 @@ export function BomSection({ projectId, initialRows }: BomSectionProps) {
       </summary>
 
       <div className="space-y-3 px-4 pb-4">
-        {rows.length === 0 && !addOpen && (
+        {rows.length === 0 && addState.phase === 'closed' && (
           <p className="text-sm text-muted-foreground">
             Plan your materials before you start. List what this project needs — we&apos;ll
             compare against your inventory.
@@ -194,76 +177,188 @@ export function BomSection({ projectId, initialRows }: BomSectionProps) {
           </div>
         )}
 
-        {addOpen && (
-          <form
-            onSubmit={handleAdd}
-            className="space-y-3 rounded-md border border-border bg-background p-3"
-          >
-            <div className="grid gap-3 md:grid-cols-[1fr_7rem_5rem_auto] md:items-end">
-              <div className="space-y-1">
-                <Label htmlFor="bom-new-label">Item name</Label>
-                <Input
-                  id="bom-new-label"
-                  value={label}
-                  onChange={(e) => setLabel(e.target.value)}
-                  maxLength={100}
-                  placeholder="e.g., Kaolin"
-                  autoFocus
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="bom-new-required">Required</Label>
-                <Input
-                  id="bom-new-required"
-                  type="number"
-                  inputMode="decimal"
-                  step="any"
-                  min="0"
-                  value={required}
-                  onChange={(e) => setRequired(e.target.value)}
-                  placeholder="500"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="bom-new-unit">Unit</Label>
-                <Input
-                  id="bom-new-unit"
-                  value={unit}
-                  onChange={(e) => setUnit(e.target.value)}
-                  maxLength={50}
-                  placeholder="g"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                type="submit"
-                size="sm"
-                className="min-h-[44px]"
-                disabled={isPending || !label.trim() || !Number(required) || Number(required) <= 0}
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
-                  </>
-                ) : (
-                  'Save'
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="min-h-[44px]"
-                onClick={resetForm}
-                disabled={isPending}
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
+        {addState.phase === 'combobox' && (
+          <div className="space-y-2 rounded-md border border-border bg-background p-3">
+            <Label>Add item</Label>
+            <InventoryCombobox
+              options={options}
+              onPickExisting={(opt) => setAddState({ phase: 'pick-required', picked: opt })}
+              onRequestNew={(query) => setAddState({ phase: 'new-inventory', query })}
+              onCancel={() => setAddState({ phase: 'closed' })}
+            />
+          </div>
+        )}
+
+        {addState.phase === 'pick-required' && (
+          <PickRequiredForm
+            projectId={projectId}
+            picked={addState.picked}
+            onSaved={(row) => {
+              appendRow(row)
+              setAddState({ phase: 'closed' })
+            }}
+            onCancel={() => setAddState({ phase: 'closed' })}
+          />
+        )}
+
+        {addState.phase === 'new-inventory' && (
+          <BomNewInventoryForm
+            projectId={projectId}
+            initialName={addState.query}
+            onSaved={(result) => {
+              setOptions((prev) =>
+                prev.some((o) => o.id === result.created.id)
+                  ? prev
+                  : [...prev, result.created],
+              )
+              setRows((prev) => {
+                const nextSort = (prev[prev.length - 1]?.sortOrder ?? -1) + 1
+                return [
+                  ...prev,
+                  {
+                    id: result.id,
+                    label: null,
+                    requiredQuantity: result.requiredQuantity,
+                    unit: result.unit,
+                    sortOrder: nextSort,
+                    consumptionState: 'NOT_CONSUMED' as BomConsumptionState,
+                    inventoryItem: {
+                      id: result.created.id,
+                      name: result.created.name,
+                      type: result.created.type,
+                      quantity: result.created.quantity,
+                      isDeleted: false,
+                    },
+                  },
+                ]
+              })
+              setAddState({ phase: 'closed' })
+            }}
+            onCancel={() => setAddState({ phase: 'closed' })}
+          />
         )}
       </div>
     </details>
+  )
+}
+
+function PickRequiredForm({
+  projectId,
+  picked,
+  onSaved,
+  onCancel,
+}: {
+  projectId: string
+  picked: InventoryOption
+  onSaved: (row: BomItemData) => void
+  onCancel: () => void
+}) {
+  const [required, setRequired] = useState('')
+  const [unit, setUnit] = useState(picked.unit ?? '')
+  const [isPending, startTransition] = useTransition()
+
+  const requiredNum = Number(required)
+  const canSave = Number.isFinite(requiredNum) && requiredNum > 0
+
+  function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    if (!canSave) return
+    startTransition(async () => {
+      const result = await addBomItem({
+        projectId,
+        inventoryItemId: picked.id,
+        requiredQuantity: requiredNum,
+        unit: unit.trim() || undefined,
+      })
+      if (!result.success) {
+        // AC #4: remap the server's "This inventory item is already in this project."
+        // to the spec-mandated shorter string.
+        const toastMessage =
+          result.error === 'This inventory item is already in this project.'
+            ? 'Already in this BOM'
+            : result.error
+        showErrorToast(toastMessage)
+        return
+      }
+      showSuccessToast('BOM item added')
+      onSaved({
+        id: result.data.id,
+        label: null,
+        requiredQuantity: requiredNum,
+        unit: unit.trim() || null,
+        sortOrder: 0, // sortOrder authoritative on server; local value is a placeholder for render
+        consumptionState: 'NOT_CONSUMED' as BomConsumptionState,
+        inventoryItem: {
+          id: picked.id,
+          name: picked.name,
+          type: picked.type,
+          quantity: picked.quantity,
+          isDeleted: false,
+        },
+      })
+    })
+  }
+
+  return (
+    <form
+      onSubmit={handleSave}
+      className="space-y-3 rounded-md border border-border bg-background p-3"
+    >
+      <div className="text-sm font-medium">
+        <span className="text-muted-foreground">Selected: </span>
+        {picked.name}
+      </div>
+      <div className="grid gap-3 md:grid-cols-[1fr_7rem_auto] md:items-end">
+        <div className="space-y-1">
+          <Label htmlFor="bom-pick-required">Required</Label>
+          <Input
+            id="bom-pick-required"
+            type="number"
+            inputMode="decimal"
+            step="any"
+            min="0"
+            value={required}
+            onChange={(e) => setRequired(e.target.value)}
+            autoFocus
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="bom-pick-unit">Unit</Label>
+          <Input
+            id="bom-pick-unit"
+            value={unit}
+            onChange={(e) => setUnit(e.target.value)}
+            maxLength={50}
+            placeholder={picked.unit ?? ''}
+          />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <Button
+          type="submit"
+          size="sm"
+          className="min-h-[44px]"
+          disabled={!canSave || isPending}
+        >
+          {isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving…
+            </>
+          ) : (
+            'Save'
+          )}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="min-h-[44px]"
+          onClick={onCancel}
+          disabled={isPending}
+        >
+          Cancel
+        </Button>
+      </div>
+    </form>
   )
 }

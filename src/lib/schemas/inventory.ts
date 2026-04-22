@@ -27,6 +27,8 @@ export type InventoryItemOption = {
   id: string
   name: string
   type: 'MATERIAL' | 'CONSUMABLE' | 'TOOL'
+  quantity: number | null
+  unit: string | null
 }
 
 export type InventoryItemData = {

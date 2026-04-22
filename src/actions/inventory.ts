@@ -158,7 +158,7 @@ export async function getInventoryItemOptions(): Promise<ActionResult<InventoryI
     const items = await prisma.inventoryItem.findMany({
       where: { isDeleted: false },
       orderBy: { name: 'asc' },
-      select: { id: true, name: true, type: true },
+      select: { id: true, name: true, type: true, quantity: true, unit: true },
     })
     return { success: true, data: items }
   } catch (error) {

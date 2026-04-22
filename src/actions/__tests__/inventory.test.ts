@@ -304,12 +304,21 @@ describe('deleteInventoryItem', () => {
 describe('getInventoryItemOptions', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('filters soft-deleted items', async () => {
+  it('filters soft-deleted items and selects quantity + unit (Story 16.3)', async () => {
     mockFindMany.mockResolvedValue([] as never)
     await getInventoryItemOptions()
-    expect(mockFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { isDeleted: false } }),
-    )
+    const callArg = mockFindMany.mock.calls[0][0] as {
+      where: Record<string, unknown>
+      select: Record<string, unknown>
+    }
+    expect(callArg.where).toEqual({ isDeleted: false })
+    expect(callArg.select).toEqual({
+      id: true,
+      name: true,
+      type: true,
+      quantity: true,
+      unit: true,
+    })
   })
 })
 

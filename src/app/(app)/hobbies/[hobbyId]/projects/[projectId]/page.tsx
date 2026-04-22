@@ -15,7 +15,8 @@ import { ReminderDatePicker } from '@/components/reminder/reminder-date-picker'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 import { GallerySection } from '@/components/gallery/gallery-section'
 import { BomSection } from '@/components/bom/bom-section'
-import type { BomItemData } from '@/lib/bom'
+import type { BomItemData, InventoryOption } from '@/lib/bom'
+import { getInventoryItemOptions } from '@/actions/inventory'
 
 interface ProjectDetailPageProps {
   params: Promise<{ hobbyId: string; projectId: string }>
@@ -108,6 +109,11 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     inventoryItem: b.inventoryItem,
   }))
 
+  const inventoryOptionsResult = await getInventoryItemOptions()
+  const inventoryOptions: InventoryOption[] = inventoryOptionsResult.success
+    ? inventoryOptionsResult.data
+    : []
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -151,7 +157,11 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         <AddStepForm projectId={project.id} />
       )}
 
-      <BomSection projectId={project.id} initialRows={bomRows} />
+      <BomSection
+        projectId={project.id}
+        initialRows={bomRows}
+        initialInventoryOptions={inventoryOptions}
+      />
 
       {!project.isArchived && (
         <GallerySection

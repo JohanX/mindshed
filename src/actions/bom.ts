@@ -5,12 +5,15 @@ import { z } from 'zod/v4'
 import {
   addBomItemSchema,
   updateBomItemSchema,
+  addBomItemWithNewInventorySchema,
   type AddBomItemInput,
   type UpdateBomItemInput,
+  type AddBomItemWithNewInventoryInput,
 } from '@/lib/schemas/bom'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 import type { BomItemData } from '@/lib/bom'
+import { nextUniqueInventoryName } from '@/lib/inventory-name'
 
 function isP2002(error: unknown): boolean {
   return !!error && typeof error === 'object' && 'code' in error && (error as { code: string }).code === 'P2002'
@@ -166,6 +169,95 @@ export async function deleteBomItem(bomItemId: string): Promise<ActionResult<nul
     }
     console.error('deleteBomItem failed:', error)
     return { success: false, error: 'Failed to delete BOM item.' }
+  }
+}
+
+export async function addBomItemWithNewInventory(
+  input: AddBomItemWithNewInventoryInput,
+): Promise<ActionResult<{ id: string; inventoryItemId: string; finalName: string }>> {
+  const parsed = addBomItemWithNewInventorySchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
+  }
+  const { projectId, newItem, requiredQuantity, unit } = parsed.data
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const project = await tx.project.findUnique({
+        where: { id: projectId },
+        select: { hobbyId: true },
+      })
+      if (!project) throw Object.assign(new Error('PROJECT_NOT_FOUND'), { code: 'P2025' })
+
+      const existing = await tx.inventoryItem.findMany({
+        where: { isDeleted: false },
+        select: { name: true },
+      })
+      const finalName = nextUniqueInventoryName(
+        newItem.name,
+        existing.map((e) => e.name),
+      )
+
+      const createdInventoryItem = await tx.inventoryItem.create({
+        data: {
+          name: finalName,
+          type: newItem.type,
+          quantity: newItem.startingQuantity ?? 0,
+          unit: newItem.unit ?? null,
+        },
+        select: { id: true, unit: true },
+      })
+
+      const maxSort = await tx.bomItem.aggregate({
+        where: { projectId },
+        _max: { sortOrder: true },
+      })
+      const sortOrder = (maxSort._max.sortOrder ?? -1) + 1
+
+      const bomItem = await tx.bomItem.create({
+        data: {
+          projectId,
+          inventoryItemId: createdInventoryItem.id,
+          label: null,
+          requiredQuantity,
+          unit: unit ?? createdInventoryItem.unit ?? null,
+          sortOrder,
+        },
+        select: { id: true },
+      })
+
+      await tx.project.update({
+        where: { id: projectId },
+        data: { lastActivityAt: new Date() },
+      })
+
+      return {
+        id: bomItem.id,
+        inventoryItemId: createdInventoryItem.id,
+        finalName,
+        hobbyId: project.hobbyId,
+      }
+    })
+
+    revalidatePath(`/hobbies/${result.hobbyId}/projects/${projectId}`)
+    revalidatePath('/inventory')
+    return {
+      success: true,
+      data: {
+        id: result.id,
+        inventoryItemId: result.inventoryItemId,
+        finalName: result.finalName,
+      },
+    }
+  } catch (error) {
+    if (isP2002(error)) {
+      return { success: false, error: 'Item name collided — please retry.' }
+    }
+    if (isP2025(error)) {
+      return { success: false, error: 'Project not found.' }
+    }
+    console.error('addBomItemWithNewInventory failed:', error)
+    return { success: false, error: 'Failed to add inventory item and BOM row.' }
   }
 }
 

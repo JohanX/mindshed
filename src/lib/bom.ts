@@ -1,3 +1,50 @@
+export type InventoryType = 'MATERIAL' | 'CONSUMABLE' | 'TOOL'
+
+export type InventoryOption = {
+  id: string
+  name: string
+  type: InventoryType
+  quantity: number | null
+  unit: string | null
+}
+
+export type FilteredCombobox = {
+  results: InventoryOption[]
+  showAddNew: boolean
+}
+
+/**
+ * Pure filter for the inventory combobox: case-insensitive substring on name,
+ * starts-with ranks above mid-name matches, stable alpha tie-breaker.
+ * Returns a flag for whether to show the "Add new" option — hidden when any
+ * result matches the query exactly (case-insensitive) so the user is forced
+ * to reuse the existing inventory row.
+ */
+export function filterInventoryOptions(
+  options: InventoryOption[],
+  query: string,
+): FilteredCombobox {
+  const q = query.trim().toLowerCase()
+  if (q === '') {
+    return {
+      results: [...options].sort((a, b) => a.name.localeCompare(b.name)),
+      showAddNew: false,
+    }
+  }
+  const starts: InventoryOption[] = []
+  const contains: InventoryOption[] = []
+  let exactMatch = false
+  for (const o of options) {
+    const lower = o.name.toLowerCase()
+    if (lower === q) exactMatch = true
+    if (lower.startsWith(q)) starts.push(o)
+    else if (lower.includes(q)) contains.push(o)
+  }
+  starts.sort((a, b) => a.name.localeCompare(b.name))
+  contains.sort((a, b) => a.name.localeCompare(b.name))
+  return { results: [...starts, ...contains], showAddNew: !exactMatch }
+}
+
 export type BomConsumptionState = 'NOT_CONSUMED' | 'CONSUMED' | 'UNDONE'
 
 export type BomItemData = {

@@ -1,4 +1,5 @@
 import { z } from 'zod/v4'
+import { inventoryItemTypeEnum } from './inventory'
 
 export const addBomItemSchema = z
   .object({
@@ -29,3 +30,19 @@ export const updateBomItemSchema = z
   )
 
 export type UpdateBomItemInput = z.infer<typeof updateBomItemSchema>
+
+export const addBomItemWithNewInventorySchema = z.object({
+  projectId: z.uuid(),
+  newItem: z.object({
+    name: z.string().trim().min(1, 'Name is required').max(100),
+    type: inventoryItemTypeEnum,
+    startingQuantity: z.number().min(0, 'Starting quantity must be 0 or more').optional(),
+    unit: z.string().trim().max(50).optional(),
+  }),
+  requiredQuantity: z.number().positive('Required quantity must be greater than 0'),
+  unit: z.string().trim().max(50).optional(),
+})
+
+export type AddBomItemWithNewInventoryInput = z.infer<
+  typeof addBomItemWithNewInventorySchema
+>

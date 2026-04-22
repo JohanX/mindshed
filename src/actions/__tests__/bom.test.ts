@@ -16,11 +16,14 @@ import {
   updateBomItem,
   deleteBomItem,
   getBomItemsByProject,
+  addBomItemWithNewInventory,
 } from '../bom'
 import { prisma } from '@/lib/db'
+import { revalidatePath } from 'next/cache'
 
 const mockTransaction = vi.mocked(prisma.$transaction)
 const mockFindMany = vi.mocked(prisma.bomItem.findMany)
+const mockRevalidatePath = vi.mocked(revalidatePath)
 
 const PROJECT_ID = '550e8400-e29b-41d4-a716-446655440000'
 const INVENTORY_ID = '550e8400-e29b-41d4-a716-446655440001'
@@ -32,7 +35,11 @@ type TxMock = {
     findUnique: ReturnType<typeof vi.fn>
     update: ReturnType<typeof vi.fn>
   }
-  inventoryItem: { findUnique: ReturnType<typeof vi.fn> }
+  inventoryItem: {
+    findUnique: ReturnType<typeof vi.fn>
+    findMany: ReturnType<typeof vi.fn>
+    create: ReturnType<typeof vi.fn>
+  }
   bomItem: {
     aggregate: ReturnType<typeof vi.fn>
     create: ReturnType<typeof vi.fn>
@@ -45,6 +52,9 @@ type TxMock = {
 function buildTx(opts: {
   project?: { hobbyId: string } | null
   inventoryItem?: { isDeleted: boolean } | null
+  existingInventoryNames?: string[]
+  inventoryCreateResult?: { id: string; unit: string | null }
+  inventoryCreateError?: Error | { code: string }
   maxSortOrder?: number | null
   createResult?: { id: string }
   createError?: Error | { code: string }
@@ -63,6 +73,13 @@ function buildTx(opts: {
       findUnique: vi.fn(async () =>
         opts.inventoryItem !== undefined ? opts.inventoryItem : { isDeleted: false },
       ),
+      findMany: vi.fn(async () =>
+        (opts.existingInventoryNames ?? []).map((name) => ({ name })),
+      ),
+      create: vi.fn(async () => {
+        if (opts.inventoryCreateError) throw opts.inventoryCreateError
+        return opts.inventoryCreateResult ?? { id: 'new-inv-id', unit: null }
+      }),
     },
     bomItem: {
       aggregate: vi.fn(async () => ({
@@ -411,3 +428,160 @@ describe('getBomItemsByProject', () => {
     }
   })
 })
+
+describe('addBomItemWithNewInventory', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('rejects empty name', async () => {
+    const result = await addBomItemWithNewInventory({
+      projectId: PROJECT_ID,
+      newItem: { name: '', type: 'MATERIAL' },
+      requiredQuantity: 10,
+    })
+    expect(result.success).toBe(false)
+    expect(mockTransaction).not.toHaveBeenCalled()
+  })
+
+  it('rejects missing requiredQuantity', async () => {
+    const result = await addBomItemWithNewInventory({
+      projectId: PROJECT_ID,
+      newItem: { name: 'X', type: 'MATERIAL' },
+    } as never)
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects negative startingQuantity', async () => {
+    const result = await addBomItemWithNewInventory({
+      projectId: PROJECT_ID,
+      newItem: { name: 'X', type: 'MATERIAL', startingQuantity: -1 },
+      requiredQuantity: 10,
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('creates inventory item and BOM row in one transaction', async () => {
+    const tx = buildTx({
+      existingInventoryNames: [],
+      inventoryCreateResult: { id: 'inv-1', unit: 'g' },
+      maxSortOrder: null,
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await addBomItemWithNewInventory({
+      projectId: PROJECT_ID,
+      newItem: { name: 'Kaolin', type: 'MATERIAL', startingQuantity: 0, unit: 'g' },
+      requiredQuantity: 500,
+    })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.inventoryItemId).toBe('inv-1')
+      expect(result.data.finalName).toBe('Kaolin')
+    }
+
+    const invPayload = tx.inventoryItem.create.mock.calls[0][0] as { data: Record<string, unknown> }
+    expect(invPayload.data).toEqual({
+      name: 'Kaolin',
+      type: 'MATERIAL',
+      quantity: 0,
+      unit: 'g',
+    })
+
+    const bomPayload = tx.bomItem.create.mock.calls[0][0] as { data: Record<string, unknown> }
+    expect(bomPayload.data).toEqual({
+      projectId: PROJECT_ID,
+      inventoryItemId: 'inv-1',
+      label: null,
+      requiredQuantity: 500,
+      unit: 'g',
+      sortOrder: 0,
+    })
+
+    expect(tx.project.update).toHaveBeenCalledOnce()
+    expect(mockRevalidatePath).toHaveBeenCalledWith(`/hobbies/${HOBBY_ID}/projects/${PROJECT_ID}`)
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/inventory')
+  })
+
+  it('auto-renames on inventory name collision via nextUniqueInventoryName', async () => {
+    const tx = buildTx({
+      existingInventoryNames: ['Kaolin'],
+      inventoryCreateResult: { id: 'inv-2', unit: null },
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await addBomItemWithNewInventory({
+      projectId: PROJECT_ID,
+      newItem: { name: 'kaolin', type: 'MATERIAL' },
+      requiredQuantity: 100,
+    })
+
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.finalName).toBe('kaolin (1)')
+    const invPayload = tx.inventoryItem.create.mock.calls[0][0] as { data: Record<string, unknown> }
+    expect(invPayload.data.name).toBe('kaolin (1)')
+  })
+
+  it('inherits unit from inventory when BOM unit not provided', async () => {
+    const tx = buildTx({
+      inventoryCreateResult: { id: 'inv-3', unit: 'kg' },
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    await addBomItemWithNewInventory({
+      projectId: PROJECT_ID,
+      newItem: { name: 'Clay', type: 'MATERIAL', unit: 'kg' },
+      requiredQuantity: 5,
+    })
+
+    const bomPayload = tx.bomItem.create.mock.calls[0][0] as { data: Record<string, unknown> }
+    expect(bomPayload.data.unit).toBe('kg')
+  })
+
+  it('BOM-level unit overrides inventory unit when both supplied', async () => {
+    const tx = buildTx({
+      inventoryCreateResult: { id: 'inv-4', unit: 'kg' },
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    await addBomItemWithNewInventory({
+      projectId: PROJECT_ID,
+      newItem: { name: 'Clay', type: 'MATERIAL', unit: 'kg' },
+      requiredQuantity: 500,
+      unit: 'g',
+    })
+
+    const bomPayload = tx.bomItem.create.mock.calls[0][0] as { data: Record<string, unknown> }
+    expect(bomPayload.data.unit).toBe('g')
+  })
+
+  it('returns Project not found when target project is missing', async () => {
+    const tx = buildTx({ project: null })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await addBomItemWithNewInventory({
+      projectId: PROJECT_ID,
+      newItem: { name: 'Clay', type: 'MATERIAL' },
+      requiredQuantity: 10,
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Project not found.')
+  })
+
+  it('returns Item name collided on inventory P2002 race', async () => {
+    const tx = buildTx({
+      inventoryCreateError: { code: 'P2002' },
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await addBomItemWithNewInventory({
+      projectId: PROJECT_ID,
+      newItem: { name: 'Clay', type: 'MATERIAL' },
+      requiredQuantity: 10,
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Item name collided — please retry.')
+  })
+})
+
