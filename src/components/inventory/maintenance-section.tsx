@@ -72,11 +72,11 @@ export function MaintenanceSection({ item }: MaintenanceSectionProps) {
             value={intervalInput}
             onChange={(e) => setIntervalInput(e.target.value)}
             placeholder="30"
-            className="w-20 h-8"
+            className="w-20 min-h-[44px]"
           />
           <span className="text-xs text-muted-foreground">days</span>
-          <Button size="sm" className="h-8" onClick={handleSetup} disabled={isPending}>
-            {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Set'}
+          <Button size="sm" className="min-h-[44px]" onClick={handleSetup} disabled={isPending}>
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Set'}
           </Button>
         </div>
       </div>
@@ -103,8 +103,8 @@ export function MaintenanceSection({ item }: MaintenanceSectionProps) {
         ) : (
           <span className="text-xs text-muted-foreground">Next: {format(nextDate, 'MMM d')}</span>
         )}
-        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleRecord} disabled={isPending}>
-          {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Record Maintenance'}
+        <Button variant="ghost" size="sm" className="min-h-[44px] text-xs" onClick={handleRecord} disabled={isPending}>
+          {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Record Maintenance'}
         </Button>
       </div>
     </div>

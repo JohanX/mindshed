@@ -80,7 +80,7 @@ export function ReminderDatePicker({ targetType, targetId, existingReminder }: R
         />
         {existingReminder && (
           <div className="border-t p-2">
-            <Button variant="ghost" size="sm" className="w-full text-destructive" onClick={handleRemove} disabled={isPending}>
+            <Button variant="ghost" size="sm" className="w-full min-h-[44px] text-destructive" onClick={handleRemove} disabled={isPending}>
               <X className="h-4 w-4 mr-1" /> Remove Reminder
             </Button>
           </div>

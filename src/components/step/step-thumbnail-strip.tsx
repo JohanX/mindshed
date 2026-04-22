@@ -18,6 +18,11 @@ function Thumbnail({ src, alt }: { src: string; alt: string }) {
   }
 
   return (
+    // Intentionally raw <img> — the onError broken-image fallback is simpler
+    // than next/image's API, and thumbnails are below-the-fold (step detail
+    // pages), so LCP isn't affected. Dashboard continue-card uses next/image
+    // because that surface IS above-the-fold LCP.
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
       alt={alt}

@@ -78,8 +78,8 @@ test.describe('Inventory Management', () => {
     await page.goto('/inventory')
     await page.waitForLoadState('networkidle')
 
-    // Click edit on the first item
-    await page.getByLabel('Edit item').first().click()
+    // Click edit on the first item (aria-label now includes item name)
+    await page.getByLabel(/^Edit /).first().click()
     await page.waitForTimeout(500)
 
     // Change the name
@@ -101,8 +101,8 @@ test.describe('Inventory Management', () => {
 
     const itemCount = await page.locator('[data-slot="card"]').count()
 
-    // Click delete on the first item
-    await page.getByLabel('Delete item').first().click()
+    // Click delete on the first item (aria-label now includes item name)
+    await page.getByLabel(/^Delete /).first().click()
     await page.waitForTimeout(500)
 
     // Confirm deletion
@@ -154,7 +154,7 @@ test.describe('Inventory Management', () => {
       .locator('[data-slot="card"]')
       .filter({ has: page.getByText(base, { exact: true }) })
     await expect(baseCard).toHaveCount(1)
-    await baseCard.getByLabel('Delete item').click()
+    await baseCard.getByLabel(/^Delete /).click()
     await page.getByRole('button', { name: 'Delete' }).click()
     await page.waitForTimeout(1000)
 

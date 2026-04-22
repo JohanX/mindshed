@@ -41,7 +41,7 @@ function CopyLinkButton({ url }: { url: string }) {
       <Button
         variant="ghost"
         size="icon"
-        className="shrink-0 h-8 w-8"
+        className="shrink-0 min-h-[44px] min-w-[44px]"
         onClick={handleCopy}
         aria-label="Copy link"
       >

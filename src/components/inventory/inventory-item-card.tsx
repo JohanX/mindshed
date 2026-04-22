@@ -51,11 +51,11 @@ export function InventoryItemCard({ item }: InventoryItemCardProps) {
               <Badge className={typeConfig.colorClass} variant="default">
                 {typeConfig.label}
               </Badge>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditOpen(true)} title="Edit item" aria-label="Edit item">
-                <Pencil className="h-3.5 w-3.5" />
+              <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" onClick={() => setEditOpen(true)} title="Edit item" aria-label={`Edit ${item.name}`}>
+                <Pencil className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteOpen(true)} title="Delete item" aria-label="Delete item">
-                <Trash2 className="h-3.5 w-3.5" />
+              <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] text-destructive" onClick={() => setDeleteOpen(true)} title="Delete item" aria-label={`Delete ${item.name}`}>
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           </div>

@@ -97,26 +97,30 @@ function NoteItem({ note, isProjectCompleted }: { note: NoteData; isProjectCompl
         <div className="flex items-start justify-between gap-2">
           <p className="whitespace-pre-wrap break-words flex-1">{note.text}</p>
           {!isProjectCompleted && (
-            <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            // Actions stay visible (default opacity-80) on touch/mobile where
+            // hover never fires — reviewer flagged 60% on the destructive
+            // icon as a WCAG 1.4.11 non-text-contrast risk. Hover/focus
+            // promote to full opacity for desktop discoverability.
+            <div className="flex gap-1 shrink-0 opacity-80 hover:opacity-100 focus-within:opacity-100 transition-opacity">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7"
+                className="min-h-[44px] min-w-[44px]"
                 onClick={() => { setEditing(true); setEditText(note.text) }}
                 title="Edit note"
                 aria-label="Edit note"
               >
-                <Pencil className="h-3 w-3" />
+                <Pencil className="h-4 w-4" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-destructive"
+                className="min-h-[44px] min-w-[44px] text-destructive"
                 onClick={() => setDeleteOpen(true)}
                 title="Delete note"
                 aria-label="Delete note"
               >
-                <Trash2 className="h-3 w-3" />
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           )}

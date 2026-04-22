@@ -29,11 +29,11 @@ function CopyButton({ url }: { url: string }) {
     <Button
       variant="ghost"
       size="icon"
-      className="shrink-0 h-7 w-7"
+      className="shrink-0 min-h-[44px] min-w-[44px]"
       onClick={handleCopy}
       aria-label="Copy link"
     >
-      {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+      {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
     </Button>
   )
 }

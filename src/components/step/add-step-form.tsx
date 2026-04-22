@@ -43,10 +43,10 @@ export function AddStepForm({ projectId }: AddStepFormProps) {
           maxLength={200}
           autoFocus
         />
-        <Button type="submit" disabled={!newStepName.trim() || isPending}>
+        <Button type="submit" className="min-h-[44px]" disabled={!newStepName.trim() || isPending}>
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add'}
         </Button>
-        <Button type="button" variant="ghost" onClick={() => { setAdding(false); setNewStepName('') }}>
+        <Button type="button" variant="ghost" className="min-h-[44px]" onClick={() => { setAdding(false); setNewStepName('') }}>
           Cancel
         </Button>
       </form>
