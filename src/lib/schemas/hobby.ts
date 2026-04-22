@@ -27,7 +27,10 @@ export const HOBBY_COLORS = [
   { name: 'Sunshine', value: 'hsl(48, 70%, 62%)' },
 ] as const
 
-export const hobbyColorValues = HOBBY_COLORS.map((c) => c.value) as unknown as [string, ...string[]]
+export const hobbyColorValues = HOBBY_COLORS.map((color) => color.value) as unknown as [
+  string,
+  ...string[],
+]
 
 export const createHobbySchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(100, 'Name must be under 100 characters'),

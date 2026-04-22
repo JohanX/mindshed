@@ -241,7 +241,7 @@ export function StepList({
     startTransition(async () => {
       const result = await reorderSteps({
         projectId,
-        orderedStepIds: newSteps.map((s) => s.id),
+        orderedStepIds: newSteps.map((step) => step.id),
       })
       if (result.success) {
         lastConfirmedOrderRef.current = newSteps
@@ -256,15 +256,15 @@ export function StepList({
     const { active, over } = event
     if (!over || active.id === over.id) return
 
-    const oldIndex = steps.findIndex((s) => s.id === active.id)
-    const newIndex = steps.findIndex((s) => s.id === over.id)
+    const oldIndex = steps.findIndex((step) => step.id === active.id)
+    const newIndex = steps.findIndex((step) => step.id === over.id)
     const newSteps = arrayMove(steps, oldIndex, newIndex)
     setSteps(newSteps)
     persistOrder(newSteps)
   }
 
   function handleMoveUp(stepId: string) {
-    const index = steps.findIndex((s) => s.id === stepId)
+    const index = steps.findIndex((step) => step.id === stepId)
     if (index <= 0) return
     const newSteps = arrayMove(steps, index, index - 1)
     setSteps(newSteps)
@@ -272,7 +272,7 @@ export function StepList({
   }
 
   function handleMoveDown(stepId: string) {
-    const index = steps.findIndex((s) => s.id === stepId)
+    const index = steps.findIndex((step) => step.id === stepId)
     if (index >= steps.length - 1) return
     const newSteps = arrayMove(steps, index, index + 1)
     setSteps(newSteps)
@@ -335,7 +335,10 @@ export function StepList({
     <div className="space-y-3">
       {!hideStepDisplay && (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={steps.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+          <SortableContext
+            items={steps.map((step) => step.id)}
+            strategy={verticalListSortingStrategy}
+          >
             <div className="space-y-3">
               {steps.map((step, index) => (
                 <SortableStepItem

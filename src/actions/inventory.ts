@@ -50,7 +50,7 @@ export async function createInventoryItem(
       })
       const finalName = nextUniqueInventoryName(
         parsed.data.name,
-        existing.map((e) => e.name),
+        existing.map((existingItem) => existingItem.name),
       )
       return tx.inventoryItem.create({
         data: {
@@ -86,9 +86,9 @@ export async function getInventoryItems(
 
     return {
       success: true,
-      data: items.map((i) => ({
-        ...i,
-        activeBlockerCount: i._count.blockers,
+      data: items.map((item) => ({
+        ...item,
+        activeBlockerCount: item._count.blockers,
       })),
     }
   } catch (error) {
@@ -121,7 +121,7 @@ export async function updateInventoryItem(
         })
         finalName = nextUniqueInventoryName(
           parsed.data.name,
-          siblings.map((s) => s.name),
+          siblings.map((sibling) => sibling.name),
         )
       }
 
@@ -275,14 +275,19 @@ export async function getOverdueMaintenanceItems(): Promise<ActionResult<Mainten
       await import('@/lib/maintenance')
 
     const overdue = tools
-      .filter((t) => isMaintenanceOverdue(t.lastMaintenanceDate!, t.maintenanceIntervalDays!))
-      .map((t) => ({
-        id: t.id,
-        name: t.name,
-        lastMaintenanceDate: t.lastMaintenanceDate!,
-        maintenanceIntervalDays: t.maintenanceIntervalDays!,
-        nextDueDate: getNextMaintenanceDate(t.lastMaintenanceDate!, t.maintenanceIntervalDays!),
-        daysOverdue: getDaysOverdue(t.lastMaintenanceDate!, t.maintenanceIntervalDays!),
+      .filter((tool) =>
+        isMaintenanceOverdue(tool.lastMaintenanceDate!, tool.maintenanceIntervalDays!),
+      )
+      .map((tool) => ({
+        id: tool.id,
+        name: tool.name,
+        lastMaintenanceDate: tool.lastMaintenanceDate!,
+        maintenanceIntervalDays: tool.maintenanceIntervalDays!,
+        nextDueDate: getNextMaintenanceDate(
+          tool.lastMaintenanceDate!,
+          tool.maintenanceIntervalDays!,
+        ),
+        daysOverdue: getDaysOverdue(tool.lastMaintenanceDate!, tool.maintenanceIntervalDays!),
       }))
       .sort((a, b) => b.daysOverdue - a.daysOverdue)
 

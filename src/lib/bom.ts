@@ -34,11 +34,11 @@ export function filterInventoryOptions(
   const starts: InventoryOption[] = []
   const contains: InventoryOption[] = []
   let exactMatch = false
-  for (const o of options) {
-    const lower = o.name.toLowerCase()
+  for (const option of options) {
+    const lower = option.name.toLowerCase()
     if (lower === q) exactMatch = true
-    if (lower.startsWith(q)) starts.push(o)
-    else if (lower.includes(q)) contains.push(o)
+    if (lower.startsWith(q)) starts.push(option)
+    else if (lower.includes(q)) contains.push(option)
   }
   starts.sort((a, b) => a.name.localeCompare(b.name))
   contains.sort((a, b) => a.name.localeCompare(b.name))
@@ -102,7 +102,7 @@ export function shortageRows(rows: BomItemData[]): BomItemData[] {
  */
 export function shortageFingerprint(rows: BomItemData[]): string {
   return shortageRows(rows)
-    .map((r) => r.id)
+    .map((row) => row.id)
     .sort()
     .join('|')
 }

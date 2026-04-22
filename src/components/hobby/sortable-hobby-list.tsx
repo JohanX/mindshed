@@ -69,7 +69,7 @@ export function SortableHobbyList({ hobbies: initialHobbies }: SortableHobbyList
   function persistOrder(newHobbies: HobbyWithCounts[]) {
     startTransition(async () => {
       const result = await reorderHobbies({
-        orderedIds: newHobbies.map((h) => h.id),
+        orderedIds: newHobbies.map((hobby) => hobby.id),
       })
       if (result.success) {
         lastConfirmedOrderRef.current = newHobbies
@@ -84,8 +84,8 @@ export function SortableHobbyList({ hobbies: initialHobbies }: SortableHobbyList
     const { active, over } = event
     if (!over || active.id === over.id) return
 
-    const oldIndex = hobbies.findIndex((h) => h.id === active.id)
-    const newIndex = hobbies.findIndex((h) => h.id === over.id)
+    const oldIndex = hobbies.findIndex((hobby) => hobby.id === active.id)
+    const newIndex = hobbies.findIndex((hobby) => hobby.id === over.id)
     const newHobbies = arrayMove(hobbies, oldIndex, newIndex)
     setHobbies(newHobbies)
     persistOrder(newHobbies)
@@ -93,7 +93,10 @@ export function SortableHobbyList({ hobbies: initialHobbies }: SortableHobbyList
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <SortableContext items={hobbies.map((h) => h.id)} strategy={verticalListSortingStrategy}>
+      <SortableContext
+        items={hobbies.map((hobby) => hobby.id)}
+        strategy={verticalListSortingStrategy}
+      >
         <div className="space-y-3">
           {hobbies.map((hobby) => (
             <SortableItem key={hobby.id} hobby={hobby} />

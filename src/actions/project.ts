@@ -84,19 +84,19 @@ export async function getAllProjects(): Promise<ActionResult<ProjectWithHobby[]>
 
     return {
       success: true,
-      data: projects.map((p) => {
+      data: projects.map((project) => {
         const currentStep =
-          p.steps.find((s) => s.state === 'IN_PROGRESS') ??
-          p.steps.find((s) => s.state === 'NOT_STARTED')
+          project.steps.find((step) => step.state === 'IN_PROGRESS') ??
+          project.steps.find((step) => step.state === 'NOT_STARTED')
         return {
-          id: p.id,
-          name: p.name,
-          hobbyId: p.hobbyId,
-          totalSteps: p.steps.length,
-          completedSteps: p.steps.filter((s) => s.state === 'COMPLETED').length,
-          derivedStatus: deriveProjectStatus(p.steps),
+          id: project.id,
+          name: project.name,
+          hobbyId: project.hobbyId,
+          totalSteps: project.steps.length,
+          completedSteps: project.steps.filter((step) => step.state === 'COMPLETED').length,
+          derivedStatus: deriveProjectStatus(project.steps),
           currentStepName: currentStep?.name ?? null,
-          hobby: p.hobby,
+          hobby: project.hobby,
         }
       }),
     }
@@ -133,20 +133,20 @@ export async function getProjectsByHobby(
 
     return {
       success: true,
-      data: projects.map((p) => {
+      data: projects.map((project) => {
         const currentStep =
-          p.steps.find((s) => s.state === 'IN_PROGRESS') ??
-          p.steps.find((s) => s.state === 'NOT_STARTED')
+          project.steps.find((step) => step.state === 'IN_PROGRESS') ??
+          project.steps.find((step) => step.state === 'NOT_STARTED')
         return {
-          id: p.id,
-          name: p.name,
-          hobbyId: p.hobbyId,
-          totalSteps: p.steps.length,
-          completedSteps: p.steps.filter((s) => s.state === 'COMPLETED').length,
-          derivedStatus: deriveProjectStatus(p.steps),
+          id: project.id,
+          name: project.name,
+          hobbyId: project.hobbyId,
+          totalSteps: project.steps.length,
+          completedSteps: project.steps.filter((step) => step.state === 'COMPLETED').length,
+          derivedStatus: deriveProjectStatus(project.steps),
           currentStepName: currentStep?.name ?? null,
-          isArchived: p.isArchived,
-          isCompleted: p.isCompleted,
+          isArchived: project.isArchived,
+          isCompleted: project.isCompleted,
         }
       }),
     }
@@ -213,7 +213,7 @@ export async function cloneProject(
       })
       const cloneName = nextCloneName(
         source.name,
-        siblings.map((p) => p.name),
+        siblings.map((project) => project.name),
       )
 
       const maxSort = await tx.project.aggregate({
@@ -230,21 +230,21 @@ export async function cloneProject(
           sortOrder,
           lastActivityAt: new Date(),
           steps: {
-            create: source.steps.map((s) => ({
-              name: s.name,
-              sortOrder: s.sortOrder,
+            create: source.steps.map((step) => ({
+              name: step.name,
+              sortOrder: step.sortOrder,
               state: 'NOT_STARTED' as const,
               previousState: null,
               excludeFromGallery: false,
             })),
           },
           bomItems: {
-            create: source.bomItems.map((b) => ({
-              inventoryItemId: b.inventoryItemId,
-              label: b.label,
-              requiredQuantity: b.requiredQuantity,
-              unit: b.unit,
-              sortOrder: b.sortOrder,
+            create: source.bomItems.map((bomItem) => ({
+              inventoryItemId: bomItem.inventoryItemId,
+              label: bomItem.label,
+              requiredQuantity: bomItem.requiredQuantity,
+              unit: bomItem.unit,
+              sortOrder: bomItem.sortOrder,
               consumptionState: 'NOT_CONSUMED' as const,
             })),
           },
@@ -341,18 +341,18 @@ export async function getIdleProjects(): Promise<ActionResult<IdleProjectData[]>
 
     return {
       success: true,
-      data: projects.map((p) => {
-        const currentStep = getCurrentStep(p.steps)
+      data: projects.map((project) => {
+        const currentStep = getCurrentStep(project.steps)
         return {
-          id: p.id,
-          name: p.name,
-          hobbyId: p.hobbyId,
-          totalSteps: p.steps.length,
-          completedSteps: p.steps.filter((s) => s.state === 'COMPLETED').length,
-          derivedStatus: deriveProjectStatus(p.steps),
+          id: project.id,
+          name: project.name,
+          hobbyId: project.hobbyId,
+          totalSteps: project.steps.length,
+          completedSteps: project.steps.filter((step) => step.state === 'COMPLETED').length,
+          derivedStatus: deriveProjectStatus(project.steps),
           currentStepName: currentStep?.name ?? null,
-          hobby: p.hobby,
-          lastActivityAt: p.lastActivityAt,
+          hobby: project.hobby,
+          lastActivityAt: project.lastActivityAt,
         }
       }),
     }

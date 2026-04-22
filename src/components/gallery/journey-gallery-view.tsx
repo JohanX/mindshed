@@ -29,7 +29,7 @@ export function JourneyGalleryView({ project, steps }: JourneyGalleryViewProps) 
       displayUrl: img.displayUrl,
       originalFilename: img.originalFilename,
       stepName: step.name,
-      description: step.notes.map((n) => n.text).join(' ') || null,
+      description: step.notes.map((note) => note.text).join(' ') || null,
     })),
   )
 

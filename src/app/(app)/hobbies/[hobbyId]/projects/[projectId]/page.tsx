@@ -78,19 +78,19 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
 
   // Compute current step (first IN_PROGRESS or NOT_STARTED)
   const currentStepId =
-    project.steps.find((s) => s.state === 'IN_PROGRESS')?.id ??
-    project.steps.find((s) => s.state === 'NOT_STARTED')?.id ??
+    project.steps.find((step) => step.state === 'IN_PROGRESS')?.id ??
+    project.steps.find((step) => step.state === 'NOT_STARTED')?.id ??
     null
 
   // Map steps with nested data for StepCard
-  const stepCards: StepCardData[] = project.steps.map((s) => ({
-    id: s.id,
-    name: s.name,
-    state: s.state as StepState,
-    previousState: (s.previousState as StepState | null) ?? null,
-    sortOrder: s.sortOrder,
-    notes: s.notes.map((n) => ({ id: n.id, text: n.text, createdAt: n.createdAt })),
-    images: s.images.map((img): StepCardImage => {
+  const stepCards: StepCardData[] = project.steps.map((step) => ({
+    id: step.id,
+    name: step.name,
+    state: step.state as StepState,
+    previousState: (step.previousState as StepState | null) ?? null,
+    sortOrder: step.sortOrder,
+    notes: step.notes.map((note) => ({ id: note.id, text: note.text, createdAt: note.createdAt })),
+    images: step.images.map((img): StepCardImage => {
       const isUpload = img.type === 'UPLOAD' && img.storageKey
       const fallback = img.url ?? ''
       return {
@@ -105,30 +105,36 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         originalFilename: img.originalFilename,
       }
     }),
-    blockers: s.blockers.map((b) => ({ id: b.id, description: b.description })),
+    blockers: step.blockers.map((blocker) => ({
+      id: blocker.id,
+      description: blocker.description,
+    })),
   }))
 
   // Gallery data
-  const gallerySteps = project.steps.map((s) => ({
-    id: s.id,
-    name: s.name,
-    state: s.state as string,
-    hasImages: s.images.length > 0,
-    excludeFromGallery: s.excludeFromGallery,
+  const gallerySteps = project.steps.map((step) => ({
+    id: step.id,
+    name: step.name,
+    state: step.state as string,
+    hasImages: step.images.length > 0,
+    excludeFromGallery: step.excludeFromGallery,
   }))
 
   const stepKey = stepCards
-    .map((s) => `${s.id}:${s.state}:${s.notes.length}:${s.images.length}:${s.blockers.length}`)
+    .map(
+      (step) =>
+        `${step.id}:${step.state}:${step.notes.length}:${step.images.length}:${step.blockers.length}`,
+    )
     .join(',')
 
-  const bomRows: BomItemData[] = project.bomItems.map((b) => ({
-    id: b.id,
-    label: b.label,
-    requiredQuantity: b.requiredQuantity,
-    unit: b.unit,
-    sortOrder: b.sortOrder,
-    consumptionState: b.consumptionState,
-    inventoryItem: b.inventoryItem,
+  const bomRows: BomItemData[] = project.bomItems.map((bomItem) => ({
+    id: bomItem.id,
+    label: bomItem.label,
+    requiredQuantity: bomItem.requiredQuantity,
+    unit: bomItem.unit,
+    sortOrder: bomItem.sortOrder,
+    consumptionState: bomItem.consumptionState,
+    inventoryItem: bomItem.inventoryItem,
   }))
 
   const inventoryOptionsResult = await getInventoryItemOptions()
@@ -189,11 +195,11 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         projectId={project.id}
         initialRows={bomRows}
         initialInventoryOptions={inventoryOptions}
-        projectSteps={project.steps.map((s) => ({
-          id: s.id,
-          name: s.name,
-          state: s.state as StepState,
-          sortOrder: s.sortOrder,
+        projectSteps={project.steps.map((step) => ({
+          id: step.id,
+          name: step.name,
+          state: step.state as StepState,
+          sortOrder: step.sortOrder,
         }))}
       />
 

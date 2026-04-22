@@ -13,8 +13,12 @@ interface ProjectListProps {
 export function ProjectList({ projects, hobby }: ProjectListProps) {
   const [showArchived, setShowArchived] = useState(false)
 
-  const activeProjects = projects.filter((p) => !p.isArchived && p.derivedStatus !== 'COMPLETED')
-  const archivedProjects = projects.filter((p) => p.isArchived || p.derivedStatus === 'COMPLETED')
+  const activeProjects = projects.filter(
+    (project) => !project.isArchived && project.derivedStatus !== 'COMPLETED',
+  )
+  const archivedProjects = projects.filter(
+    (project) => project.isArchived || project.derivedStatus === 'COMPLETED',
+  )
 
   return (
     <div className="space-y-6">

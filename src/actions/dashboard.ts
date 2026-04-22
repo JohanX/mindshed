@@ -113,16 +113,16 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
       },
     })
 
-    const publicGalleries: PublicGallery[] = rawGalleries.map((g) => ({
-      id: g.id,
-      name: g.name,
-      hobbyId: g.hobbyId,
-      gallerySlug: g.gallerySlug!,
-      journeyGalleryEnabled: g.journeyGalleryEnabled,
-      resultGalleryEnabled: g.resultGalleryEnabled,
-      hobby: g.hobby,
-      thumbnails: g.steps
-        .flatMap((s) => s.images)
+    const publicGalleries: PublicGallery[] = rawGalleries.map((gallery) => ({
+      id: gallery.id,
+      name: gallery.name,
+      hobbyId: gallery.hobbyId,
+      gallerySlug: gallery.gallerySlug!,
+      journeyGalleryEnabled: gallery.journeyGalleryEnabled,
+      resultGalleryEnabled: gallery.resultGalleryEnabled,
+      hobby: gallery.hobby,
+      thumbnails: gallery.steps
+        .flatMap((step) => step.images)
         .slice(0, DASHBOARD_LIMITS.GALLERY_THUMBNAILS)
         .map((img) => {
           if (img.type === 'UPLOAD' && img.storageKey) {
@@ -141,7 +141,7 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
     }))
 
     // Batch fetch latest photo per project (avoids N+1)
-    const projectIds = rawRecentProjects.map((p) => p.id)
+    const projectIds = rawRecentProjects.map((project) => project.id)
     const allPhotos =
       projectIds.length > 0
         ? await prisma.stepImage.findMany({
@@ -169,50 +169,50 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
       }
     }
 
-    const recentProjects: RecentProject[] = rawRecentProjects.map((p) => {
+    const recentProjects: RecentProject[] = rawRecentProjects.map((project) => {
       const currentStepData =
-        p.steps.find((s) => s.state === 'IN_PROGRESS') ??
-        p.steps.find((s) => s.state === 'NOT_STARTED')
+        project.steps.find((step) => step.state === 'IN_PROGRESS') ??
+        project.steps.find((step) => step.state === 'NOT_STARTED')
 
       return {
-        id: p.id,
-        name: p.name,
-        lastActivityAt: p.lastActivityAt,
-        hobbyId: p.hobbyId,
-        hobby: p.hobby,
+        id: project.id,
+        name: project.name,
+        lastActivityAt: project.lastActivityAt,
+        hobbyId: project.hobbyId,
+        hobby: project.hobby,
         currentStep: currentStepData
           ? { id: currentStepData.id, name: currentStepData.name }
           : null,
-        latestPhoto: latestPhotoByProject.get(p.id) ?? null,
+        latestPhoto: latestPhotoByProject.get(project.id) ?? null,
       }
     })
 
-    const activeBlockers: ActiveBlocker[] = rawActiveBlockers.map((b) => ({
-      id: b.id,
-      description: b.description,
-      createdAt: b.createdAt,
+    const activeBlockers: ActiveBlocker[] = rawActiveBlockers.map((blocker) => ({
+      id: blocker.id,
+      description: blocker.description,
+      createdAt: blocker.createdAt,
       step: {
-        id: b.step.id,
-        name: b.step.name,
+        id: blocker.step.id,
+        name: blocker.step.name,
         project: {
-          id: b.step.project.id,
-          name: b.step.project.name,
-          hobbyId: b.step.project.hobbyId,
-          hobby: b.step.project.hobby,
+          id: blocker.step.project.id,
+          name: blocker.step.project.name,
+          hobbyId: blocker.step.project.hobbyId,
+          hobby: blocker.step.project.hobby,
         },
       },
     }))
 
-    const idleProjects: IdleProject[] = rawIdleProjects.map((p) => {
+    const idleProjects: IdleProject[] = rawIdleProjects.map((project) => {
       const currentStepData =
-        p.steps.find((s) => s.state === 'IN_PROGRESS') ??
-        p.steps.find((s) => s.state === 'NOT_STARTED')
+        project.steps.find((step) => step.state === 'IN_PROGRESS') ??
+        project.steps.find((step) => step.state === 'NOT_STARTED')
       return {
-        id: p.id,
-        name: p.name,
-        lastActivityAt: p.lastActivityAt,
-        hobbyId: p.hobbyId,
-        hobby: p.hobby,
+        id: project.id,
+        name: project.name,
+        lastActivityAt: project.lastActivityAt,
+        hobbyId: project.hobbyId,
+        hobby: project.hobby,
         currentStep: currentStepData
           ? { id: currentStepData.id, name: currentStepData.name }
           : null,

@@ -108,23 +108,25 @@ export function BomNewInventoryForm({
       <div className="space-y-1">
         <Label>Type</Label>
         <div className="flex flex-wrap gap-2">
-          {TYPES.map((t) => (
+          {TYPES.map((typeOption) => (
             <label
-              key={t.value}
+              key={typeOption.value}
               className={`inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-md border px-3 py-1 text-sm ${
-                type === t.value ? 'border-ring bg-accent text-accent-foreground' : 'border-input'
+                type === typeOption.value
+                  ? 'border-ring bg-accent text-accent-foreground'
+                  : 'border-input'
               }`}
             >
               <input
                 type="radio"
                 name="bom-new-inv-type"
-                value={t.value}
-                checked={type === t.value}
-                onChange={() => setType(t.value)}
+                value={typeOption.value}
+                checked={type === typeOption.value}
+                onChange={() => setType(typeOption.value)}
                 className="sr-only"
               />
-              <span aria-hidden>{t.emoji}</span>
-              {t.label}
+              <span aria-hidden>{typeOption.emoji}</span>
+              {typeOption.label}
             </label>
           ))}
         </div>

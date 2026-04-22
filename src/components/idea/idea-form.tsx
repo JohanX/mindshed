@@ -107,14 +107,14 @@ export function IdeaFormDialog({ hobbyId, hobbies }: IdeaFormDialogProps) {
                   <SelectValue placeholder="Select a hobby" />
                 </SelectTrigger>
                 <SelectContent>
-                  {hobbies.map((h) => (
-                    <SelectItem key={h.id} value={h.id}>
+                  {hobbies.map((hobby) => (
+                    <SelectItem key={hobby.id} value={hobby.id}>
                       <span className="flex items-center gap-2">
                         <span
                           className="inline-block h-3 w-3 rounded-full"
-                          style={{ backgroundColor: h.color }}
+                          style={{ backgroundColor: hobby.color }}
                         />
-                        {h.name}
+                        {hobby.name}
                       </span>
                     </SelectItem>
                   ))}

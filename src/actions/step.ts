@@ -185,7 +185,8 @@ export async function updateStepState(input: UpdateStepStateInput): Promise<Acti
         where: { projectId: existing.projectId },
         select: { state: true },
       })
-      const allCompleted = allSteps.length > 0 && allSteps.every((s) => s.state === 'COMPLETED')
+      const allCompleted =
+        allSteps.length > 0 && allSteps.every((step) => step.state === 'COMPLETED')
       if (allCompleted !== existing.project.isCompleted) {
         await tx.project.update({
           where: { id: existing.projectId },
@@ -230,7 +231,7 @@ export async function reorderSteps(input: ReorderStepsInput): Promise<ActionResu
         where: { projectId: parsed.data.projectId },
         select: { id: true },
       })
-      const projectStepIds = new Set(steps.map((s) => s.id))
+      const projectStepIds = new Set(steps.map((step) => step.id))
       if (parsed.data.orderedStepIds.length !== projectStepIds.size) {
         throw new Error('STEP_COUNT_MISMATCH')
       }

@@ -31,7 +31,7 @@ export function ProjectCreateDialog({ hobbyId }: ProjectCreateDialogProps) {
   const [isPending, startTransition] = useTransition()
 
   const isValid =
-    name.trim().length > 0 && steps.length > 0 && steps.every((s) => s.name.trim().length > 0)
+    name.trim().length > 0 && steps.length > 0 && steps.every((step) => step.name.trim().length > 0)
 
   function resetForm() {
     setName('')
@@ -56,7 +56,7 @@ export function ProjectCreateDialog({ hobbyId }: ProjectCreateDialogProps) {
   }
 
   function updateStep(index: number, value: string) {
-    setSteps(steps.map((s, i) => (i === index ? { ...s, name: value } : s)))
+    setSteps(steps.map((step, i) => (i === index ? { ...step, name: value } : step)))
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -68,7 +68,7 @@ export function ProjectCreateDialog({ hobbyId }: ProjectCreateDialogProps) {
         name: name.trim(),
         description: description.trim() || null,
         hobbyId,
-        steps: steps.map((s) => ({ name: s.name.trim() })),
+        steps: steps.map((step) => ({ name: step.name.trim() })),
       })
 
       if (result.success) {

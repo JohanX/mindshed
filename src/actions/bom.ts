@@ -209,7 +209,7 @@ export async function addBomItemWithNewInventory(
       })
       const finalName = nextUniqueInventoryName(
         newItem.name,
-        existing.map((e) => e.name),
+        existing.map((existingItem) => existingItem.name),
       )
 
       const createdInventoryItem = await tx.inventoryItem.create({
@@ -296,14 +296,14 @@ export async function getBomItemsByProject(
 
     return {
       success: true,
-      data: rows.map((r) => ({
-        id: r.id,
-        label: r.label,
-        requiredQuantity: r.requiredQuantity,
-        unit: r.unit,
-        sortOrder: r.sortOrder,
-        consumptionState: r.consumptionState,
-        inventoryItem: r.inventoryItem,
+      data: rows.map((row) => ({
+        id: row.id,
+        label: row.label,
+        requiredQuantity: row.requiredQuantity,
+        unit: row.unit,
+        sortOrder: row.sortOrder,
+        consumptionState: row.consumptionState,
+        inventoryItem: row.inventoryItem,
       })),
     }
   } catch (error) {

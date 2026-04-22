@@ -179,13 +179,11 @@ describe('updateStepState', () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         step: {
-          findUniqueOrThrow: vi
-            .fn()
-            .mockResolvedValue({
-              ...existing,
-              projectId: existing.projectId ?? 'p1',
-              project: existing.project ?? { isCompleted: false },
-            }),
+          findUniqueOrThrow: vi.fn().mockResolvedValue({
+            ...existing,
+            projectId: existing.projectId ?? 'p1',
+            project: existing.project ?? { isCompleted: false },
+          }),
           update: mockStepUpdate,
           findMany: mockStepFindMany,
         },

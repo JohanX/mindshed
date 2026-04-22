@@ -10,18 +10,18 @@ interface DashboardBlockersSectionProps {
 
 export function DashboardBlockersSection({ blockers }: DashboardBlockersSectionProps) {
   // Map ActiveBlocker to BlockerWithContext shape expected by BlockerList
-  const mapped = blockers.map((b) => ({
-    id: b.id,
-    description: b.description,
+  const mapped = blockers.map((blocker) => ({
+    id: blocker.id,
+    description: blocker.description,
     isResolved: false as const,
-    createdAt: b.createdAt,
+    createdAt: blocker.createdAt,
     step: {
-      name: b.step.name,
+      name: blocker.step.name,
       project: {
-        id: b.step.project.id,
-        name: b.step.project.name,
-        hobbyId: b.step.project.hobbyId,
-        hobby: b.step.project.hobby,
+        id: blocker.step.project.id,
+        name: blocker.step.project.name,
+        hobbyId: blocker.step.project.hobbyId,
+        hobby: blocker.step.project.hobby,
       },
     },
   }))

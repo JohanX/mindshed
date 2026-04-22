@@ -89,12 +89,10 @@ describe('addStepImageLink', () => {
     mockTx.mockImplementation(async (fn) => {
       const tx = {
         step: {
-          findUnique: vi
-            .fn()
-            .mockResolvedValue({
-              projectId: 'p1',
-              project: { id: 'p1', hobbyId: 'h1', isCompleted: true },
-            }),
+          findUnique: vi.fn().mockResolvedValue({
+            projectId: 'p1',
+            project: { id: 'p1', hobbyId: 'h1', isCompleted: true },
+          }),
         },
         stepImage: { create: vi.fn() },
         project: { update: vi.fn() },
@@ -114,12 +112,10 @@ describe('addStepImageLink', () => {
     mockTx.mockImplementation(async (fn) => {
       const tx = {
         step: {
-          findUnique: vi
-            .fn()
-            .mockResolvedValue({
-              projectId: 'p1',
-              project: { id: 'p1', hobbyId: 'h1', isCompleted: false },
-            }),
+          findUnique: vi.fn().mockResolvedValue({
+            projectId: 'p1',
+            project: { id: 'p1', hobbyId: 'h1', isCompleted: false },
+          }),
         },
         stepImage: { create: mockCreate },
         project: { update: mockUpdate },

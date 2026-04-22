@@ -38,9 +38,9 @@ interface CreateBlockerDialogProps {
 }
 
 function pickDefaultStepId(selectable: PickerStep[]): string | null {
-  const inProgress = selectable.find((s) => s.state === 'IN_PROGRESS')
+  const inProgress = selectable.find((step) => step.state === 'IN_PROGRESS')
   if (inProgress) return inProgress.id
-  const notStarted = selectable.find((s) => s.state === 'NOT_STARTED')
+  const notStarted = selectable.find((step) => step.state === 'NOT_STARTED')
   if (notStarted) return notStarted.id
   return selectable[0]?.id ?? null
 }
@@ -58,7 +58,9 @@ function DialogBody({
 }) {
   const selectable = useMemo(
     () =>
-      [...steps].filter((s) => s.state !== 'COMPLETED').sort((a, b) => a.sortOrder - b.sortOrder),
+      [...steps]
+        .filter((step) => step.state !== 'COMPLETED')
+        .sort((a, b) => a.sortOrder - b.sortOrder),
     [steps],
   )
   const [selectedStepId, setSelectedStepId] = useState<string | null>(() =>
@@ -115,12 +117,12 @@ function DialogBody({
               <SelectValue placeholder="Pick a step" />
             </SelectTrigger>
             <SelectContent>
-              {selectable.map((s) => (
-                <SelectItem key={s.id} value={s.id} className="min-h-[44px]">
+              {selectable.map((step) => (
+                <SelectItem key={step.id} value={step.id} className="min-h-[44px]">
                   <span className="flex items-center gap-2">
-                    <span>{s.name}</span>
+                    <span>{step.name}</span>
                     <span className="text-xs text-muted-foreground">
-                      ({STEP_STATE_CONFIG[s.state].label})
+                      ({STEP_STATE_CONFIG[step.state].label})
                     </span>
                   </span>
                 </SelectItem>

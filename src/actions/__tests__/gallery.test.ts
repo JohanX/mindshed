@@ -46,15 +46,13 @@ describe('enableJourneyGallery', () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         project: {
-          findUnique: vi
-            .fn()
-            .mockResolvedValue({
-              id: 'p1',
-              name: 'Walnut Table',
-              gallerySlug: null,
-              hobbyId: 'h1',
-              isArchived: false,
-            }),
+          findUnique: vi.fn().mockResolvedValue({
+            id: 'p1',
+            name: 'Walnut Table',
+            gallerySlug: null,
+            hobbyId: 'h1',
+            isArchived: false,
+          }),
           findMany: vi.fn().mockResolvedValue([]),
           update: vi
             .fn()
@@ -73,15 +71,13 @@ describe('enableJourneyGallery', () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         project: {
-          findUnique: vi
-            .fn()
-            .mockResolvedValue({
-              id: 'p1',
-              name: 'Walnut Table',
-              gallerySlug: 'walnut-table',
-              hobbyId: 'h1',
-              isArchived: false,
-            }),
+          findUnique: vi.fn().mockResolvedValue({
+            id: 'p1',
+            name: 'Walnut Table',
+            gallerySlug: 'walnut-table',
+            hobbyId: 'h1',
+            isArchived: false,
+          }),
           update: vi
             .fn()
             .mockResolvedValue({ id: 'p1', gallerySlug: 'walnut-table', hobbyId: 'h1' }),

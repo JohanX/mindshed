@@ -13,10 +13,10 @@ export interface StepForCurrentStep {
 export function getCurrentStep(
   steps: StepForCurrentStep[],
 ): { name: string; state: StepState } | null {
-  const inProgress = steps.find((s) => s.state === 'IN_PROGRESS')
+  const inProgress = steps.find((step) => step.state === 'IN_PROGRESS')
   if (inProgress) return { name: inProgress.name, state: inProgress.state as StepState }
 
-  const notStarted = steps.find((s) => s.state === 'NOT_STARTED')
+  const notStarted = steps.find((step) => step.state === 'NOT_STARTED')
   if (notStarted) return { name: notStarted.name, state: notStarted.state as StepState }
 
   return null

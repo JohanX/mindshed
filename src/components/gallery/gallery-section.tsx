@@ -125,7 +125,7 @@ export function GallerySection({
     })
   }
 
-  const completedSteps = steps.filter((s) => s.state === 'COMPLETED')
+  const completedSteps = steps.filter((step) => step.state === 'COMPLETED')
 
   return (
     <section className="space-y-4">

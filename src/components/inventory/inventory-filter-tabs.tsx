@@ -20,7 +20,7 @@ interface InventoryFilterTabsProps {
 export function InventoryFilterTabs({ items }: InventoryFilterTabsProps) {
   const [filter, setFilter] = useState<string>('ALL')
 
-  const filtered = filter === 'ALL' ? items : items.filter((i) => i.type === filter)
+  const filtered = filter === 'ALL' ? items : items.filter((item) => item.type === filter)
 
   return (
     <div className="space-y-4">

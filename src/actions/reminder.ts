@@ -175,15 +175,15 @@ export async function getDashboardReminders(): Promise<ActionResult<DashboardRem
     // per reminder) with a constant 3 queries regardless of N.
     const stepIds: string[] = []
     const projectIds: string[] = []
-    for (const r of reminders) {
-      if (r.targetType === 'STEP') {
-        stepIds.push(r.targetId)
-      } else if (r.targetType === 'PROJECT') {
-        projectIds.push(r.targetId)
+    for (const reminder of reminders) {
+      if (reminder.targetType === 'STEP') {
+        stepIds.push(reminder.targetId)
+      } else if (reminder.targetType === 'PROJECT') {
+        projectIds.push(reminder.targetId)
       } else {
         // Future-proof: if ReminderTargetType gains a variant without updating
         // this partition, surface a warning instead of silently misrouting.
-        console.warn('getDashboardReminders: unhandled targetType', r.targetType)
+        console.warn('getDashboardReminders: unhandled targetType', reminder.targetType)
       }
     }
 
@@ -219,35 +219,35 @@ export async function getDashboardReminders(): Promise<ActionResult<DashboardRem
         : Promise.resolve([]),
     ])
 
-    const stepMap = new Map(stepRows.map((s) => [s.id, s]))
-    const projectMap = new Map(projectRows.map((p) => [p.id, p]))
+    const stepMap = new Map(stepRows.map((step) => [step.id, step]))
+    const projectMap = new Map(projectRows.map((project) => [project.id, project]))
 
     const enriched: DashboardReminder[] = []
-    for (const r of reminders) {
-      if (r.targetType === 'STEP') {
-        const step = stepMap.get(r.targetId)
+    for (const reminder of reminders) {
+      if (reminder.targetType === 'STEP') {
+        const step = stepMap.get(reminder.targetId)
         if (!step) continue
         enriched.push({
-          id: r.id,
+          id: reminder.id,
           targetType: 'STEP',
-          targetId: r.targetId,
+          targetId: reminder.targetId,
           targetName: step.name,
-          dueDate: r.dueDate,
-          isOverdue: r.dueDate < now,
+          dueDate: reminder.dueDate,
+          isOverdue: reminder.dueDate < now,
           hobby: step.project.hobby,
           hobbyId: step.project.hobbyId,
           projectId: step.project.id,
         })
       } else {
-        const project = projectMap.get(r.targetId)
+        const project = projectMap.get(reminder.targetId)
         if (!project) continue
         enriched.push({
-          id: r.id,
+          id: reminder.id,
           targetType: 'PROJECT',
-          targetId: r.targetId,
+          targetId: reminder.targetId,
           targetName: project.name,
-          dueDate: r.dueDate,
-          isOverdue: r.dueDate < now,
+          dueDate: reminder.dueDate,
+          isOverdue: reminder.dueDate < now,
           hobby: project.hobby,
           hobbyId: project.hobbyId,
           projectId: project.id,

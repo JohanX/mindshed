@@ -2,8 +2,9 @@ export type DerivedProjectStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'BLOCKED' | '
 
 export function deriveProjectStatus(steps: { state: string }[]): DerivedProjectStatus {
   if (steps.length === 0) return 'NOT_STARTED'
-  if (steps.some((s) => s.state === 'BLOCKED')) return 'BLOCKED'
-  if (steps.every((s) => s.state === 'COMPLETED')) return 'COMPLETED'
-  if (steps.some((s) => s.state === 'IN_PROGRESS' || s.state === 'COMPLETED')) return 'IN_PROGRESS'
+  if (steps.some((step) => step.state === 'BLOCKED')) return 'BLOCKED'
+  if (steps.every((step) => step.state === 'COMPLETED')) return 'COMPLETED'
+  if (steps.some((step) => step.state === 'IN_PROGRESS' || step.state === 'COMPLETED'))
+    return 'IN_PROGRESS'
   return 'NOT_STARTED'
 }

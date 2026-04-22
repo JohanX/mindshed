@@ -89,24 +89,24 @@ export async function getHobbies(): Promise<ActionResult<HobbyWithCounts[]>> {
       }),
     ])
 
-    const activeMap = new Map(activeCounts.map((r) => [r.hobbyId, r._count._all]))
-    const blockedMap = new Map(blockedCounts.map((r) => [r.hobbyId, r._count._all]))
-    const idleMap = new Map(idleCounts.map((r) => [r.hobbyId, r._count._all]))
+    const activeMap = new Map(activeCounts.map((row) => [row.hobbyId, row._count._all]))
+    const blockedMap = new Map(blockedCounts.map((row) => [row.hobbyId, row._count._all]))
+    const idleMap = new Map(idleCounts.map((row) => [row.hobbyId, row._count._all]))
 
     return {
       success: true,
-      data: hobbies.map((h) => ({
-        id: h.id,
-        name: h.name,
-        color: h.color,
-        icon: h.icon,
-        sortOrder: h.sortOrder,
-        createdAt: h.createdAt,
-        updatedAt: h.updatedAt,
-        projectCount: h._count.projects,
-        activeCount: activeMap.get(h.id) ?? 0,
-        blockedCount: blockedMap.get(h.id) ?? 0,
-        idleCount: idleMap.get(h.id) ?? 0,
+      data: hobbies.map((hobby) => ({
+        id: hobby.id,
+        name: hobby.name,
+        color: hobby.color,
+        icon: hobby.icon,
+        sortOrder: hobby.sortOrder,
+        createdAt: hobby.createdAt,
+        updatedAt: hobby.updatedAt,
+        projectCount: hobby._count.projects,
+        activeCount: activeMap.get(hobby.id) ?? 0,
+        blockedCount: blockedMap.get(hobby.id) ?? 0,
+        idleCount: idleMap.get(hobby.id) ?? 0,
       })),
     }
   } catch (error) {

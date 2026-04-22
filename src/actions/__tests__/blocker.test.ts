@@ -603,12 +603,10 @@ describe('updateBlocker', () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         blocker: {
-          update: vi
-            .fn()
-            .mockResolvedValue({
-              id: 'b1',
-              step: { projectId: PROJECT_ID, project: { hobbyId: HOBBY_ID } },
-            }),
+          update: vi.fn().mockResolvedValue({
+            id: 'b1',
+            step: { projectId: PROJECT_ID, project: { hobbyId: HOBBY_ID } },
+          }),
         },
         project: { update: vi.fn().mockResolvedValue({}) },
       }

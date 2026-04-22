@@ -39,7 +39,7 @@ export async function enableJourneyGallery(
         })
         slug = ensureUniqueSlug(
           generateSlug(existing.name),
-          allSlugs.map((p) => p.gallerySlug).filter((s): s is string => s !== null),
+          allSlugs.map((project) => project.gallerySlug).filter((s): s is string => s !== null),
         )
       }
 
@@ -121,7 +121,7 @@ export async function enableResultGallery(
         })
         slug = ensureUniqueSlug(
           generateSlug(existing.name),
-          allSlugs.map((p) => p.gallerySlug).filter((s): s is string => s !== null),
+          allSlugs.map((project) => project.gallerySlug).filter((s): s is string => s !== null),
         )
       }
 

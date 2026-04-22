@@ -67,11 +67,11 @@ export function BomSection({
   // Post-epic UX directive: cleaner to simply hide taken items than to surface
   // the "Already in this BOM" error toast.
   const linkedInventoryIds = useMemo(
-    () => new Set(rows.map((r) => r.inventoryItem?.id).filter((id): id is string => !!id)),
+    () => new Set(rows.map((row) => row.inventoryItem?.id).filter((id): id is string => !!id)),
     [rows],
   )
   const availableOptions = useMemo(
-    () => options.filter((o) => !linkedInventoryIds.has(o.id)),
+    () => options.filter((option) => !linkedInventoryIds.has(option.id)),
     [options, linkedInventoryIds],
   )
 
@@ -126,22 +126,22 @@ export function BomSection({
     },
   ) {
     setRows((prev) =>
-      prev.map((r) =>
-        r.id === id
+      prev.map((row) =>
+        row.id === id
           ? {
-              ...r,
-              requiredQuantity: patch.requiredQuantity ?? r.requiredQuantity,
-              unit: patch.unit === undefined ? r.unit : patch.unit,
-              label: patch.label ?? r.label,
-              consumptionState: patch.consumptionState ?? r.consumptionState,
+              ...row,
+              requiredQuantity: patch.requiredQuantity ?? row.requiredQuantity,
+              unit: patch.unit === undefined ? row.unit : patch.unit,
+              label: patch.label ?? row.label,
+              consumptionState: patch.consumptionState ?? row.consumptionState,
             }
-          : r,
+          : row,
       ),
     )
   }
 
   function handleRowDelete(id: string) {
-    setRows((prev) => prev.filter((r) => r.id !== id))
+    setRows((prev) => prev.filter((row) => row.id !== id))
   }
 
   return (
@@ -254,7 +254,9 @@ export function BomSection({
             initialName={addState.query}
             onSaved={(result) => {
               setOptions((prev) =>
-                prev.some((o) => o.id === result.created.id) ? prev : [...prev, result.created],
+                prev.some((option) => option.id === result.created.id)
+                  ? prev
+                  : [...prev, result.created],
               )
               setRows((prev) => {
                 const nextSort = (prev[prev.length - 1]?.sortOrder ?? -1) + 1

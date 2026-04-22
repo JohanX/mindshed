@@ -13,7 +13,7 @@ interface StepInclusionListProps {
 export function StepInclusionList({ steps }: StepInclusionListProps) {
   const [isPending, startTransition] = useTransition()
 
-  const stepsWithImages = steps.filter((s) => s.hasImages)
+  const stepsWithImages = steps.filter((step) => step.hasImages)
 
   if (stepsWithImages.length === 0) {
     return <p className="text-xs text-muted-foreground">No steps with images to include.</p>
