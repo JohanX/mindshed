@@ -39,6 +39,10 @@ interface StepBlockerData {
   description: string
 }
 
+export interface StepCardImage extends GalleryImage {
+  stripThumbnailUrl?: string
+}
+
 export interface StepCardData {
   id: string
   name: string
@@ -46,7 +50,7 @@ export interface StepCardData {
   previousState: StepState | null
   sortOrder: number
   notes: StepNoteData[]
-  images: GalleryImage[]
+  images: StepCardImage[]
   blockers: StepBlockerData[]
 }
 
@@ -136,7 +140,11 @@ export function StepCard({
               onClick={() => setExpanded((prev) => !prev)}
             >
               <span className="font-medium truncate">{step.name}</span>
-              {!expanded && <StepThumbnailStrip images={step.images} />}
+              {!expanded && <StepThumbnailStrip images={step.images.map(img => ({
+                id: img.id,
+                displayUrl: img.displayUrl,
+                thumbnailUrl: img.stripThumbnailUrl || img.thumbnailUrl,
+              }))} />}
             </button>
             <StepStatusSelect
               currentState={step.state}

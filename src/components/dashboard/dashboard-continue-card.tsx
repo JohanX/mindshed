@@ -84,7 +84,7 @@ export function DashboardContinueCard({ project, variant }: DashboardContinueCar
               width={64}
               height={64}
               className="h-16 w-16 shrink-0 rounded-lg object-cover"
-              unoptimized={photoUrl.includes('localhost') || photoUrl.includes('127.0.0.1')}
+              unoptimized={photoUrl.includes('res.cloudinary.com') || photoUrl.includes('localhost') || photoUrl.includes('127.0.0.1')}
             />
           )}
           <div className="min-w-0 flex-1 space-y-1">

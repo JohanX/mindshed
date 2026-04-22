@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/page-header'
 import { ProjectActions } from '@/components/project/project-actions'
 import { ProjectStatusBadge } from '@/components/project/project-status-badge'
-import { type StepCardData } from '@/components/step/step-card'
+import { type StepCardData, type StepCardImage } from '@/components/step/step-card'
 import { StepCardList } from '@/components/step/step-card-list'
 import { AddStepForm } from '@/components/step/add-step-form'
 import { EmptyStateCard } from '@/components/empty-state-card'
@@ -88,12 +88,14 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     previousState: (s.previousState as StepState | null) ?? null,
     sortOrder: s.sortOrder,
     notes: s.notes.map(n => ({ id: n.id, text: n.text, createdAt: n.createdAt })),
-    images: s.images.map(img => {
+    images: s.images.map((img): StepCardImage => {
       const isUpload = img.type === 'UPLOAD' && img.storageKey
+      const fallback = img.url ?? ''
       return {
         id: img.id,
-        displayUrl: isUpload ? getPublicImageUrl(img.storageKey!) : img.url ?? '',
-        thumbnailUrl: isUpload ? getThumbnailImageUrl(img.storageKey!, 400) : img.url ?? '',
+        displayUrl: isUpload ? getPublicImageUrl(img.storageKey!) : fallback,
+        thumbnailUrl: isUpload ? getThumbnailImageUrl(img.storageKey!, 400) : fallback,
+        stripThumbnailUrl: isUpload ? getThumbnailImageUrl(img.storageKey!, 80) : fallback,
         originalFilename: img.originalFilename,
       }
     }),
