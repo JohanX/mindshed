@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Applies raw-SQL schema artifacts that Prisma cannot express in schema.prisma.
-// Runs after `prisma db push` in both dev/prod deploys (see package.json build
-// script) and in E2E global-setup. Idempotent: drop-then-create guarantees the
-// partial index predicate always matches the current definition — preventing
-// silent predicate drift when the clause changes over time.
+// Applies partial unique indexes that Prisma cannot express in schema.prisma.
+// Only needed after `prisma db push` in local dev — production uses
+// `prisma migrate deploy` which includes these indexes in the migration SQL.
+// Run manually: `node prisma/post-push.mjs`
+// E2E global-setup applies the same indexes independently for the test DB.
 
 import pg from 'pg'
 import 'dotenv/config'

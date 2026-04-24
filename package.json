@@ -5,7 +5,7 @@
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "prisma db push --accept-data-loss && node prisma/post-push.mjs && next build",
+    "build": "prisma migrate deploy && next build",
     "start": "next start",
     "lint": "eslint",
     "format": "prettier --write .",
