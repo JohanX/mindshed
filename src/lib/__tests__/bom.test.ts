@@ -68,14 +68,6 @@ describe('summarizeBomRows', () => {
     expect(s).toEqual({ total: 2, shortCount: 1, summary: 'short' })
   })
 
-  it('two rows — one short, one UNDONE → shortCount 1 (UNDONE excluded)', () => {
-    const s = summarizeBomRows([
-      linked({ id: 'a', required: 500, available: 100 }),
-      linked({ id: 'b', required: 200, available: 50, consumptionState: 'UNDONE' }),
-    ])
-    expect(s).toEqual({ total: 2, shortCount: 1, summary: 'short' })
-  })
-
   it('row linked to soft-deleted inventory is never short', () => {
     const s = summarizeBomRows([linked({ required: 500, available: 100, isDeleted: true })])
     expect(s).toEqual({ total: 1, shortCount: 0, summary: 'ready' })
@@ -127,12 +119,6 @@ describe('renderAvailable', () => {
     ).toEqual({ label: 'Consumed', variant: 'consumed' })
   })
 
-  it('UNDONE → reverted chip', () => {
-    expect(
-      renderAvailable(linked({ required: 100, available: 50, consumptionState: 'UNDONE' })),
-    ).toEqual({ label: 'Reverted', variant: 'undone' })
-  })
-
   it('soft-deleted inventory → missing em-dash', () => {
     expect(renderAvailable(linked({ required: 100, available: 50, isDeleted: true }))).toEqual({
       label: '—',
@@ -181,11 +167,6 @@ describe('isRowShort', () => {
   })
   it('CONSUMED row → false', () => {
     expect(isRowShort(linked({ required: 500, available: 0, consumptionState: 'CONSUMED' }))).toBe(
-      false,
-    )
-  })
-  it('UNDONE row → false', () => {
-    expect(isRowShort(linked({ required: 500, available: 0, consumptionState: 'UNDONE' }))).toBe(
       false,
     )
   })

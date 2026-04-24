@@ -44,7 +44,7 @@ type SourceMock = {
     requiredQuantity: number
     unit: string | null
     sortOrder: number
-    consumptionState: 'NOT_CONSUMED' | 'CONSUMED' | 'UNDONE'
+    consumptionState: 'NOT_CONSUMED' | 'CONSUMED'
   }>
 }
 
@@ -343,7 +343,7 @@ describe('cloneProject', () => {
             requiredQuantity: 5,
             unit: 'kg',
             sortOrder: 2,
-            consumptionState: 'UNDONE',
+            consumptionState: 'NOT_CONSUMED',
           },
         ],
       },

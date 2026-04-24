@@ -623,7 +623,7 @@ type PerRowBomRow = {
   requiredQuantity: number
   unit: string | null
   projectId: string
-  consumptionState: 'NOT_CONSUMED' | 'CONSUMED' | 'UNDONE'
+  consumptionState: 'NOT_CONSUMED' | 'CONSUMED'
   label: string | null
   sortOrder: number
   inventoryItem: {
@@ -958,7 +958,7 @@ type ConsumptionTxMock = {
 function buildConsumptionTx(opts: {
   row?: {
     requiredQuantity: number
-    consumptionState: 'NOT_CONSUMED' | 'CONSUMED' | 'UNDONE'
+    consumptionState: 'NOT_CONSUMED' | 'CONSUMED'
     projectId: string
     inventoryItem: {
       id: string
@@ -988,7 +988,7 @@ function materialRow(
   overrides: {
     required?: number
     available?: number | null
-    state?: 'NOT_CONSUMED' | 'CONSUMED' | 'UNDONE'
+    state?: 'NOT_CONSUMED' | 'CONSUMED'
     isDeleted?: boolean
     type?: 'MATERIAL' | 'CONSUMABLE' | 'TOOL'
     name?: string
@@ -1068,17 +1068,7 @@ describe('markBomItemConsumed', () => {
 
     const result = await markBomItemConsumed({ id: BOM_ITEM_ID })
     expect(result.success).toBe(false)
-    if (!result.success) expect(result.error).toBe('Row already consumed or reverted.')
-  })
-
-  it('rejects when row is UNDONE', async () => {
-    const tx = buildConsumptionTx({
-      row: materialRow({ state: 'UNDONE', required: 10, available: 1000 }),
-    })
-    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
-
-    const result = await markBomItemConsumed({ id: BOM_ITEM_ID })
-    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Row already consumed.')
   })
 
   it('rejects CONSUMABLE type', async () => {
@@ -1139,7 +1129,7 @@ describe('undoBomItemConsumption', () => {
     expect(mockTransaction).not.toHaveBeenCalled()
   })
 
-  it('happy path: credits inventory, flips to UNDONE, bumps lastActivityAt', async () => {
+  it('happy path: credits inventory, flips to NOT_CONSUMED, bumps lastActivityAt', async () => {
     const tx = buildConsumptionTx({
       row: materialRow({ state: 'CONSUMED', required: 100, available: 400 }),
     })
@@ -1156,7 +1146,7 @@ describe('undoBomItemConsumption', () => {
     const bomCall = tx.bomItem.update.mock.calls[0][0] as {
       data: { consumptionState: string; unconsumedAt: Date }
     }
-    expect(bomCall.data.consumptionState).toBe('UNDONE')
+    expect(bomCall.data.consumptionState).toBe('NOT_CONSUMED')
     expect(bomCall.data.unconsumedAt).toBeInstanceOf(Date)
 
     expect(mockRevalidatePath).toHaveBeenCalledWith('/inventory')
@@ -1185,14 +1175,6 @@ describe('undoBomItemConsumption', () => {
     const result = await undoBomItemConsumption({ id: BOM_ITEM_ID })
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toBe('Row is not in a consumed state.')
-  })
-
-  it('rejects when row is UNDONE (one-shot semantics)', async () => {
-    const tx = buildConsumptionTx({ row: materialRow({ state: 'UNDONE' }) })
-    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
-
-    const result = await undoBomItemConsumption({ id: BOM_ITEM_ID })
-    expect(result.success).toBe(false)
   })
 
   it('returns BOM item not found when row missing', async () => {

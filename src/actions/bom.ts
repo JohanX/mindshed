@@ -551,7 +551,7 @@ export async function markBomItemConsumed(
         }
       }
       if (error.message === 'ALREADY_CONSUMED') {
-        return { success: false, error: 'Row already consumed or reverted.' }
+        return { success: false, error: 'Row already consumed.' }
       }
       if (error.message === 'NOT_MATERIAL_LINKED') {
         return { success: false, error: 'Cannot mark this row as consumed.' }
@@ -595,7 +595,7 @@ export async function undoBomItemConsumption(
 
       await tx.bomItem.update({
         where: { id: parsed.data.id },
-        data: { consumptionState: 'UNDONE', unconsumedAt: new Date() },
+        data: { consumptionState: 'NOT_CONSUMED', unconsumedAt: new Date() },
       })
 
       await tx.project.update({

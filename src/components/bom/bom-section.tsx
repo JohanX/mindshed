@@ -122,7 +122,6 @@ export function BomSection({
       label?: string
       consumptionState?: BomConsumptionState
       consumedAt?: Date | null
-      unconsumedAt?: Date | null
     },
   ) {
     setRows((prev) =>

@@ -125,7 +125,7 @@ test.describe('BOM Consumption (Mark / Undo) + Clone Integration', () => {
     const matCard = page.locator('[data-slot="card"]').filter({ hasText: matName })
     await expect(matCard.getByText('150 g')).toBeVisible()
 
-    // === Scenario 2: Undo ===
+    // === Scenario 2: Undo → row returns to NOT_CONSUMED (editable, re-consumable) ===
     await page.goto(projectUrl)
     await page.waitForLoadState('networkidle')
     const matRow2 = page.locator('table tbody tr').filter({ hasText: matName })
@@ -133,15 +133,33 @@ test.describe('BOM Consumption (Mark / Undo) + Clone Integration', () => {
     await expect(page.getByText(`Reverted consumption of ${matName}`)).toBeVisible({
       timeout: 5000,
     })
-    // Available cell now shows "Reverted"
-    await expect(matRow2.getByText('Reverted', { exact: true })).toBeVisible()
     // Inventory credited back
     await page.goto('/inventory')
     await page.waitForLoadState('networkidle')
     const matCard2 = page.locator('[data-slot="card"]').filter({ hasText: matName })
     await expect(matCard2.getByText('200 g')).toBeVisible()
+    // Reload project page to get fresh server state after undo
+    await page.goto(projectUrl)
+    await page.waitForLoadState('networkidle')
+    const matRow2Fresh = page.locator('table tbody tr').filter({ hasText: matName })
+    // Available cell shows quantity again (NOT "Reverted" — UNDONE state eliminated)
+    await expect(matRow2Fresh.getByText('200 g')).toBeVisible()
+    await expect(matRow2Fresh.getByText('Reverted', { exact: true })).toHaveCount(0)
+    // Row is editable again
+    await expect(matRow2Fresh.getByLabel('Required quantity')).toBeEnabled()
 
-    // === Scenario 3: Mark consumed hidden on TOOL row ===
+    // === Scenario 3: Re-consume after undo (NOT_CONSUMED cycle) ===
+    await matRow2Fresh.getByRole('button', { name: /Actions for / }).click()
+    await page.getByRole('menuitem', { name: 'Mark consumed' }).click()
+    await expect(page.getByText(`Marked ${matName} as consumed`)).toBeVisible({ timeout: 5000 })
+    await expect(matRow2Fresh.getByText('Consumed', { exact: true })).toBeVisible()
+    // Undo again to leave row in NOT_CONSUMED for clone test
+    await matRow2Fresh.getByRole('button', { name: /Undo/ }).click()
+    await expect(page.getByText(`Reverted consumption of ${matName}`)).toBeVisible({
+      timeout: 5000,
+    })
+
+    // === Scenario 4: Mark consumed hidden on TOOL row ===
     await page.goto(projectUrl)
     await page.waitForLoadState('networkidle')
     const toolRow = page.locator('table tbody tr').filter({ hasText: toolName })
@@ -156,8 +174,8 @@ test.describe('BOM Consumption (Mark / Undo) + Clone Integration', () => {
     await page.goto(projectUrl)
     await page.waitForLoadState('networkidle')
 
-    // Clone the project — the existing project has 1 UNDONE row (ConsMat)
-    // and 1 NOT_CONSUMED row (ConsTool)
+    // Clone the project — the existing project has 2 NOT_CONSUMED rows
+    // (ConsMat was undone back to NOT_CONSUMED, ConsTool was always NOT_CONSUMED)
     await page.getByRole('button', { name: 'Project actions' }).click()
     await page.getByRole('menuitem', { name: 'Clone' }).click()
     await expect(page.getByRole('heading', { name: /Consumption Test \(copy\)/ })).toBeVisible({

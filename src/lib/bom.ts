@@ -45,7 +45,7 @@ export function filterInventoryOptions(
   return { results: [...starts, ...contains], showAddNew: !exactMatch }
 }
 
-export type BomConsumptionState = 'NOT_CONSUMED' | 'CONSUMED' | 'UNDONE'
+export type BomConsumptionState = 'NOT_CONSUMED' | 'CONSUMED'
 
 export type BomItemData = {
   id: string
@@ -132,7 +132,7 @@ export function summarizeBomRows(rows: BomItemData[]): BomSummary {
   return { total, shortCount, summary }
 }
 
-export type AvailableVariant = 'ok' | 'short' | 'missing' | 'consumed' | 'undone'
+export type AvailableVariant = 'ok' | 'short' | 'missing' | 'consumed'
 
 export type AvailableCell = {
   label: string
@@ -151,9 +151,6 @@ function formatQuantity(qty: number, unit: string | null): string {
 export function renderAvailable(row: BomItemData): AvailableCell {
   if (row.consumptionState === 'CONSUMED') {
     return { label: 'Consumed', variant: 'consumed' }
-  }
-  if (row.consumptionState === 'UNDONE') {
-    return { label: 'Reverted', variant: 'undone' }
   }
   const inv = row.inventoryItem
   if (!inv || inv.isDeleted || inv.quantity === null) {

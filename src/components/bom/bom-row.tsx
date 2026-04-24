@@ -31,7 +31,6 @@ interface BomRowProps {
       label?: string
       consumptionState?: BomConsumptionState
       consumedAt?: Date | null
-      unconsumedAt?: Date | null
     },
   ) => void
   onDelete: (id: string) => void
@@ -47,9 +46,7 @@ function AvailableCell({ row }: { row: BomItemData }) {
         ? 'text-step-blocked font-medium'
         : variant === 'consumed'
           ? 'inline-flex items-center rounded-full bg-step-completed px-2 py-0.5 text-xs text-white'
-          : variant === 'undone'
-            ? 'inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground'
-            : 'text-muted-foreground'
+          : 'text-muted-foreground'
   return <span className={className}>{label}</span>
 }
 
@@ -144,7 +141,7 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
         showErrorToast(result.error)
         return
       }
-      onUpdate(row.id, { consumptionState: 'UNDONE', unconsumedAt: new Date() })
+      onUpdate(row.id, { consumptionState: 'NOT_CONSUMED' })
       showSuccessToast(`Reverted consumption of ${displayName}`)
     })
   }
