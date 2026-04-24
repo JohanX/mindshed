@@ -253,20 +253,59 @@ describe('updateHobby', () => {
 describe('deleteHobby', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('deletes successfully', async () => {
-    mockHobbyDelete.mockResolvedValue({ id: VALID_UUID } as never)
+  it('deletes hobby, cleans up reminders for projects/steps, revalidates inventory', async () => {
+    const mockProjectFindMany = vi.fn().mockResolvedValue([{ id: 'p1' }, { id: 'p2' }])
+    const mockStepFindMany = vi.fn().mockResolvedValue([{ id: 's1' }, { id: 's2' }])
+    const mockReminderDeleteMany = vi.fn().mockResolvedValue({ count: 2 })
+    const mockHobbyDeleteTx = vi.fn().mockResolvedValue({ id: VALID_UUID })
+
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        project: { findMany: mockProjectFindMany },
+        step: { findMany: mockStepFindMany },
+        reminder: { deleteMany: mockReminderDeleteMany },
+        hobby: { delete: mockHobbyDeleteTx },
+      }
+      return fn(tx as never)
+    })
+
+    const { revalidatePath: mockRevalidatePath } = await import('next/cache')
     const result = await deleteHobby(VALID_UUID)
     expect(result.success).toBe(true)
+
+    expect(mockReminderDeleteMany).toHaveBeenCalledWith({
+      where: { targetId: { in: ['p1', 'p2', 's1', 's2'] } },
+    })
+    expect(vi.mocked(mockRevalidatePath)).toHaveBeenCalledWith('/inventory')
+  })
+
+  it('skips reminder cleanup when hobby has no projects', async () => {
+    const mockProjectFindMany = vi.fn().mockResolvedValue([])
+    const mockReminderDeleteMany = vi.fn()
+    const mockHobbyDeleteTx = vi.fn().mockResolvedValue({ id: VALID_UUID })
+
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        project: { findMany: mockProjectFindMany },
+        step: { findMany: vi.fn() },
+        reminder: { deleteMany: mockReminderDeleteMany },
+        hobby: { delete: mockHobbyDeleteTx },
+      }
+      return fn(tx as never)
+    })
+
+    const result = await deleteHobby(VALID_UUID)
+    expect(result.success).toBe(true)
+    expect(mockReminderDeleteMany).not.toHaveBeenCalled()
   })
 
   it('rejects invalid UUID', async () => {
     const result = await deleteHobby('bad')
     expect(result.success).toBe(false)
-    expect(mockHobbyDelete).not.toHaveBeenCalled()
   })
 
   it('returns generic error on unexpected failure', async () => {
-    mockHobbyDelete.mockRejectedValue(new Error('DB error'))
+    mockTransaction.mockRejectedValue(new Error('DB error'))
     const result = await deleteHobby(VALID_UUID)
     expect(result.success).toBe(false)
   })

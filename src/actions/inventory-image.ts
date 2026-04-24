@@ -14,6 +14,17 @@ import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES } from '@/lib/constants/imag
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 
+async function revalidateBomProjectPaths(inventoryItemId: string) {
+  const rows = await prisma.bomItem.findMany({
+    where: { inventoryItemId },
+    select: { project: { select: { id: true, hobbyId: true } } },
+    distinct: ['projectId'],
+  })
+  for (const row of rows) {
+    revalidatePath(`/hobbies/${row.project.hobbyId}/projects/${row.project.id}`)
+  }
+}
+
 export interface InventoryItemImageWithDisplayUrl {
   id: string
   inventoryItemId: string
@@ -102,6 +113,7 @@ export async function addInventoryItemImage(
 
     dbSuccess = true
     revalidatePath('/inventory')
+    await revalidateBomProjectPaths(parsed.data.inventoryItemId)
     return { success: true, data: { id: image.id } }
   } catch (error) {
     if (!dbSuccess) {
@@ -152,6 +164,7 @@ export async function addInventoryItemImageLink(
     })
 
     revalidatePath('/inventory')
+    await revalidateBomProjectPaths(parsed.data.inventoryItemId)
     return { success: true, data: { id: image.id } }
   } catch (error) {
     console.error('addInventoryItemImageLink failed:', error)
@@ -223,6 +236,7 @@ export async function uploadInventoryItemImageCloudinary(
 
       dbSuccess = true
       revalidatePath('/inventory')
+      await revalidateBomProjectPaths(parsedId.data)
       return { success: true, data: { id: image.id } }
     } catch (error) {
       if (!dbSuccess) {
@@ -255,6 +269,7 @@ export async function deleteInventoryItemImage(imageId: string): Promise<ActionR
       where: { id: parsed.data },
       select: {
         id: true,
+        inventoryItemId: true,
         type: true,
         storageKey: true,
       },
@@ -278,6 +293,7 @@ export async function deleteInventoryItemImage(imageId: string): Promise<ActionR
     }
 
     revalidatePath('/inventory')
+    await revalidateBomProjectPaths(image.inventoryItemId)
     return { success: true, data: null }
   } catch (error) {
     console.error('deleteInventoryItemImage failed:', error)

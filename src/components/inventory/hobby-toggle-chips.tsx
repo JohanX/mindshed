@@ -1,5 +1,7 @@
 'use client'
 
+import { getContrastTextColor } from '@/lib/hobby-color'
+
 interface HobbyOption {
   id: string
   name: string
@@ -30,7 +32,7 @@ export function HobbyToggleChips({ hobbies, selectedIds, onToggle }: HobbyToggle
               className="min-h-[44px] rounded-full px-3 py-1 text-sm font-medium transition-colors"
               style={
                 selected
-                  ? { backgroundColor: hobby.color, color: 'white' }
+                  ? { backgroundColor: hobby.color, color: getContrastTextColor(hobby.color) }
                   : { border: `1.5px solid ${hobby.color}`, color: hobby.color }
               }
               onClick={() => onToggle(hobby.id)}

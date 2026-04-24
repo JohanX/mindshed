@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { InventoryItemCard } from '@/components/inventory/inventory-item-card'
 import { cn } from '@/lib/utils'
+import { getContrastTextColor } from '@/lib/hobby-color'
 import type { InventoryItemData } from '@/lib/schemas/inventory'
 
 const TYPE_FILTERS = [
@@ -44,7 +45,7 @@ export function InventoryFilterTabs({ items, hobbies }: InventoryFilterTabsProps
           className={cn('min-h-[44px]', hobbyFilter === hobby.id && 'pointer-events-none')}
           style={
             hobbyFilter === hobby.id
-              ? { backgroundColor: hobby.color, color: 'white', borderColor: hobby.color }
+              ? { backgroundColor: hobby.color, color: getContrastTextColor(hobby.color), borderColor: hobby.color }
               : { borderColor: hobby.color, color: hobby.color }
           }
           onClick={() => setHobbyFilter(hobbyFilter === hobby.id ? null : hobby.id)}

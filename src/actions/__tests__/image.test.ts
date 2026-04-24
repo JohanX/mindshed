@@ -344,7 +344,7 @@ describe('getStepImages', () => {
         'https://r2.example.com/bucket/steps/abc/def.jpg',
       )
       expect(result.data.images[0].thumbnailUrl).toBe(
-        'https://r2.example.com/bucket/steps/abc/def.jpg?w=400',
+        'https://r2.example.com/bucket/steps/abc/def.jpg?w=800',
       )
     }
   })

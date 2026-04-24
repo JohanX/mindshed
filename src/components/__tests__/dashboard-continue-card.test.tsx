@@ -72,7 +72,7 @@ describe('DashboardContinueCard', () => {
       render(<DashboardContinueCard project={baseProject} variant="primary" />)
       const img = screen.getByAltText('Latest photo for Walnut Side Table')
       expect(img).toBeInTheDocument()
-      expect(img).toHaveAttribute('src', 'https://r2.example.com/bucket/images/photo-1.jpg?w=64')
+      expect(img).toHaveAttribute('src', 'https://r2.example.com/bucket/images/photo-1.jpg?w=128')
     })
 
     it('does not render photo when latestPhoto is null', () => {

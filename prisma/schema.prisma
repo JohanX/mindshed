@@ -214,6 +214,7 @@ model StepImage {
 
   step Step @relation(fields: [stepId], references: [id], onDelete: Cascade)
 
+  @@index([stepId])
   @@map("step_image")
 }
 
@@ -230,6 +231,7 @@ model InventoryItemImage {
 
   inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
 
+  @@index([inventoryItemId])
   @@map("inventory_item_image")
 }
 

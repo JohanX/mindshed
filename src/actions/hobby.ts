@@ -151,12 +151,28 @@ export async function deleteHobby(id: string): Promise<ActionResult<null>> {
   }
 
   try {
-    await prisma.hobby.delete({
-      where: { id: parsed.data },
+    await prisma.$transaction(async (tx) => {
+      const projects = await tx.project.findMany({
+        where: { hobbyId: parsed.data },
+        select: { id: true },
+      })
+      const projectIds = projects.map((p) => p.id)
+      const steps = projectIds.length
+        ? await tx.step.findMany({
+            where: { projectId: { in: projectIds } },
+            select: { id: true },
+          })
+        : []
+      const targetIds = [...projectIds, ...steps.map((s) => s.id)]
+      if (targetIds.length) {
+        await tx.reminder.deleteMany({ where: { targetId: { in: targetIds } } })
+      }
+      await tx.hobby.delete({ where: { id: parsed.data } })
     })
 
     revalidatePath('/hobbies')
     revalidatePath('/settings')
+    revalidatePath('/inventory')
     revalidatePath('/')
     return { success: true, data: null }
   } catch (error) {

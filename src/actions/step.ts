@@ -114,6 +114,7 @@ export async function deleteStep(id: string): Promise<ActionResult<null>> {
         select: { projectId: true, project: { select: { isCompleted: true } } },
       })
       if (existing.project.isCompleted) throw new Error('PROJECT_COMPLETED')
+      await tx.reminder.deleteMany({ where: { targetId: parsed.data } })
       return tx.step.delete({ where: { id: parsed.data } })
     })
 

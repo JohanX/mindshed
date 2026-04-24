@@ -274,8 +274,14 @@ export async function deleteProject(id: string): Promise<ActionResult<{ hobbyId:
   }
 
   try {
-    const project = await prisma.project.delete({
-      where: { id: parsed.data },
+    const project = await prisma.$transaction(async (tx) => {
+      const steps = await tx.step.findMany({
+        where: { projectId: parsed.data },
+        select: { id: true },
+      })
+      const targetIds = [parsed.data, ...steps.map((s) => s.id)]
+      await tx.reminder.deleteMany({ where: { targetId: { in: targetIds } } })
+      return tx.project.delete({ where: { id: parsed.data } })
     })
 
     revalidatePath(`/hobbies/${project.hobbyId}`)

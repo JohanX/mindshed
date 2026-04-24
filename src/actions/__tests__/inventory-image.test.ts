@@ -12,6 +12,9 @@ vi.mock('@/lib/db', () => ({
     inventoryItem: {
       findUnique: vi.fn(),
     },
+    bomItem: {
+      findMany: vi.fn(),
+    },
   },
 }))
 
@@ -47,6 +50,7 @@ const mockTransaction = vi.mocked(prisma.$transaction)
 const mockFindMany = vi.mocked(prisma.inventoryItemImage.findMany)
 const mockFindUnique = vi.mocked(prisma.inventoryItemImage.findUnique)
 const mockDelete = vi.mocked(prisma.inventoryItemImage.delete)
+const mockBomFindMany = vi.mocked(prisma.bomItem.findMany)
 const mockAdapter = vi.mocked(getImageStorageAdapter)
 
 describe('getInventoryItemImages', () => {
@@ -123,7 +127,10 @@ describe('getInventoryItemImages', () => {
 })
 
 describe('addInventoryItemImageLink', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockBomFindMany.mockResolvedValue([])
+  })
 
   it('rejects invalid inventoryItemId', async () => {
     const result = await addInventoryItemImageLink({ inventoryItemId: 'bad', url: VALID_URL })
@@ -193,6 +200,26 @@ describe('addInventoryItemImageLink', () => {
       },
     })
   })
+
+  it('revalidates BOM project paths after adding image link', async () => {
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        inventoryItem: { findUnique: vi.fn().mockResolvedValue({ isDeleted: false }) },
+        inventoryItemImage: { create: vi.fn().mockResolvedValue({ id: 'img1' }) },
+      }
+      return fn(tx as never)
+    })
+    mockBomFindMany.mockResolvedValue([
+      { project: { id: 'p1', hobbyId: 'h1' } },
+      { project: { id: 'p2', hobbyId: 'h2' } },
+    ] as never)
+
+    const { revalidatePath: mockRevalidatePath } = await import('next/cache')
+    await addInventoryItemImageLink({ inventoryItemId: VALID_UUID, url: VALID_URL })
+
+    expect(vi.mocked(mockRevalidatePath)).toHaveBeenCalledWith('/hobbies/h1/projects/p1')
+    expect(vi.mocked(mockRevalidatePath)).toHaveBeenCalledWith('/hobbies/h2/projects/p2')
+  })
 })
 
 const validUploadInput = {
@@ -204,7 +231,10 @@ const validUploadInput = {
 }
 
 describe('addInventoryItemImage', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockBomFindMany.mockResolvedValue([])
+  })
 
   it('rejects invalid inventoryItemId', async () => {
     const result = await addInventoryItemImage({ ...validUploadInput, inventoryItemId: 'bad' })
@@ -274,7 +304,10 @@ describe('addInventoryItemImage', () => {
 })
 
 describe('deleteInventoryItemImage', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockBomFindMany.mockResolvedValue([])
+  })
 
   it('rejects invalid imageId', async () => {
     const result = await deleteInventoryItemImage('bad')
@@ -300,6 +333,7 @@ describe('deleteInventoryItemImage', () => {
     } as never)
     mockFindUnique.mockResolvedValue({
       id: VALID_UUID,
+      inventoryItemId: 'inv1',
       type: 'UPLOAD',
       storageKey: 'inventory/abc/def.jpg',
     } as never)
@@ -322,6 +356,7 @@ describe('deleteInventoryItemImage', () => {
     } as never)
     mockFindUnique.mockResolvedValue({
       id: VALID_UUID,
+      inventoryItemId: 'inv1',
       type: 'LINK',
       storageKey: null,
     } as never)
@@ -330,6 +365,23 @@ describe('deleteInventoryItemImage', () => {
     const result = await deleteInventoryItemImage(VALID_UUID)
     expect(result.success).toBe(true)
     expect(mockDeleteObj).not.toHaveBeenCalled()
+  })
+
+  it('revalidates BOM project paths after deleting image', async () => {
+    mockFindUnique.mockResolvedValue({
+      id: VALID_UUID,
+      inventoryItemId: 'inv1',
+      type: 'LINK',
+      storageKey: null,
+    } as never)
+    mockDelete.mockResolvedValue({} as never)
+    mockBomFindMany.mockResolvedValue([
+      { project: { id: 'p1', hobbyId: 'h1' } },
+    ] as never)
+
+    const { revalidatePath: mockRevalidatePath } = await import('next/cache')
+    await deleteInventoryItemImage(VALID_UUID)
+    expect(vi.mocked(mockRevalidatePath)).toHaveBeenCalledWith('/hobbies/h1/projects/p1')
   })
 
   it('still deletes DB record when storage fails (best effort)', async () => {
@@ -343,6 +395,7 @@ describe('deleteInventoryItemImage', () => {
     } as never)
     mockFindUnique.mockResolvedValue({
       id: VALID_UUID,
+      inventoryItemId: 'inv1',
       type: 'UPLOAD',
       storageKey: 'inventory/abc/def.jpg',
     } as never)

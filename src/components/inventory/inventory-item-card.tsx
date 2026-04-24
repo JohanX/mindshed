@@ -14,6 +14,7 @@ import { showSuccessToast, showErrorToast } from '@/lib/toast'
 import { Pencil, Trash2, Loader2 } from 'lucide-react'
 import type { InventoryItemData } from '@/lib/schemas/inventory'
 import type { GalleryImage } from '@/components/image/image-gallery'
+import { getContrastTextColor } from '@/lib/hobby-color'
 
 const TYPE_CONFIG = {
   MATERIAL: { label: 'Material', colorClass: 'bg-step-in-progress text-white' },
@@ -133,8 +134,8 @@ export function InventoryItemCard({ item, hobbies }: InventoryItemCardProps) {
               {item.hobbies.map((hobby) => (
                 <span
                   key={hobby.id}
-                  className="text-xs rounded-full px-2 py-0.5 text-white"
-                  style={{ backgroundColor: hobby.color }}
+                  className="text-xs rounded-full px-2 py-0.5"
+                  style={{ backgroundColor: hobby.color, color: getContrastTextColor(hobby.color) }}
                 >
                   {hobby.name}
                 </span>

@@ -121,7 +121,8 @@ describe('deleteStep', () => {
     expect(result.success).toBe(false)
   })
 
-  it('deletes step and updates project lastActivityAt', async () => {
+  it('deletes step, cleans up reminders, and updates project lastActivityAt', async () => {
+    const mockReminderDeleteMany = vi.fn().mockResolvedValue({ count: 1 })
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         step: {
@@ -130,12 +131,16 @@ describe('deleteStep', () => {
             .mockResolvedValue({ projectId: 'p1', project: { isCompleted: false } }),
           delete: vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' }),
         },
+        reminder: { deleteMany: mockReminderDeleteMany },
       }
       return fn(tx as never)
     })
 
     const result = await deleteStep('550e8400-e29b-41d4-a716-446655440000')
     expect(result.success).toBe(true)
+    expect(mockReminderDeleteMany).toHaveBeenCalledWith({
+      where: { targetId: '550e8400-e29b-41d4-a716-446655440000' },
+    })
     expect(mockProjectUpdate).toHaveBeenCalled()
   })
 
