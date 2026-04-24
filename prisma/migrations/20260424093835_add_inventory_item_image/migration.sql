@@ -1,6 +1,3 @@
--- DropIndex
-DROP INDEX "bom_item_project_id_sort_order_idx";
-
 -- CreateTable
 CREATE TABLE "inventory_item_image" (
     "id" TEXT NOT NULL,
