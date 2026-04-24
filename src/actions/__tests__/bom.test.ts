@@ -499,6 +499,7 @@ describe('addBomItemWithNewInventory', () => {
       type: 'MATERIAL',
       quantity: 0,
       unit: 'g',
+      hobbies: { connect: [{ id: HOBBY_ID }] },
     })
 
     const bomPayload = tx.bomItem.create.mock.calls[0][0] as { data: Record<string, unknown> }

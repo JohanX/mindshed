@@ -23,14 +23,20 @@ import { createInventoryItem } from '@/actions/inventory'
 import { createInventoryItemSchema } from '@/lib/schemas/inventory'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
 import { Plus, Loader2 } from 'lucide-react'
+import { HobbyToggleChips } from './hobby-toggle-chips'
 
-export function CreateInventoryItemDialog() {
+interface CreateInventoryItemDialogProps {
+  hobbies: { id: string; name: string; color: string }[]
+}
+
+export function CreateInventoryItemDialog({ hobbies }: CreateInventoryItemDialogProps) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [type, setType] = useState<string>('MATERIAL')
   const [quantity, setQuantity] = useState('')
   const [unit, setUnit] = useState('')
   const [notes, setNotes] = useState('')
+  const [selectedHobbyIds, setSelectedHobbyIds] = useState<string[]>([])
   const [isPending, startTransition] = useTransition()
 
   function reset() {
@@ -39,6 +45,13 @@ export function CreateInventoryItemDialog() {
     setQuantity('')
     setUnit('')
     setNotes('')
+    setSelectedHobbyIds([])
+  }
+
+  function toggleHobby(id: string) {
+    setSelectedHobbyIds((prev) =>
+      prev.includes(id) ? prev.filter((hId) => hId !== id) : [...prev, id],
+    )
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -50,6 +63,7 @@ export function CreateInventoryItemDialog() {
       quantity: quantity ? parseFloat(quantity) : undefined,
       unit: unit || undefined,
       notes: notes || undefined,
+      hobbyIds: selectedHobbyIds.length > 0 ? selectedHobbyIds : undefined,
     }
 
     const parsed = createInventoryItemSchema.safeParse(input)
@@ -154,6 +168,12 @@ export function CreateInventoryItemDialog() {
               rows={2}
             />
           </div>
+
+          <HobbyToggleChips
+            hobbies={hobbies}
+            selectedIds={selectedHobbyIds}
+            onToggle={toggleHobby}
+          />
 
           <Button
             type="submit"

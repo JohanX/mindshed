@@ -21,8 +21,9 @@ model Hobby {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  projects Project[]
-  ideas    Idea[]
+  projects       Project[]
+  ideas          Idea[]
+  inventoryItems InventoryItem[]
 
   @@map("hobby")
 }
@@ -158,6 +159,7 @@ model InventoryItem {
 
   blockers Blocker[]
   bomItems BomItem[]
+  hobbies  Hobby[]
 
   // Unique index UNIQUE(lower(name)) WHERE is_deleted = false enforced via raw SQL in migration
   // (Prisma cannot express partial/functional unique indexes natively).

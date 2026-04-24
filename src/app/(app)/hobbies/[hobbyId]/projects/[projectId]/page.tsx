@@ -137,7 +137,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     inventoryItem: bomItem.inventoryItem,
   }))
 
-  const inventoryOptionsResult = await getInventoryItemOptions()
+  const inventoryOptionsResult = await getInventoryItemOptions(hobbyId)
   const inventoryOptions: InventoryOption[] = inventoryOptionsResult.success
     ? inventoryOptionsResult.data
     : []

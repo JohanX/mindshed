@@ -151,6 +151,50 @@ export async function seedProject(opts: {
   }
 }
 
+export interface SeededInventoryItem {
+  id: string
+  name: string
+  type: 'MATERIAL' | 'CONSUMABLE' | 'TOOL'
+  quantity: number | null
+  unit: string | null
+}
+
+export async function seedInventoryItem(opts: {
+  name: string
+  type?: 'MATERIAL' | 'CONSUMABLE' | 'TOOL'
+  quantity?: number | null
+  unit?: string | null
+  hobbyIds?: string[]
+}): Promise<SeededInventoryItem> {
+  const client = await getClient()
+  const id = randomUUID()
+  const type = opts.type ?? 'MATERIAL'
+  const quantity = opts.quantity ?? null
+  const unit = opts.unit ?? null
+
+  await client.query(
+    `INSERT INTO inventory_item (id, name, type, quantity, unit, created_at, updated_at)
+     VALUES ($1, $2, $3::"InventoryItemType", $4, $5, now(), now())`,
+    [id, opts.name, type, quantity, unit],
+  )
+
+  if (opts.hobbyIds?.length) {
+    for (const hobbyId of opts.hobbyIds) {
+      await client.query(
+        `INSERT INTO "_HobbyToInventoryItem" ("A", "B") VALUES ($1, $2)`,
+        [hobbyId, id],
+      )
+    }
+  }
+
+  return { id, name: opts.name, type, quantity, unit }
+}
+
+export async function deleteInventoryItemsByPrefix(prefix: string): Promise<void> {
+  const client = await getClient()
+  await client.query(`DELETE FROM inventory_item WHERE name LIKE $1`, [`${prefix}%`])
+}
+
 /**
  * Hard-delete a hobby and let cascade tear down projects/steps/blockers/etc.
  * Prefer this in `afterAll` blocks over the UI delete flow — cleaner and

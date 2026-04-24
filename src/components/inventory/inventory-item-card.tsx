@@ -20,9 +20,10 @@ const TYPE_CONFIG = {
 
 interface InventoryItemCardProps {
   item: InventoryItemData
+  hobbies: { id: string; name: string; color: string }[]
 }
 
-export function InventoryItemCard({ item }: InventoryItemCardProps) {
+export function InventoryItemCard({ item, hobbies }: InventoryItemCardProps) {
   const typeConfig = TYPE_CONFIG[item.type]
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -80,6 +81,19 @@ export function InventoryItemCard({ item }: InventoryItemCardProps) {
               {item.unit}
             </p>
           )}
+          {item.hobbies.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {item.hobbies.map((hobby) => (
+                <span
+                  key={hobby.id}
+                  className="text-xs rounded-full px-2 py-0.5 text-white"
+                  style={{ backgroundColor: hobby.color }}
+                >
+                  {hobby.name}
+                </span>
+              ))}
+            </div>
+          )}
           {item.notes && <p className="text-sm text-muted-foreground line-clamp-2">{item.notes}</p>}
           {item.activeBlockerCount > 0 && (
             <Badge variant="outline" className="text-xs text-step-blocked border-step-blocked">
@@ -90,7 +104,7 @@ export function InventoryItemCard({ item }: InventoryItemCardProps) {
         </CardContent>
       </Card>
 
-      <EditInventoryItemDialog item={item} open={editOpen} onOpenChange={setEditOpen} />
+      <EditInventoryItemDialog item={item} hobbies={hobbies} open={editOpen} onOpenChange={setEditOpen} />
 
       <ConfirmDialog
         open={deleteOpen}

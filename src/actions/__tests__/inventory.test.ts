@@ -145,6 +145,38 @@ describe('createInventoryItem', () => {
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toBe('Failed to add item.')
   })
+
+  it('connects hobbies when hobbyIds provided', async () => {
+    const hobbyId1 = '550e8400-e29b-41d4-a716-446655440001'
+    const hobbyId2 = '550e8400-e29b-41d4-a716-446655440002'
+    const tx = buildTx({ existingNames: [] })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    await createInventoryItem({
+      name: 'Clay',
+      type: 'MATERIAL',
+      hobbyIds: [hobbyId1, hobbyId2],
+    })
+
+    const payload = tx.inventoryItem.create.mock.calls[0][0] as {
+      data: { hobbies?: { connect: { id: string }[] } }
+    }
+    expect(payload.data.hobbies).toEqual({
+      connect: [{ id: hobbyId1 }, { id: hobbyId2 }],
+    })
+  })
+
+  it('omits hobbies connect when hobbyIds empty or absent', async () => {
+    const tx = buildTx({ existingNames: [] })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    await createInventoryItem({ name: 'Wire', type: 'MATERIAL', hobbyIds: [] })
+
+    const payload = tx.inventoryItem.create.mock.calls[0][0] as {
+      data: Record<string, unknown>
+    }
+    expect(payload.data.hobbies).toBeUndefined()
+  })
 })
 
 describe('getInventoryItems', () => {
@@ -253,6 +285,41 @@ describe('updateInventoryItem', () => {
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toBe('Item name collided — please retry.')
   })
+
+  it('sets hobbies via replace-all semantics (set)', async () => {
+    const hobbyId = '550e8400-e29b-41d4-a716-446655440001'
+    const tx = buildTx({ currentName: 'Clay', siblingNames: [] })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    await updateInventoryItem({
+      id: validId,
+      name: 'Clay',
+      type: 'MATERIAL',
+      hobbyIds: [hobbyId],
+    })
+
+    const payload = tx.inventoryItem.update.mock.calls[0][0] as {
+      data: { hobbies?: { set: { id: string }[] } }
+    }
+    expect(payload.data.hobbies).toEqual({ set: [{ id: hobbyId }] })
+  })
+
+  it('clears hobbies when hobbyIds is empty array', async () => {
+    const tx = buildTx({ currentName: 'Clay', siblingNames: [] })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    await updateInventoryItem({
+      id: validId,
+      name: 'Clay',
+      type: 'MATERIAL',
+      hobbyIds: [],
+    })
+
+    const payload = tx.inventoryItem.update.mock.calls[0][0] as {
+      data: { hobbies?: { set: { id: string }[] } }
+    }
+    expect(payload.data.hobbies).toEqual({ set: [] })
+  })
 })
 
 describe('deleteInventoryItem', () => {
@@ -323,6 +390,24 @@ describe('getInventoryItemOptions', () => {
       quantity: true,
       unit: true,
     })
+  })
+
+  it('scopes to hobby-tagged + untagged items when hobbyId provided', async () => {
+    const hobbyId = '550e8400-e29b-41d4-a716-446655440001'
+    mockFindMany.mockResolvedValue([] as never)
+    await getInventoryItemOptions(hobbyId)
+    const callArg = mockFindMany.mock.calls[0][0] as { where: Record<string, unknown> }
+    expect(callArg.where).toEqual({
+      isDeleted: false,
+      OR: [{ hobbies: { some: { id: hobbyId } } }, { hobbies: { none: {} } }],
+    })
+  })
+
+  it('rejects invalid hobbyId', async () => {
+    const result = await getInventoryItemOptions('bad-id')
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Invalid hobby ID.')
+    expect(mockFindMany).not.toHaveBeenCalled()
   })
 })
 

@@ -52,6 +52,7 @@ export async function createInventoryItem(
         parsed.data.name,
         existing.map((existingItem) => existingItem.name),
       )
+      const hobbyIds = parsed.data.hobbyIds
       return tx.inventoryItem.create({
         data: {
           name: finalName,
@@ -59,6 +60,9 @@ export async function createInventoryItem(
           quantity: parsed.data.quantity ?? null,
           unit: parsed.data.unit ?? null,
           notes: parsed.data.notes ?? null,
+          ...(hobbyIds && hobbyIds.length > 0
+            ? { hobbies: { connect: hobbyIds.map((id) => ({ id })) } }
+            : {}),
         },
       })
     })
@@ -68,6 +72,9 @@ export async function createInventoryItem(
   } catch (error) {
     if (isP2002(error)) {
       return { success: false, error: 'Item name collided — please retry.' }
+    }
+    if (isP2025(error)) {
+      return { success: false, error: 'One or more selected hobbies no longer exist.' }
     }
     console.error('createInventoryItem failed:', error)
     return { success: false, error: 'Failed to add item.' }
@@ -81,7 +88,10 @@ export async function getInventoryItems(
     const items = await prisma.inventoryItem.findMany({
       where: { isDeleted: false, ...(typeFilter ? { type: typeFilter } : {}) },
       orderBy: { createdAt: 'desc' },
-      include: { _count: { select: { blockers: { where: { isResolved: false } } } } },
+      include: {
+        _count: { select: { blockers: { where: { isResolved: false } } } },
+        hobbies: { select: { id: true, name: true, color: true } },
+      },
     })
 
     return {
@@ -89,6 +99,7 @@ export async function getInventoryItems(
       data: items.map((item) => ({
         ...item,
         activeBlockerCount: item._count.blockers,
+        hobbies: item.hobbies,
       })),
     }
   } catch (error) {
@@ -133,6 +144,9 @@ export async function updateInventoryItem(
           quantity: parsed.data.quantity ?? null,
           unit: parsed.data.unit ?? null,
           notes: parsed.data.notes ?? null,
+          ...(parsed.data.hobbyIds !== undefined
+            ? { hobbies: { set: parsed.data.hobbyIds.map((id) => ({ id })) } }
+            : {}),
         },
       })
     })
@@ -144,7 +158,10 @@ export async function updateInventoryItem(
       return { success: false, error: 'Item name collided — please retry.' }
     }
     if (isP2025(error)) {
-      return { success: false, error: 'Item not found.' }
+      const msg = error instanceof Error && error.message === 'NOT_FOUND'
+        ? 'Item not found.'
+        : 'One or more selected hobbies no longer exist.'
+      return { success: false, error: msg }
     }
     console.error('updateInventoryItem failed:', error)
     return { success: false, error: 'Failed to update item.' }
@@ -176,10 +193,20 @@ export async function deleteInventoryItem(itemId: string): Promise<ActionResult<
   }
 }
 
-export async function getInventoryItemOptions(): Promise<ActionResult<InventoryItemOption[]>> {
+export async function getInventoryItemOptions(
+  hobbyId?: string,
+): Promise<ActionResult<InventoryItemOption[]>> {
+  if (hobbyId !== undefined) {
+    const parsed = z.uuid().safeParse(hobbyId)
+    if (!parsed.success) return { success: false, error: 'Invalid hobby ID.' }
+  }
   try {
+    const where: Record<string, unknown> = { isDeleted: false }
+    if (hobbyId) {
+      where.OR = [{ hobbies: { some: { id: hobbyId } } }, { hobbies: { none: {} } }]
+    }
     const items = await prisma.inventoryItem.findMany({
-      where: { isDeleted: false },
+      where,
       orderBy: { name: 'asc' },
       select: { id: true, name: true, type: true, quantity: true, unit: true },
     })

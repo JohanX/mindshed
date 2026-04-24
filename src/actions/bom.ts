@@ -218,6 +218,7 @@ export async function addBomItemWithNewInventory(
           type: newItem.type,
           quantity: newItem.startingQuantity ?? 0,
           unit: newItem.unit ?? null,
+          hobbies: { connect: [{ id: project.hobbyId }] },
         },
         select: { id: true, unit: true },
       })

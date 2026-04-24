@@ -18,15 +18,18 @@ import { updateInventoryItemSchema } from '@/lib/schemas/inventory'
 import type { InventoryItemData } from '@/lib/schemas/inventory'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
 import { Loader2 } from 'lucide-react'
+import { HobbyToggleChips } from './hobby-toggle-chips'
 
 interface EditInventoryItemDialogProps {
   item: InventoryItemData
+  hobbies: { id: string; name: string; color: string }[]
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
 export function EditInventoryItemDialog({
   item,
+  hobbies,
   open,
   onOpenChange,
 }: EditInventoryItemDialogProps) {
@@ -35,7 +38,16 @@ export function EditInventoryItemDialog({
   const [quantity, setQuantity] = useState(item.quantity?.toString() ?? '')
   const [unit, setUnit] = useState(item.unit ?? '')
   const [notes, setNotes] = useState(item.notes ?? '')
+  const [selectedHobbyIds, setSelectedHobbyIds] = useState<string[]>(
+    item.hobbies.map((h) => h.id),
+  )
   const [isPending, startTransition] = useTransition()
+
+  function toggleHobby(id: string) {
+    setSelectedHobbyIds((prev) =>
+      prev.includes(id) ? prev.filter((hId) => hId !== id) : [...prev, id],
+    )
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -47,6 +59,7 @@ export function EditInventoryItemDialog({
       quantity: quantity ? parseFloat(quantity) : undefined,
       unit: unit || undefined,
       notes: notes || undefined,
+      hobbyIds: selectedHobbyIds,
     }
 
     const parsed = updateInventoryItemSchema.safeParse(input)
@@ -128,6 +141,11 @@ export function EditInventoryItemDialog({
               rows={2}
             />
           </div>
+          <HobbyToggleChips
+            hobbies={hobbies}
+            selectedIds={selectedHobbyIds}
+            onToggle={toggleHobby}
+          />
           <Button
             type="submit"
             disabled={!name.trim() || isPending}
