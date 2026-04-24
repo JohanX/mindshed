@@ -270,12 +270,22 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
     return (
       <tr className="border-b last:border-b-0">
         <td className="py-2 pr-3">
-          <span
-            className={nameClass}
-            title={nameIsMuted ? 'Item removed from inventory' : undefined}
-          >
-            {displayName}
-          </span>
+          <div className="flex items-center gap-2">
+            {row.inventoryItem?.heroThumbnailUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={row.inventoryItem.heroThumbnailUrl}
+                alt=""
+                className="h-7 w-7 shrink-0 rounded object-cover"
+              />
+            )}
+            <span
+              className={nameClass}
+              title={nameIsMuted ? 'Item removed from inventory' : undefined}
+            >
+              {displayName}
+            </span>
+          </div>
         </td>
         <td className="py-2 pr-3">
           <Input
@@ -314,12 +324,22 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
   return (
     <div className="rounded-md border border-border bg-background p-3">
       <div className="flex items-center justify-between gap-2">
-        <span
-          className={`font-medium ${nameClass}`}
-          title={nameIsMuted ? 'Item removed from inventory' : undefined}
-        >
-          {displayName}
-        </span>
+        <div className="flex items-center gap-2 min-w-0">
+          {row.inventoryItem?.heroThumbnailUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={row.inventoryItem.heroThumbnailUrl}
+              alt=""
+              className="h-7 w-7 shrink-0 rounded object-cover"
+            />
+          )}
+          <span
+            className={`font-medium ${nameClass}`}
+            title={nameIsMuted ? 'Item removed from inventory' : undefined}
+          >
+            {displayName}
+          </span>
+        </div>
         {mobileHeaderActions}
       </div>
       <div className="mt-2 grid grid-cols-2 gap-2">

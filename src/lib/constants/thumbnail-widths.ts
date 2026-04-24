@@ -3,4 +3,6 @@ export const THUMBNAIL_WIDTH = {
   STRIP: 80,
   GALLERY_SECTION: 80,
   GRID: 400,
+  INVENTORY_CARD: 48,
+  BOM_ROW: 28,
 } as const

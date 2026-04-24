@@ -52,6 +52,8 @@ export type InventoryItemData = {
   maintenanceIntervalDays: number | null
   activeBlockerCount: number
   hobbies: { id: string; name: string; color: string }[]
+  heroImageUrl: string | null
+  heroThumbnailUrl: string | null
   createdAt: Date
   updatedAt: Date
 }

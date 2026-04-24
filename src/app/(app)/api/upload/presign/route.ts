@@ -10,11 +10,20 @@ const EXT_MAP: Record<string, string> = {
   'image/webp': 'webp',
 }
 
-const presignRequestSchema = z.object({
-  stepId: z.uuid(),
-  filename: z.string().min(1),
-  contentType: z.enum(ACCEPTED_IMAGE_TYPES),
-})
+const presignRequestSchema = z
+  .object({
+    prefix: z.enum(['steps', 'inventory']).default('steps'),
+    stepId: z.uuid().optional(),
+    inventoryItemId: z.uuid().optional(),
+    filename: z.string().min(1),
+    contentType: z.enum(ACCEPTED_IMAGE_TYPES),
+  })
+  .refine(
+    (data) =>
+      (data.prefix === 'steps' && !!data.stepId) ||
+      (data.prefix === 'inventory' && !!data.inventoryItemId),
+    { message: 'stepId required for steps prefix, inventoryItemId required for inventory prefix' },
+  )
 
 export async function POST(request: Request) {
   try {
@@ -45,9 +54,10 @@ export async function POST(request: Request) {
       )
     }
 
-    const { stepId, contentType } = parsed.data
+    const { prefix, stepId, inventoryItemId, contentType } = parsed.data
     const ext = EXT_MAP[contentType]
-    const key = `steps/${stepId}/${crypto.randomUUID()}.${ext}`
+    const parentId = prefix === 'steps' ? stepId : inventoryItemId
+    const key = `${prefix}/${parentId}/${crypto.randomUUID()}.${ext}`
 
     try {
       const result = await adapter.generatePresignedUrl(key, contentType)

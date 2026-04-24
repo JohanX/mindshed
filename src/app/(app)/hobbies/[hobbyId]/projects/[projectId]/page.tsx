@@ -61,7 +61,18 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         orderBy: { sortOrder: 'asc' },
         include: {
           inventoryItem: {
-            select: { id: true, name: true, type: true, quantity: true, isDeleted: true },
+            select: {
+              id: true,
+              name: true,
+              type: true,
+              quantity: true,
+              isDeleted: true,
+              images: {
+                orderBy: { createdAt: 'asc' },
+                take: 1,
+                select: { type: true, storageKey: true, url: true },
+              },
+            },
           },
         },
       },
@@ -127,15 +138,35 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     )
     .join(',')
 
-  const bomRows: BomItemData[] = project.bomItems.map((bomItem) => ({
-    id: bomItem.id,
-    label: bomItem.label,
-    requiredQuantity: bomItem.requiredQuantity,
-    unit: bomItem.unit,
-    sortOrder: bomItem.sortOrder,
-    consumptionState: bomItem.consumptionState,
-    inventoryItem: bomItem.inventoryItem,
-  }))
+  const bomRows: BomItemData[] = project.bomItems.map((bomItem) => {
+    let heroThumbnailUrl: string | null = null
+    const heroImage = bomItem.inventoryItem?.images?.[0] ?? null
+    if (heroImage) {
+      if (heroImage.type === 'UPLOAD' && heroImage.storageKey) {
+        heroThumbnailUrl = getThumbnailImageUrl(heroImage.storageKey, THUMBNAIL_WIDTH.BOM_ROW)
+      } else if (heroImage.url) {
+        heroThumbnailUrl = heroImage.url
+      }
+    }
+    return {
+      id: bomItem.id,
+      label: bomItem.label,
+      requiredQuantity: bomItem.requiredQuantity,
+      unit: bomItem.unit,
+      sortOrder: bomItem.sortOrder,
+      consumptionState: bomItem.consumptionState,
+      inventoryItem: bomItem.inventoryItem
+        ? {
+            id: bomItem.inventoryItem.id,
+            name: bomItem.inventoryItem.name,
+            type: bomItem.inventoryItem.type,
+            quantity: bomItem.inventoryItem.quantity,
+            isDeleted: bomItem.inventoryItem.isDeleted,
+            heroThumbnailUrl,
+          }
+        : null,
+    }
+  })
 
   const inventoryOptionsResult = await getInventoryItemOptions(hobbyId)
   const inventoryOptions: InventoryOption[] = inventoryOptionsResult.success

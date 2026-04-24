@@ -190,6 +190,36 @@ export async function seedInventoryItem(opts: {
   return { id, name: opts.name, type, quantity, unit }
 }
 
+export interface SeededInventoryItemImage {
+  id: string
+  inventoryItemId: string
+  type: 'UPLOAD' | 'LINK'
+  url: string | null
+}
+
+export async function seedInventoryItemImage(opts: {
+  inventoryItemId: string
+  type?: 'UPLOAD' | 'LINK'
+  url?: string
+  storageKey?: string
+  originalFilename?: string
+}): Promise<SeededInventoryItemImage> {
+  const client = await getClient()
+  const id = randomUUID()
+  const type = opts.type ?? 'LINK'
+  const url = opts.url ?? null
+  const storageKey = opts.storageKey ?? null
+  const originalFilename = opts.originalFilename ?? null
+
+  await client.query(
+    `INSERT INTO inventory_item_image (id, inventory_item_id, type, url, storage_key, original_filename, created_at)
+     VALUES ($1, $2, $3::"StepImageType", $4, $5, $6, now())`,
+    [id, opts.inventoryItemId, type, url, storageKey, originalFilename],
+  )
+
+  return { id, inventoryItemId: opts.inventoryItemId, type, url }
+}
+
 export async function deleteInventoryItemsByPrefix(prefix: string): Promise<void> {
   const client = await getClient()
   await client.query(`DELETE FROM inventory_item WHERE name LIKE $1`, [`${prefix}%`])

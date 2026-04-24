@@ -105,6 +105,7 @@ export function BomSection({
               type: opt.type,
               quantity: opt.quantity,
               isDeleted: false,
+              heroThumbnailUrl: null,
             },
           },
         ]
@@ -274,6 +275,7 @@ export function BomSection({
                       type: result.created.type,
                       quantity: result.created.quantity,
                       isDeleted: false,
+                      heroThumbnailUrl: null,
                     },
                   },
                 ]

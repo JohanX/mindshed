@@ -12,9 +12,10 @@ interface ImageLightboxProps {
   images: GalleryImage[]
   initialIndex: number
   onClose: () => void
+  showDelete?: boolean
 }
 
-export function ImageLightbox({ images, initialIndex, onClose }: ImageLightboxProps) {
+export function ImageLightbox({ images, initialIndex, onClose, showDelete = true }: ImageLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [broken, setBroken] = useState(false)
 
@@ -68,10 +69,12 @@ export function ImageLightbox({ images, initialIndex, onClose }: ImageLightboxPr
 
         {/* Top-right controls: delete + close */}
         <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
-          <ImageDeleteButton
-            imageId={current.id}
-            className="h-11 w-11 rounded-full bg-white/10 hover:bg-destructive text-white"
-          />
+          {showDelete && (
+            <ImageDeleteButton
+              imageId={current.id}
+              className="h-11 w-11 rounded-full bg-white/10 hover:bg-destructive text-white"
+            />
+          )}
           <Button
             variant="ghost"
             size="icon"

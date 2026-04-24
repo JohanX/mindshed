@@ -60,6 +60,7 @@ export type BomItemData = {
     type: 'MATERIAL' | 'CONSUMABLE' | 'TOOL'
     quantity: number | null
     isDeleted: boolean
+    heroThumbnailUrl?: string | null
   } | null
 }
 

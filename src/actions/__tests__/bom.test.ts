@@ -407,7 +407,18 @@ describe('getBomItemsByProject', () => {
         orderBy: { sortOrder: 'asc' },
         include: {
           inventoryItem: {
-            select: { id: true, name: true, type: true, quantity: true, isDeleted: true },
+            select: {
+              id: true,
+              name: true,
+              type: true,
+              quantity: true,
+              isDeleted: true,
+              images: {
+                orderBy: { createdAt: 'asc' },
+                take: 1,
+                select: { id: true, type: true, storageKey: true, url: true },
+              },
+            },
           },
         },
       }),

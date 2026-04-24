@@ -160,6 +160,7 @@ model InventoryItem {
   blockers Blocker[]
   bomItems BomItem[]
   hobbies  Hobby[]
+  images   InventoryItemImage[]
 
   // Unique index UNIQUE(lower(name)) WHERE is_deleted = false enforced via raw SQL in migration
   // (Prisma cannot express partial/functional unique indexes natively).
@@ -214,6 +215,22 @@ model StepImage {
   step Step @relation(fields: [stepId], references: [id], onDelete: Cascade)
 
   @@map("step_image")
+}
+
+model InventoryItemImage {
+  id               String        @id @default(uuid())
+  inventoryItemId  String        @map("inventory_item_id")
+  storageKey       String?       @map("storage_key")
+  originalFilename String?       @map("original_filename")
+  contentType      String?       @map("content_type")
+  sizeBytes        Int?          @map("size_bytes")
+  type             StepImageType @default(UPLOAD)
+  url              String?
+  createdAt        DateTime      @default(now()) @map("created_at")
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@map("inventory_item_image")
 }
 
 enum ReminderTargetType {
