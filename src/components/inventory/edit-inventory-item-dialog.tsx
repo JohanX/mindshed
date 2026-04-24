@@ -27,7 +27,7 @@ import { ACCEPTED_IMAGE_TYPES } from '@/lib/constants/image-upload'
 import { updateInventoryItemSchema } from '@/lib/schemas/inventory'
 import type { InventoryItemData } from '@/lib/schemas/inventory'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
-import { Loader2, Upload, X } from 'lucide-react'
+import { Loader2, Upload, Trash2 } from 'lucide-react'
 import { HobbyToggleChips } from './hobby-toggle-chips'
 
 interface EditInventoryItemDialogProps {
@@ -99,6 +99,13 @@ export function EditInventoryItemDialog({
     }
   }
 
+  async function handlePastedFile(file: File) {
+    setLinkError(null)
+    await handlePhotoUpload(file)
+    setLinkExpanded(false)
+    setLinkUrl('')
+  }
+
   function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
     const items = e.clipboardData?.items
     if (!items) return
@@ -106,7 +113,7 @@ export function EditInventoryItemDialog({
       if (item.kind === 'file' && item.type.startsWith('image/')) {
         e.preventDefault()
         const file = item.getAsFile()
-        if (file) void handlePhotoUpload(file)
+        if (file) void handlePastedFile(file)
         return
       }
     }
@@ -365,7 +372,7 @@ export function EditInventoryItemDialog({
                     aria-label="Delete photo"
                     onClick={() => setDeletePhotoId(photo.id)}
                   >
-                    <X className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               ))}
