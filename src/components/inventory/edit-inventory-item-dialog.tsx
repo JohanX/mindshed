@@ -99,6 +99,19 @@ export function EditInventoryItemDialog({
     }
   }
 
+  function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    const items = e.clipboardData?.items
+    if (!items) return
+    for (const item of items) {
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        e.preventDefault()
+        const file = item.getAsFile()
+        if (file) void handlePhotoUpload(file)
+        return
+      }
+    }
+  }
+
   function handleLinkSave() {
     const parsed = addInventoryItemImageLinkSchema.safeParse({ inventoryItemId: item.id, url: linkUrl })
     if (!parsed.success) {
@@ -309,8 +322,9 @@ export function EditInventoryItemDialog({
                     if (e.key === 'Enter') { e.preventDefault(); handleLinkSave() }
                     if (e.key === 'Escape') { e.preventDefault(); setLinkExpanded(false); setLinkUrl(''); setLinkError(null) }
                   }}
-                  placeholder="Paste image URL"
-                  disabled={isLinking}
+                  onPaste={handlePaste}
+                  placeholder={isUploading ? 'Uploading pasted image…' : 'Paste image or URL'}
+                  disabled={isLinking || isUploading}
                   aria-invalid={linkError ? true : undefined}
                 />
                 {linkError && <p className="text-sm text-destructive">{linkError}</p>}
