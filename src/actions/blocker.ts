@@ -13,6 +13,7 @@ import {
 } from '@/lib/schemas/blocker'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
+import { findActiveBlockers } from '@/data/blocker'
 
 export async function createBlocker(
   input: CreateBlockerInput,
@@ -308,39 +309,8 @@ export async function deleteBlocker(blockerId: string): Promise<ActionResult<nul
 
 export async function getActiveBlockers(): Promise<ActionResult<BlockerWithContext[]>> {
   try {
-    const blockers = await prisma.blocker.findMany({
-      where: { isResolved: false },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        description: true,
-        isResolved: true,
-        createdAt: true,
-        step: {
-          select: {
-            id: true,
-            name: true,
-            project: {
-              select: {
-                id: true,
-                name: true,
-                hobbyId: true,
-                hobby: {
-                  select: {
-                    id: true,
-                    name: true,
-                    color: true,
-                    icon: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    })
-
-    return { success: true, data: blockers }
+    const data = await findActiveBlockers()
+    return { success: true, data }
   } catch (error) {
     console.error('getActiveBlockers failed:', error)
     return { success: false, error: 'Failed to load active blockers.' }
