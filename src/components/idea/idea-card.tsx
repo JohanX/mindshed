@@ -1,13 +1,18 @@
 'use client'
 
+import { useState } from 'react'
 import type { IdeaWithThumbnail } from '@/actions/idea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { IdeaActionsMenu } from '@/components/idea/idea-actions-menu'
+import { ImageLightbox } from '@/components/image/image-lightbox'
+import type { GalleryImage } from '@/components/image/image-gallery'
+import { getIdeaImage } from '@/actions/idea-image'
+import { showErrorToast } from '@/lib/toast'
 import { formatReferenceUrl } from '@/lib/idea-utils'
 import { hobbyColorWithAlpha } from '@/lib/hobby-color'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Loader2 } from 'lucide-react'
 
 export interface IdeaCardHobby {
   id: string
@@ -29,7 +34,38 @@ export function IdeaCard({ idea, hobby, showHobbyBadge = true }: IdeaCardProps) 
     style: { color: hobby.color },
   })
 
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxImages, setLightboxImages] = useState<GalleryImage[]>([])
+  const [lightboxLoading, setLightboxLoading] = useState(false)
+
+  async function openLightbox() {
+    setLightboxOpen(true)
+    setLightboxLoading(true)
+    const result = await getIdeaImage(idea.id)
+    if (result.success) {
+      if (!result.data.image) {
+        setLightboxOpen(false)
+        setLightboxLoading(false)
+        return
+      }
+      const img = result.data.image
+      setLightboxImages([
+        {
+          id: img.id,
+          displayUrl: img.displayUrl,
+          thumbnailUrl: img.thumbnailUrl,
+          originalFilename: img.originalFilename,
+        },
+      ])
+    } else {
+      showErrorToast(result.error)
+      setLightboxOpen(false)
+    }
+    setLightboxLoading(false)
+  }
+
   return (
+    <>
     <Card
       data-testid="idea-card"
       className={`relative overflow-hidden ${idea.isPromoted ? 'opacity-60' : ''}`}
@@ -38,12 +74,19 @@ export function IdeaCard({ idea, hobby, showHobbyBadge = true }: IdeaCardProps) 
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           {idea.thumbnailUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={idea.thumbnailUrl}
-              alt=""
-              className="h-12 w-12 shrink-0 rounded-md object-cover"
-            />
+            <button
+              type="button"
+              className="h-12 w-12 shrink-0 overflow-hidden rounded-md min-h-[44px] min-w-[44px]"
+              onClick={() => void openLightbox()}
+              aria-label={`View photo of ${idea.title}`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={idea.thumbnailUrl}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            </button>
           )}
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <CardTitle className="text-base">{idea.title}</CardTitle>
@@ -91,5 +134,20 @@ export function IdeaCard({ idea, hobby, showHobbyBadge = true }: IdeaCardProps) 
         </div>
       )}
     </Card>
+
+    {lightboxOpen && lightboxLoading && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+        <Loader2 className="h-8 w-8 animate-spin text-white" />
+      </div>
+    )}
+    {lightboxOpen && !lightboxLoading && lightboxImages.length > 0 && (
+      <ImageLightbox
+        images={lightboxImages}
+        initialIndex={0}
+        onClose={() => setLightboxOpen(false)}
+        showDelete={false}
+      />
+    )}
+    </>
   )
 }
