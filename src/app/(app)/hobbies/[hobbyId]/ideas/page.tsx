@@ -36,7 +36,7 @@ export default async function HobbyIdeasPage({ params }: HobbyIdeasPageProps) {
       </PageHeader>
 
       {ideas.length > 0 ? (
-        <IdeaList ideas={ideas} />
+        <IdeaList ideas={ideas} hobby={hobby} />
       ) : (
         <EmptyStateCard message="No ideas captured yet. When inspiration strikes, add it here.">
           <IdeaFormDialog hobbyId={hobbyId} />
