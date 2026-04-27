@@ -143,6 +143,7 @@ describe('getIdeasByHobby', () => {
     expect(mockIdeaFindMany).toHaveBeenCalledWith({
       where: { hobbyId: validUuid },
       orderBy: [{ isPromoted: 'asc' }, { createdAt: 'desc' }],
+      include: { image: { select: { type: true, storageKey: true, url: true } } },
     })
   })
 
@@ -195,7 +196,10 @@ describe('getAllIdeas', () => {
     }
     expect(mockIdeaFindMany).toHaveBeenCalledWith({
       orderBy: { createdAt: 'desc' },
-      include: { hobby: { select: { id: true, name: true, color: true, icon: true } } },
+      include: {
+        hobby: { select: { id: true, name: true, color: true, icon: true } },
+        image: { select: { type: true, storageKey: true, url: true } },
+      },
     })
   })
 

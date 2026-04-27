@@ -113,10 +113,32 @@ describe('renderAvailable', () => {
     })
   })
 
-  it('CONSUMED → consumed chip regardless of available/required', () => {
+  it('CONSUMED → consumed chip + live qty in secondaryLabel', () => {
     expect(
       renderAvailable(linked({ required: 100, available: 0, consumptionState: 'CONSUMED' })),
-    ).toEqual({ label: 'Consumed', variant: 'consumed' })
+    ).toEqual({ label: 'Consumed', variant: 'consumed', secondaryLabel: '0 g' })
+  })
+
+  it('CONSUMED with non-zero remaining qty → secondaryLabel reflects live stock', () => {
+    expect(
+      renderAvailable(linked({ required: 50, available: 250, consumptionState: 'CONSUMED' })),
+    ).toEqual({ label: 'Consumed', variant: 'consumed', secondaryLabel: '250 g' })
+  })
+
+  it('CONSUMED with soft-deleted inventory → secondaryLabel is em-dash', () => {
+    expect(
+      renderAvailable(
+        linked({ required: 100, available: 0, consumptionState: 'CONSUMED', isDeleted: true }),
+      ),
+    ).toEqual({ label: 'Consumed', variant: 'consumed', secondaryLabel: '—' })
+  })
+
+  it('CONSUMED with null inventory qty → secondaryLabel is em-dash', () => {
+    expect(
+      renderAvailable(
+        linked({ required: 100, available: null, consumptionState: 'CONSUMED' }),
+      ),
+    ).toEqual({ label: 'Consumed', variant: 'consumed', secondaryLabel: '—' })
   })
 
   it('soft-deleted inventory → missing em-dash', () => {

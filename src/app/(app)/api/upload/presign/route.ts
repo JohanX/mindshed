@@ -12,17 +12,22 @@ const EXT_MAP: Record<string, string> = {
 
 const presignRequestSchema = z
   .object({
-    prefix: z.enum(['steps', 'inventory']).default('steps'),
+    prefix: z.enum(['steps', 'inventory', 'ideas']).default('steps'),
     stepId: z.uuid().optional(),
     inventoryItemId: z.uuid().optional(),
+    ideaId: z.uuid().optional(),
     filename: z.string().min(1),
     contentType: z.enum(ACCEPTED_IMAGE_TYPES),
   })
   .refine(
     (data) =>
       (data.prefix === 'steps' && !!data.stepId) ||
-      (data.prefix === 'inventory' && !!data.inventoryItemId),
-    { message: 'stepId required for steps prefix, inventoryItemId required for inventory prefix' },
+      (data.prefix === 'inventory' && !!data.inventoryItemId) ||
+      (data.prefix === 'ideas' && !!data.ideaId),
+    {
+      message:
+        'stepId required for steps prefix, inventoryItemId for inventory, ideaId for ideas',
+    },
   )
 
 export async function POST(request: Request) {
@@ -54,9 +59,9 @@ export async function POST(request: Request) {
       )
     }
 
-    const { prefix, stepId, inventoryItemId, contentType } = parsed.data
+    const { prefix, stepId, inventoryItemId, ideaId, contentType } = parsed.data
     const ext = EXT_MAP[contentType]
-    const parentId = prefix === 'steps' ? stepId : inventoryItemId
+    const parentId = prefix === 'steps' ? stepId : prefix === 'inventory' ? inventoryItemId : ideaId
     const key = `${prefix}/${parentId}/${crypto.randomUUID()}.${ext}`
 
     try {

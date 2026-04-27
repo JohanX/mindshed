@@ -3,16 +3,16 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { InventoryItemCard } from '@/components/inventory/inventory-item-card'
-import { cn } from '@/lib/utils'
 import { getContrastTextColor } from '@/lib/hobby-color'
 import type { InventoryItemData } from '@/lib/schemas/inventory'
 
 const TYPE_FILTERS = [
-  { key: 'ALL', label: 'All' },
   { key: 'MATERIAL', label: 'Materials' },
   { key: 'CONSUMABLE', label: 'Consumables' },
   { key: 'TOOL', label: 'Tools' },
 ] as const
+
+type TypeFilter = (typeof TYPE_FILTERS)[number]['key']
 
 interface InventoryFilterTabsProps {
   items: InventoryItemData[]
@@ -20,11 +20,11 @@ interface InventoryFilterTabsProps {
 }
 
 export function InventoryFilterTabs({ items, hobbies }: InventoryFilterTabsProps) {
-  const [typeFilter, setTypeFilter] = useState<string>('ALL')
+  const [typeFilter, setTypeFilter] = useState<TypeFilter | null>(null)
   const [hobbyFilter, setHobbyFilter] = useState<string | null>(null)
 
   const filtered = items.filter((item) => {
-    if (typeFilter !== 'ALL' && item.type !== typeFilter) return false
+    if (typeFilter && item.type !== typeFilter) return false
     if (hobbyFilter === 'UNTAGGED') return item.hobbies.length === 0
     if (hobbyFilter) {
       return (
@@ -42,7 +42,7 @@ export function InventoryFilterTabs({ items, hobbies }: InventoryFilterTabsProps
           variant="outline"
           size="sm"
           aria-pressed={hobbyFilter === hobby.id}
-          className={cn('min-h-[44px]', hobbyFilter === hobby.id && 'pointer-events-none')}
+          className="min-h-[44px]"
           style={
             hobbyFilter === hobby.id
               ? { backgroundColor: hobby.color, color: getContrastTextColor(hobby.color), borderColor: hobby.color }
@@ -57,7 +57,7 @@ export function InventoryFilterTabs({ items, hobbies }: InventoryFilterTabsProps
         variant={hobbyFilter === 'UNTAGGED' ? 'default' : 'outline'}
         size="sm"
         aria-pressed={hobbyFilter === 'UNTAGGED'}
-        className={cn('min-h-[44px]', hobbyFilter === 'UNTAGGED' && 'pointer-events-none')}
+        className="min-h-[44px]"
         onClick={() => setHobbyFilter(hobbyFilter === 'UNTAGGED' ? null : 'UNTAGGED')}
       >
         Untagged
@@ -75,8 +75,8 @@ export function InventoryFilterTabs({ items, hobbies }: InventoryFilterTabsProps
               variant={typeFilter === key ? 'default' : 'outline'}
               size="sm"
               aria-pressed={typeFilter === key}
-              className={cn('min-h-[44px]', typeFilter === key && 'pointer-events-none')}
-              onClick={() => setTypeFilter(key)}
+              className="min-h-[44px]"
+              onClick={() => setTypeFilter(typeFilter === key ? null : key)}
             >
               {label}
             </Button>

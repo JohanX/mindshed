@@ -54,7 +54,7 @@ test.describe('Inventory Management', () => {
     await page.goto('/inventory')
     await page.waitForLoadState('networkidle')
 
-    // All tab shows both items
+    // No filter active — both items visible by default
     await expect(page.getByText('Walnut Lumber').first()).toBeVisible()
     await expect(page.getByText('Router Table').first()).toBeVisible()
 
@@ -68,8 +68,8 @@ test.describe('Inventory Management', () => {
     await expect(page.getByText('Router Table').first()).toBeVisible()
     await expect(page.getByText('Walnut Lumber')).not.toBeVisible()
 
-    // All tab again
-    await page.getByRole('button', { name: 'All' }).click()
+    // Click active Tools tab again to toggle off — both items visible again
+    await page.getByRole('button', { name: 'Tools', exact: true }).click()
     await expect(page.getByText('Walnut Lumber').first()).toBeVisible()
     await expect(page.getByText('Router Table').first()).toBeVisible()
   })

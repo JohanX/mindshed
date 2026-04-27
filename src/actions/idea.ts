@@ -11,6 +11,23 @@ import {
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 import type { Idea } from '@/generated/prisma/client'
+import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
+import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
+
+export type IdeaWithThumbnail = Idea & { thumbnailUrl: string | null }
+
+function deriveIdeaThumbnail(image: {
+  type: string
+  storageKey: string | null
+  url: string | null
+} | null): string | null {
+  if (!image) return null
+  if (image.type === 'UPLOAD' && image.storageKey) {
+    const adapter = getImageStorageAdapter()
+    if (adapter) return adapter.getThumbnailUrl(image.storageKey, THUMBNAIL_WIDTH.INVENTORY_CARD)
+  }
+  return image.url ?? null
+}
 
 export async function createIdea(input: CreateIdeaInput): Promise<ActionResult<{ id: string }>> {
   const parsed = createIdeaSchema.safeParse(input)
@@ -46,7 +63,7 @@ export async function createIdea(input: CreateIdeaInput): Promise<ActionResult<{
   }
 }
 
-export async function getIdeasByHobby(hobbyId: string): Promise<ActionResult<Idea[]>> {
+export async function getIdeasByHobby(hobbyId: string): Promise<ActionResult<IdeaWithThumbnail[]>> {
   const parsed = z.uuid().safeParse(hobbyId)
   if (!parsed.success) {
     return { success: false, error: 'Invalid hobby ID' }
@@ -56,15 +73,22 @@ export async function getIdeasByHobby(hobbyId: string): Promise<ActionResult<Ide
     const ideas = await prisma.idea.findMany({
       where: { hobbyId: parsed.data },
       orderBy: [{ isPromoted: 'asc' }, { createdAt: 'desc' }],
+      include: { image: { select: { type: true, storageKey: true, url: true } } },
     })
-    return { success: true, data: ideas }
+    return {
+      success: true,
+      data: ideas.map(({ image, ...idea }) => ({
+        ...idea,
+        thumbnailUrl: deriveIdeaThumbnail(image),
+      })),
+    }
   } catch (error) {
     console.error('getIdeasByHobby failed:', error)
     return { success: false, error: 'Failed to load ideas.' }
   }
 }
 
-export type IdeaWithHobby = Idea & {
+export type IdeaWithHobby = IdeaWithThumbnail & {
   hobby: { id: string; name: string; color: string; icon: string | null }
 }
 
@@ -72,9 +96,18 @@ export async function getAllIdeas(): Promise<ActionResult<IdeaWithHobby[]>> {
   try {
     const ideas = await prisma.idea.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { hobby: { select: { id: true, name: true, color: true, icon: true } } },
+      include: {
+        hobby: { select: { id: true, name: true, color: true, icon: true } },
+        image: { select: { type: true, storageKey: true, url: true } },
+      },
     })
-    return { success: true, data: ideas }
+    return {
+      success: true,
+      data: ideas.map(({ image, ...idea }) => ({
+        ...idea,
+        thumbnailUrl: deriveIdeaThumbnail(image),
+      })),
+    }
   } catch (error) {
     console.error('getAllIdeas failed:', error)
     return { success: false as const, error: 'Failed to load ideas.' }

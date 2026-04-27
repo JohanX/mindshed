@@ -4,10 +4,12 @@ import { getAllIdeas } from '@/actions/idea'
 import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/page-header'
 import { IdeaFormDialog } from '@/components/idea/idea-form'
+import { IdeaActionsMenu } from '@/components/idea/idea-actions-menu'
 import { EmptyStateCard } from '@/components/empty-state-card'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { hobbyColorWithAlpha } from '@/lib/hobby-color'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
+import { formatReferenceUrl } from '@/lib/idea-utils'
 import { Badge } from '@/components/ui/badge'
 import { ExternalLink } from 'lucide-react'
 
@@ -36,32 +38,45 @@ export default async function IdeasPage() {
             return (
               <Card
                 key={idea.id}
-                className="relative overflow-hidden"
+                data-testid="idea-card"
+                className={`relative overflow-hidden ${idea.isPromoted ? 'opacity-60' : ''}`}
                 style={{ backgroundColor: hobbyColorWithAlpha(idea.hobby.color) }}
               >
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      {idea.title}
+                    {idea.thumbnailUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={idea.thumbnailUrl}
+                        alt=""
+                        className="h-12 w-12 shrink-0 rounded-md object-cover"
+                      />
+                    )}
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                      <CardTitle className="text-base">{idea.title}</CardTitle>
                       {idea.referenceLink && /^https?:\/\//.test(idea.referenceLink) && (
                         <a
                           href={idea.referenceLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-muted-foreground hover:text-foreground"
+                          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                           aria-label={`Open reference link for ${idea.title}`}
                         >
-                          <ExternalLink className="h-4 w-4" />
+                          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{formatReferenceUrl(idea.referenceLink)}</span>
                         </a>
                       )}
-                    </CardTitle>
-                    <Badge
-                      variant="outline"
-                      className="shrink-0 text-xs"
-                      style={{ borderColor: idea.hobby.color, color: idea.hobby.color }}
-                    >
-                      {idea.hobby.name}
-                    </Badge>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Badge
+                        variant="outline"
+                        className="text-xs"
+                        style={{ borderColor: idea.hobby.color, color: idea.hobby.color }}
+                      >
+                        {idea.hobby.name}
+                      </Badge>
+                      <IdeaActionsMenu idea={idea} />
+                    </div>
                   </div>
                 </CardHeader>
                 {idea.description && (

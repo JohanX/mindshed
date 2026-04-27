@@ -78,7 +78,7 @@ export function InventoryItemCard({ item, hobbies }: InventoryItemCardProps) {
       <Card className="min-h-[44px]">
         <CardContent className="space-y-1.5">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
               {item.heroThumbnailUrl && (
                 <button
                   type="button"
@@ -94,12 +94,9 @@ export function InventoryItemCard({ item, hobbies }: InventoryItemCardProps) {
                   />
                 </button>
               )}
-              <span className="font-medium truncate">{item.name}</span>
+              <span className="font-medium truncate min-w-0">{item.name}</span>
             </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <Badge className={typeConfig.colorClass} variant="default">
-                {typeConfig.label}
-              </Badge>
+            <div className="flex shrink-0 items-center gap-1">
               <Button
                 variant="ghost"
                 size="icon"
@@ -122,13 +119,18 @@ export function InventoryItemCard({ item, hobbies }: InventoryItemCardProps) {
               </Button>
             </div>
           </div>
-          {(item.quantity !== null || item.unit) && (
-            <p className="text-sm text-muted-foreground">
-              {item.quantity !== null && item.quantity}
-              {item.quantity !== null && item.unit && ' '}
-              {item.unit}
-            </p>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge className={typeConfig.colorClass} variant="default">
+              {typeConfig.label}
+            </Badge>
+            {(item.quantity !== null || item.unit) && (
+              <span className="text-sm text-muted-foreground">
+                {item.quantity !== null && item.quantity}
+                {item.quantity !== null && item.unit && ' '}
+                {item.unit}
+              </span>
+            )}
+          </div>
           {item.hobbies.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {item.hobbies.map((hobby) => (

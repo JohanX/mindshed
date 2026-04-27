@@ -138,6 +138,8 @@ export type AvailableVariant = 'ok' | 'short' | 'missing' | 'consumed'
 export type AvailableCell = {
   label: string
   variant: AvailableVariant
+  /** Live inventory quantity rendered alongside the badge for consumed rows. */
+  secondaryLabel?: string
 }
 
 function formatQuantity(qty: number, unit: string | null): string {
@@ -148,10 +150,20 @@ function formatQuantity(qty: number, unit: string | null): string {
  * Pure helper for rendering the Available column of a BOM row. The view layer
  * applies colors/icons based on `variant`; this function only produces the
  * textual label + classification.
+ *
+ * For CONSUMED rows, `secondaryLabel` carries the live inventory quantity
+ * (post-consumption). The view renders the "Consumed" badge AND this
+ * secondary qty side-by-side so users see post-consumption stock without
+ * navigating away.
  */
 export function renderAvailable(row: BomItemData): AvailableCell {
   if (row.consumptionState === 'CONSUMED') {
-    return { label: 'Consumed', variant: 'consumed' }
+    const inv = row.inventoryItem
+    const secondaryLabel =
+      !inv || inv.isDeleted || inv.quantity === null
+        ? '—'
+        : formatQuantity(inv.quantity, row.unit)
+    return { label: 'Consumed', variant: 'consumed', secondaryLabel }
   }
   const inv = row.inventoryItem
   if (!inv || inv.isDeleted || inv.quantity === null) {

@@ -38,15 +38,25 @@ interface BomRowProps {
 }
 
 function AvailableCell({ row }: { row: BomItemData }) {
-  const { label, variant } = renderAvailable(row)
+  const { label, variant, secondaryLabel } = renderAvailable(row)
+  if (variant === 'consumed') {
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <span className="inline-flex items-center rounded-full bg-step-completed px-2 py-0.5 text-xs text-white">
+          {label}
+        </span>
+        {secondaryLabel && secondaryLabel !== '—' && (
+          <span className="text-sm text-muted-foreground">{secondaryLabel}</span>
+        )}
+      </span>
+    )
+  }
   const className =
     variant === 'ok'
       ? 'text-step-completed'
       : variant === 'short'
         ? 'text-step-blocked font-medium'
-        : variant === 'consumed'
-          ? 'inline-flex items-center rounded-full bg-step-completed px-2 py-0.5 text-xs text-white'
-          : 'text-muted-foreground'
+        : 'text-muted-foreground'
   return <span className={className}>{label}</span>
 }
 
