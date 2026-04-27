@@ -15,8 +15,10 @@ import {
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 import { nextUniqueInventoryName } from '@/lib/inventory-name'
-import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
-import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
+import {
+  findInventoryItemsList,
+  findInventoryItemOptions as findInventoryItemOptionsData,
+} from '@/data/inventory'
 
 function isP2002(error: unknown): boolean {
   return (
@@ -87,58 +89,8 @@ export async function getInventoryItems(
   typeFilter?: 'MATERIAL' | 'CONSUMABLE' | 'TOOL',
 ): Promise<ActionResult<InventoryItemData[]>> {
   try {
-    const items = await prisma.inventoryItem.findMany({
-      where: { isDeleted: false, ...(typeFilter ? { type: typeFilter } : {}) },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        _count: { select: { blockers: { where: { isResolved: false } } } },
-        hobbies: { select: { id: true, name: true, color: true } },
-        images: {
-          orderBy: { createdAt: 'asc' },
-          take: 1,
-          select: { id: true, type: true, storageKey: true, url: true },
-        },
-      },
-    })
-
-    const adapter = getImageStorageAdapter()
-
-    return {
-      success: true,
-      data: items.map((item) => {
-        const heroImage = item.images[0] ?? null
-        let heroImageUrl: string | null = null
-        let heroThumbnailUrl: string | null = null
-        if (heroImage) {
-          if (heroImage.type === 'UPLOAD' && heroImage.storageKey && adapter) {
-            heroImageUrl = adapter.getPublicUrl(heroImage.storageKey)
-            heroThumbnailUrl = adapter.getThumbnailUrl(
-              heroImage.storageKey,
-              THUMBNAIL_WIDTH.INVENTORY_CARD,
-            )
-          } else if (heroImage.url) {
-            heroImageUrl = heroImage.url
-            heroThumbnailUrl = heroImage.url
-          }
-        }
-        return {
-          id: item.id,
-          name: item.name,
-          type: item.type,
-          quantity: item.quantity,
-          unit: item.unit,
-          notes: item.notes,
-          lastMaintenanceDate: item.lastMaintenanceDate,
-          maintenanceIntervalDays: item.maintenanceIntervalDays,
-          createdAt: item.createdAt,
-          updatedAt: item.updatedAt,
-          activeBlockerCount: item._count.blockers,
-          hobbies: item.hobbies,
-          heroImageUrl,
-          heroThumbnailUrl,
-        }
-      }),
-    }
+    const data = await findInventoryItemsList(typeFilter)
+    return { success: true, data }
   } catch (error) {
     console.error('getInventoryItems failed:', error)
     return { success: false, error: 'Failed to load inventory.' }
@@ -239,16 +191,8 @@ export async function getInventoryItemOptions(
     if (!parsed.success) return { success: false, error: 'Invalid hobby ID.' }
   }
   try {
-    const where: Record<string, unknown> = { isDeleted: false }
-    if (hobbyId) {
-      where.OR = [{ hobbies: { some: { id: hobbyId } } }, { hobbies: { none: {} } }]
-    }
-    const items = await prisma.inventoryItem.findMany({
-      where,
-      orderBy: { name: 'asc' },
-      select: { id: true, name: true, type: true, quantity: true, unit: true },
-    })
-    return { success: true, data: items }
+    const data = await findInventoryItemOptionsData(hobbyId)
+    return { success: true, data }
   } catch (error) {
     console.error('getInventoryItemOptions failed:', error)
     return { success: false, error: 'Failed to load inventory items.' }

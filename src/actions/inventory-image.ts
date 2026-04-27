@@ -9,34 +9,23 @@ import {
   type AddInventoryItemImageLinkInput,
 } from '@/lib/schemas/inventory-image'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
-import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
 import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES } from '@/lib/constants/image-upload'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
+import {
+  findInventoryItemImagesWithDisplayUrl,
+  type InventoryItemImageWithDisplayUrl,
+} from '@/data/inventory-image'
+import { findDistinctProjectsForInventoryItem } from '@/data/bom'
+
+// Re-export type for existing callers; new ones should import from '@/data/inventory-image'.
+export type { InventoryItemImageWithDisplayUrl } from '@/data/inventory-image'
 
 async function revalidateBomProjectPaths(inventoryItemId: string) {
-  const rows = await prisma.bomItem.findMany({
-    where: { inventoryItemId },
-    select: { project: { select: { id: true, hobbyId: true } } },
-    distinct: ['projectId'],
-  })
-  for (const row of rows) {
-    revalidatePath(`/hobbies/${row.project.hobbyId}/projects/${row.project.id}`)
+  const projects = await findDistinctProjectsForInventoryItem(inventoryItemId)
+  for (const project of projects) {
+    revalidatePath(`/hobbies/${project.hobbyId}/projects/${project.id}`)
   }
-}
-
-export interface InventoryItemImageWithDisplayUrl {
-  id: string
-  inventoryItemId: string
-  type: 'UPLOAD' | 'LINK'
-  storageKey: string | null
-  url: string | null
-  originalFilename: string | null
-  contentType: string | null
-  sizeBytes: number | null
-  createdAt: Date
-  displayUrl: string
-  thumbnailUrl: string
 }
 
 export async function getInventoryItemImages(
@@ -48,33 +37,8 @@ export async function getInventoryItemImages(
   }
 
   try {
-    const images = await prisma.inventoryItemImage.findMany({
-      where: { inventoryItemId: parsed.data },
-      orderBy: { createdAt: 'asc' },
-    })
-
-    const adapter = getImageStorageAdapter()
-    const fallbackUrl = (img: { url: string | null }) => img.url ?? ''
-    const withDisplayUrl: InventoryItemImageWithDisplayUrl[] = images.map((img) => {
-      const isUpload = img.type === 'UPLOAD' && img.storageKey && adapter
-      return {
-        id: img.id,
-        inventoryItemId: img.inventoryItemId,
-        type: img.type as 'UPLOAD' | 'LINK',
-        storageKey: img.storageKey,
-        url: img.url,
-        originalFilename: img.originalFilename,
-        contentType: img.contentType,
-        sizeBytes: img.sizeBytes,
-        createdAt: img.createdAt,
-        displayUrl: isUpload ? adapter.getPublicUrl(img.storageKey!) : fallbackUrl(img),
-        thumbnailUrl: isUpload
-          ? adapter.getThumbnailUrl(img.storageKey!, THUMBNAIL_WIDTH.GRID)
-          : fallbackUrl(img),
-      }
-    })
-
-    return { success: true, data: { images: withDisplayUrl } }
+    const images = await findInventoryItemImagesWithDisplayUrl(parsed.data)
+    return { success: true, data: { images } }
   } catch (error) {
     console.error('getInventoryItemImages failed:', error)
     return { success: false, error: 'Failed to load images.' }

@@ -18,10 +18,9 @@ import {
 } from '@/lib/schemas/bom'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
-import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
-import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
 import { buildShortageBlockerDescription, isRowShort, type BomItemData } from '@/lib/bom'
 import { nextUniqueInventoryName } from '@/lib/inventory-name'
+import { findBomItemsByProject } from '@/data/bom'
 
 function isP2002(error: unknown): boolean {
   return (
@@ -287,64 +286,8 @@ export async function getBomItemsByProject(
   }
 
   try {
-    const rows = await prisma.bomItem.findMany({
-      where: { projectId: parsed.data },
-      orderBy: { sortOrder: 'asc' },
-      include: {
-        inventoryItem: {
-          select: {
-            id: true,
-            name: true,
-            type: true,
-            quantity: true,
-            isDeleted: true,
-            images: {
-              orderBy: { createdAt: 'asc' },
-              take: 1,
-              select: { id: true, type: true, storageKey: true, url: true },
-            },
-          },
-        },
-      },
-    })
-
-    const adapter = getImageStorageAdapter()
-
-    return {
-      success: true,
-      data: rows.map((row) => {
-        let heroThumbnailUrl: string | null = null
-        const heroImage = row.inventoryItem?.images?.[0] ?? null
-        if (heroImage) {
-          if (heroImage.type === 'UPLOAD' && heroImage.storageKey && adapter) {
-            heroThumbnailUrl = adapter.getThumbnailUrl(
-              heroImage.storageKey,
-              THUMBNAIL_WIDTH.BOM_ROW,
-            )
-          } else if (heroImage.url) {
-            heroThumbnailUrl = heroImage.url
-          }
-        }
-        return {
-          id: row.id,
-          label: row.label,
-          requiredQuantity: row.requiredQuantity,
-          unit: row.unit,
-          sortOrder: row.sortOrder,
-          consumptionState: row.consumptionState,
-          inventoryItem: row.inventoryItem
-            ? {
-                id: row.inventoryItem.id,
-                name: row.inventoryItem.name,
-                type: row.inventoryItem.type,
-                quantity: row.inventoryItem.quantity,
-                isDeleted: row.inventoryItem.isDeleted,
-                heroThumbnailUrl,
-              }
-            : null,
-        }
-      }),
-    }
+    const data = await findBomItemsByProject(parsed.data)
+    return { success: true, data }
   } catch (error) {
     console.error('getBomItemsByProject failed:', error)
     return { success: false, error: 'Failed to load BOM items.' }
