@@ -14,6 +14,7 @@ import {
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 import { getIdleThresholdDays } from '@/lib/settings'
+import { findHobbiesWithCounts } from '@/data/hobby'
 
 export async function createHobby(input: CreateHobbyInput): Promise<ActionResult<{ id: string }>> {
   const parsed = createHobbySchema.safeParse(input)
@@ -51,64 +52,8 @@ export async function getHobbies(): Promise<ActionResult<HobbyWithCounts[]>> {
     const idleThresholdDays = await getIdleThresholdDays()
     const idleThreshold = new Date()
     idleThreshold.setDate(idleThreshold.getDate() - idleThresholdDays)
-
-    // 4 parallel DB-side aggregates. Replaces the previous nested-include
-    // pattern that pulled every project + every step into app memory just
-    // to compute counts.
-    //   1. hobbies + total project count per hobby
-    //   2. active (non-archived, non-completed) project count per hobby
-    //   3. blocked (active AND has a BLOCKED step) project count per hobby
-    //   4. idle (active AND lastActivityAt < threshold) project count per hobby
-    const [hobbies, activeCounts, blockedCounts, idleCounts] = await Promise.all([
-      prisma.hobby.findMany({
-        orderBy: { sortOrder: 'asc' },
-        include: { _count: { select: { projects: true } } },
-      }),
-      prisma.project.groupBy({
-        by: ['hobbyId'],
-        where: { isArchived: false, isCompleted: false },
-        _count: { _all: true },
-      }),
-      prisma.project.groupBy({
-        by: ['hobbyId'],
-        where: {
-          isArchived: false,
-          isCompleted: false,
-          steps: { some: { state: 'BLOCKED' } },
-        },
-        _count: { _all: true },
-      }),
-      prisma.project.groupBy({
-        by: ['hobbyId'],
-        where: {
-          isArchived: false,
-          isCompleted: false,
-          lastActivityAt: { lt: idleThreshold },
-        },
-        _count: { _all: true },
-      }),
-    ])
-
-    const activeMap = new Map(activeCounts.map((row) => [row.hobbyId, row._count._all]))
-    const blockedMap = new Map(blockedCounts.map((row) => [row.hobbyId, row._count._all]))
-    const idleMap = new Map(idleCounts.map((row) => [row.hobbyId, row._count._all]))
-
-    return {
-      success: true,
-      data: hobbies.map((hobby) => ({
-        id: hobby.id,
-        name: hobby.name,
-        color: hobby.color,
-        icon: hobby.icon,
-        sortOrder: hobby.sortOrder,
-        createdAt: hobby.createdAt,
-        updatedAt: hobby.updatedAt,
-        projectCount: hobby._count.projects,
-        activeCount: activeMap.get(hobby.id) ?? 0,
-        blockedCount: blockedMap.get(hobby.id) ?? 0,
-        idleCount: idleMap.get(hobby.id) ?? 0,
-      })),
-    }
+    const data = await findHobbiesWithCounts(idleThreshold)
+    return { success: true, data }
   } catch (error) {
     console.error('getHobbies failed:', error)
     return { success: false, error: 'Failed to load hobbies.' }

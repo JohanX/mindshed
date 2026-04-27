@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { prisma } from '@/lib/db'
+import { findHobbyHeader } from '@/data/hobby'
 import { generateHobbyStyleVars } from '@/lib/hobby-color'
 
 interface HobbyLayoutProps {
@@ -9,10 +9,7 @@ interface HobbyLayoutProps {
 
 export default async function HobbyLayout({ children, params }: HobbyLayoutProps) {
   const { hobbyId } = await params
-  const hobby = await prisma.hobby.findUnique({
-    where: { id: hobbyId },
-    select: { id: true, color: true, name: true },
-  })
+  const hobby = await findHobbyHeader(hobbyId)
 
   if (!hobby) notFound()
 

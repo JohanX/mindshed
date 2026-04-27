@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { prisma } from '@/lib/db'
+import { findHobbyHeader } from '@/data/hobby'
 import { getProjectsByHobby } from '@/actions/project'
 import { PageHeader } from '@/components/layout/page-header'
 import { ProjectCreateDialog } from '@/components/project/project-create-dialog'
@@ -15,10 +15,7 @@ interface HobbyDetailPageProps {
 
 export default async function HobbyDetailPage({ params }: HobbyDetailPageProps) {
   const { hobbyId } = await params
-  const hobby = await prisma.hobby.findUnique({
-    where: { id: hobbyId },
-    select: { id: true, name: true, color: true, icon: true },
-  })
+  const hobby = await findHobbyHeader(hobbyId)
 
   if (!hobby) notFound()
 

@@ -8,14 +8,23 @@ import {
   type UpdateProjectInput,
 } from '@/lib/schemas/project'
 import { z } from 'zod/v4'
-import type { ProjectCardData } from '@/components/project/project-card'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 import { getIdleThresholdDays } from '@/lib/settings'
-import { getCurrentStep } from '@/lib/project-utils'
-import { deriveProjectStatus } from '@/lib/project-status'
 import { nextCloneName } from '@/lib/project-clone'
-import { fetchLatestPhotosByProject, resolveProjectThumbnailUrl } from '@/lib/project-photos'
+import {
+  findAllActiveProjects,
+  findProjectsByHobby as findProjectsByHobbyData,
+  findIdleProjects,
+  type ProjectWithHobby,
+  type ProjectWithProgress,
+  type IdleProjectData,
+} from '@/data/project'
+
+// Re-export types so existing callers (`import type { ProjectWithHobby } from '@/actions/project'`)
+// continue to work after the data-layer migration. New callers should import
+// from '@/data/project' directly.
+export type { ProjectWithHobby, ProjectWithProgress, IdleProjectData } from '@/data/project'
 
 export async function createProject(
   input: CreateProjectInput,
@@ -68,51 +77,14 @@ export async function createProject(
   }
 }
 
-export type ProjectWithHobby = ProjectCardData & {
-  hobby: { name: string; color: string; icon: string | null }
-}
-
 export async function getAllProjects(): Promise<ActionResult<ProjectWithHobby[]>> {
   try {
-    const projects = await prisma.project.findMany({
-      where: { isArchived: false, isCompleted: false },
-      orderBy: { lastActivityAt: 'desc' },
-      include: {
-        hobby: { select: { name: true, color: true, icon: true } },
-        steps: { orderBy: { sortOrder: 'asc' } },
-      },
-    })
-
-    const latestPhotoByProject = await fetchLatestPhotosByProject(projects.map((p) => p.id))
-
-    return {
-      success: true,
-      data: projects.map((project) => {
-        const currentStep =
-          project.steps.find((step) => step.state === 'IN_PROGRESS') ??
-          project.steps.find((step) => step.state === 'NOT_STARTED')
-        return {
-          id: project.id,
-          name: project.name,
-          hobbyId: project.hobbyId,
-          totalSteps: project.steps.length,
-          completedSteps: project.steps.filter((step) => step.state === 'COMPLETED').length,
-          derivedStatus: deriveProjectStatus(project.steps),
-          currentStepName: currentStep?.name ?? null,
-          latestPhotoUrl: resolveProjectThumbnailUrl(latestPhotoByProject.get(project.id) ?? null),
-          hobby: project.hobby,
-        }
-      }),
-    }
+    const data = await findAllActiveProjects()
+    return { success: true, data }
   } catch (error) {
     console.error('getAllProjects failed:', error)
     return { success: false, error: 'Failed to load projects.' }
   }
-}
-
-export interface ProjectWithProgress extends ProjectCardData {
-  isArchived: boolean
-  isCompleted: boolean // DB field kept for query optimization
 }
 
 export async function getProjectsByHobby(
@@ -124,39 +96,8 @@ export async function getProjectsByHobby(
   }
 
   try {
-    const projects = await prisma.project.findMany({
-      where: { hobbyId: parsed.data },
-      orderBy: { lastActivityAt: 'desc' },
-      include: {
-        steps: {
-          select: { id: true, name: true, state: true, sortOrder: true },
-          orderBy: { sortOrder: 'asc' },
-        },
-      },
-    })
-
-    const latestPhotoByProject = await fetchLatestPhotosByProject(projects.map((p) => p.id))
-
-    return {
-      success: true,
-      data: projects.map((project) => {
-        const currentStep =
-          project.steps.find((step) => step.state === 'IN_PROGRESS') ??
-          project.steps.find((step) => step.state === 'NOT_STARTED')
-        return {
-          id: project.id,
-          name: project.name,
-          hobbyId: project.hobbyId,
-          totalSteps: project.steps.length,
-          completedSteps: project.steps.filter((step) => step.state === 'COMPLETED').length,
-          derivedStatus: deriveProjectStatus(project.steps),
-          currentStepName: currentStep?.name ?? null,
-          latestPhotoUrl: resolveProjectThumbnailUrl(latestPhotoByProject.get(project.id) ?? null),
-          isArchived: project.isArchived,
-          isCompleted: project.isCompleted,
-        }
-      }),
-    }
+    const data = await findProjectsByHobbyData(parsed.data)
+    return { success: true, data }
   } catch (error) {
     console.error('getProjectsByHobby failed:', error)
     return { success: false, error: 'Failed to load projects.' }
@@ -329,46 +270,12 @@ export async function archiveProject(id: string): Promise<ActionResult<null>> {
   }
 }
 
-export interface IdleProjectData extends ProjectCardData {
-  hobby: { name: string; color: string; icon: string | null }
-  lastActivityAt: Date // Needed for idle duration display
-}
-
 export async function getIdleProjects(): Promise<ActionResult<IdleProjectData[]>> {
   try {
     const threshold = new Date()
     threshold.setDate(threshold.getDate() - (await getIdleThresholdDays()))
-
-    const projects = await prisma.project.findMany({
-      where: {
-        isArchived: false,
-        isCompleted: false,
-        lastActivityAt: { lt: threshold },
-      },
-      orderBy: { lastActivityAt: 'asc' },
-      include: {
-        hobby: { select: { name: true, color: true, icon: true } },
-        steps: { orderBy: { sortOrder: 'asc' } },
-      },
-    })
-
-    return {
-      success: true,
-      data: projects.map((project) => {
-        const currentStep = getCurrentStep(project.steps)
-        return {
-          id: project.id,
-          name: project.name,
-          hobbyId: project.hobbyId,
-          totalSteps: project.steps.length,
-          completedSteps: project.steps.filter((step) => step.state === 'COMPLETED').length,
-          derivedStatus: deriveProjectStatus(project.steps),
-          currentStepName: currentStep?.name ?? null,
-          hobby: project.hobby,
-          lastActivityAt: project.lastActivityAt,
-        }
-      }),
-    }
+    const data = await findIdleProjects(threshold)
+    return { success: true, data }
   } catch (error) {
     console.error('getIdleProjects failed:', error)
     return { success: false, error: 'Failed to load idle projects.' }

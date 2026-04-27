@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { prisma } from '@/lib/db'
+import { findHobbyHeader } from '@/data/hobby'
 import { getIdeasByHobby } from '@/actions/idea'
 import { PageHeader } from '@/components/layout/page-header'
 import { IdeaFormDialog } from '@/components/idea/idea-form'
@@ -12,10 +12,7 @@ interface HobbyIdeasPageProps {
 
 export default async function HobbyIdeasPage({ params }: HobbyIdeasPageProps) {
   const { hobbyId } = await params
-  const hobby = await prisma.hobby.findUnique({
-    where: { id: hobbyId },
-    select: { id: true, name: true, color: true, icon: true },
-  })
+  const hobby = await findHobbyHeader(hobbyId)
 
   if (!hobby) notFound()
 

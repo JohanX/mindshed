@@ -1,17 +1,14 @@
 export const dynamic = 'force-dynamic'
 
 import { getAllIdeas } from '@/actions/idea'
-import { prisma } from '@/lib/db'
+import { findAllHobbiesOrdered } from '@/data/hobby'
 import { PageHeader } from '@/components/layout/page-header'
 import { IdeaFormDialog } from '@/components/idea/idea-form'
 import { IdeaCard } from '@/components/idea/idea-card'
 import { EmptyStateCard } from '@/components/empty-state-card'
 
 export default async function IdeasPage() {
-  const hobbies = await prisma.hobby.findMany({
-    orderBy: { sortOrder: 'asc' },
-    select: { id: true, name: true, color: true },
-  })
+  const hobbies = await findAllHobbiesOrdered()
 
   const result = await getAllIdeas()
   const ideas = result.success ? result.data : []

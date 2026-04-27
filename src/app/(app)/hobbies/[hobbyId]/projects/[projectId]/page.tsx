@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation'
-import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/page-header'
 import { ProjectActions } from '@/components/project/project-actions'
 import { ProjectStatusBadge } from '@/components/project/project-status-badge'
@@ -18,6 +17,7 @@ import { GallerySection } from '@/components/gallery/gallery-section'
 import { BomSection } from '@/components/bom/bom-section'
 import type { BomItemData, InventoryOption } from '@/lib/bom'
 import { getInventoryItemOptions } from '@/actions/inventory'
+import { findProjectDetail } from '@/data/project'
 
 interface ProjectDetailPageProps {
   params: Promise<{ hobbyId: string; projectId: string }>
@@ -47,39 +47,7 @@ function getThumbnailImageUrl(storageKey: string, width: number): string {
 export default async function ProjectDetailPage({ params, searchParams }: ProjectDetailPageProps) {
   const { hobbyId, projectId } = await params
   const { step: focusedStepParam } = await searchParams
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-    include: {
-      hobby: true,
-      steps: {
-        orderBy: { sortOrder: 'asc' },
-        include: {
-          notes: { orderBy: { createdAt: 'desc' } },
-          images: { orderBy: { createdAt: 'desc' } },
-          blockers: { where: { isResolved: false }, orderBy: { createdAt: 'desc' } },
-        },
-      },
-      bomItems: {
-        orderBy: { sortOrder: 'asc' },
-        include: {
-          inventoryItem: {
-            select: {
-              id: true,
-              name: true,
-              type: true,
-              quantity: true,
-              isDeleted: true,
-              images: {
-                orderBy: { createdAt: 'asc' },
-                take: 1,
-                select: { type: true, storageKey: true, url: true },
-              },
-            },
-          },
-        },
-      },
-    },
-  })
+  const project = await findProjectDetail(projectId)
 
   if (!project || project.hobbyId !== hobbyId) notFound()
 
