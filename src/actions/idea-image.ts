@@ -9,24 +9,13 @@ import {
   type AddIdeaImageLinkInput,
 } from '@/lib/schemas/idea-image'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
-import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
 import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES } from '@/lib/constants/image-upload'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
+import { findIdeaImageWithDisplayUrl, type IdeaImageWithDisplayUrl } from '@/data/idea-image'
 
-export interface IdeaImageWithDisplayUrl {
-  id: string
-  ideaId: string
-  type: 'UPLOAD' | 'LINK'
-  storageKey: string | null
-  url: string | null
-  originalFilename: string | null
-  contentType: string | null
-  sizeBytes: number | null
-  createdAt: Date
-  displayUrl: string
-  thumbnailUrl: string
-}
+// Re-export type for existing callers; new ones should import from '@/data/idea-image'.
+export type { IdeaImageWithDisplayUrl } from '@/data/idea-image'
 
 function revalidateIdeaPaths(hobbyId?: string | null) {
   revalidatePath('/ideas')
@@ -43,34 +32,8 @@ export async function getIdeaImage(
   }
 
   try {
-    const image = await prisma.ideaImage.findUnique({
-      where: { ideaId: parsed.data },
-    })
-
-    if (!image) {
-      return { success: true, data: { image: null } }
-    }
-
-    const adapter = getImageStorageAdapter()
-    const fallbackUrl = image.url ?? ''
-    const isUpload = image.type === 'UPLOAD' && image.storageKey && adapter
-    const withDisplayUrl: IdeaImageWithDisplayUrl = {
-      id: image.id,
-      ideaId: image.ideaId,
-      type: image.type as 'UPLOAD' | 'LINK',
-      storageKey: image.storageKey,
-      url: image.url,
-      originalFilename: image.originalFilename,
-      contentType: image.contentType,
-      sizeBytes: image.sizeBytes,
-      createdAt: image.createdAt,
-      displayUrl: isUpload ? adapter.getPublicUrl(image.storageKey!) : fallbackUrl,
-      thumbnailUrl: isUpload
-        ? adapter.getThumbnailUrl(image.storageKey!, THUMBNAIL_WIDTH.INVENTORY_CARD)
-        : fallbackUrl,
-    }
-
-    return { success: true, data: { image: withDisplayUrl } }
+    const image = await findIdeaImageWithDisplayUrl(parsed.data)
+    return { success: true, data: { image } }
   } catch (error) {
     console.error('getIdeaImage failed:', error)
     return { success: false, error: 'Failed to load image.' }
