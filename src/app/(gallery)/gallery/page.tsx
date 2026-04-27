@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { prisma } from '@/lib/db'
+import { findPublicGalleryProjects } from '@/data/gallery'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
@@ -9,22 +9,7 @@ import { hobbyColorWithAlpha } from '@/lib/hobby-color'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
 
 export default async function GalleryIndexPage() {
-  const projects = await prisma.project.findMany({
-    where: {
-      OR: [{ journeyGalleryEnabled: true }, { resultGalleryEnabled: true }],
-      gallerySlug: { not: null },
-    },
-    orderBy: { updatedAt: 'desc' },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      gallerySlug: true,
-      journeyGalleryEnabled: true,
-      resultGalleryEnabled: true,
-      hobby: { select: { id: true, name: true, color: true, icon: true } },
-    },
-  })
+  const projects = await findPublicGalleryProjects()
 
   if (projects.length === 0) {
     return (

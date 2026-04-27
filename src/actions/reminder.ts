@@ -14,6 +14,10 @@ import {
 } from '@/lib/schemas/reminder'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
+import {
+  findRemindersForTarget as findRemindersForTargetData,
+  findUpcomingReminders,
+} from '@/data/reminder'
 
 export async function createReminder(
   input: CreateReminderInput,
@@ -108,11 +112,8 @@ export async function getRemindersForTarget(
   targetId: string,
 ): Promise<ActionResult<ReminderData[]>> {
   try {
-    const reminders = await prisma.reminder.findMany({
-      where: { targetType, targetId, isDismissed: false },
-      orderBy: { dueDate: 'asc' },
-    })
-    return { success: true, data: reminders }
+    const data = await findRemindersForTargetData(targetType, targetId)
+    return { success: true, data }
   } catch (error) {
     console.error('getRemindersForTarget failed:', error)
     return { success: false, error: 'Failed to load reminders.' }
@@ -161,14 +162,7 @@ export async function getDashboardReminders(): Promise<ActionResult<DashboardRem
     const weekFromNow = new Date(Date.now() + 7 * 86400000)
 
     // Query 1: upcoming undismissed reminders within the next week.
-    const reminders = await prisma.reminder.findMany({
-      where: {
-        isDismissed: false,
-        OR: [{ snoozedUntil: null }, { snoozedUntil: { lt: now } }],
-        dueDate: { lte: weekFromNow },
-      },
-      orderBy: { dueDate: 'asc' },
-    })
+    const reminders = await findUpcomingReminders(now, weekFromNow)
 
     // Partition target IDs by targetType so each kind is fetched in a single
     // batched findMany. This replaces the previous 1+N pattern (one findUnique

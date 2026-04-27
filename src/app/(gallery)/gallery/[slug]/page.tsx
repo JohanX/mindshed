@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { notFound } from 'next/navigation'
-import { prisma } from '@/lib/db'
+import { findJourneyGalleryBySlug } from '@/data/gallery'
 import { JourneyGalleryView } from '@/components/gallery/journey-gallery-view'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
@@ -33,30 +33,7 @@ function getThumbnailImageUrl(storageKey: string, width: number): string {
 export default async function JourneyGalleryPage({ params }: JourneyGalleryPageProps) {
   const { slug } = await params
 
-  const project = await prisma.project.findUnique({
-    where: { gallerySlug: slug },
-    select: {
-      name: true,
-      description: true,
-      journeyGalleryEnabled: true,
-      hobby: { select: { name: true, color: true, icon: true } },
-      steps: {
-        where: { excludeFromGallery: false },
-        orderBy: { sortOrder: 'asc' },
-        select: {
-          name: true,
-          images: {
-            orderBy: { createdAt: 'desc' },
-            select: { storageKey: true, url: true, type: true, originalFilename: true },
-          },
-          notes: {
-            orderBy: { createdAt: 'desc' },
-            select: { text: true },
-          },
-        },
-      },
-    },
-  })
+  const project = await findJourneyGalleryBySlug(slug)
 
   if (!project || !project.journeyGalleryEnabled) notFound()
 

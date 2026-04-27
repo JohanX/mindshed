@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { notFound } from 'next/navigation'
-import { prisma } from '@/lib/db'
+import { findResultGalleryBySlug } from '@/data/gallery'
 import { ResultGalleryView } from '@/components/gallery/result-gallery-view'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 
@@ -22,27 +22,7 @@ function getPublicImageUrl(storageKey: string): string {
 export default async function ResultGalleryPage({ params }: ResultGalleryPageProps) {
   const { slug } = await params
 
-  const project = await prisma.project.findUnique({
-    where: { gallerySlug: slug },
-    select: {
-      name: true,
-      description: true,
-      resultGalleryEnabled: true,
-      resultStepId: true,
-      hobby: { select: { name: true, color: true, icon: true } },
-      steps: {
-        where: { state: 'COMPLETED' },
-        orderBy: { sortOrder: 'desc' },
-        select: {
-          id: true,
-          images: {
-            orderBy: { createdAt: 'desc' },
-            select: { storageKey: true, url: true, type: true, originalFilename: true },
-          },
-        },
-      },
-    },
-  })
+  const project = await findResultGalleryBySlug(slug)
 
   if (!project || !project.resultGalleryEnabled) notFound()
 

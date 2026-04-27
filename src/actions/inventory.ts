@@ -19,6 +19,7 @@ import {
   findInventoryItemsList,
   findInventoryItemOptions as findInventoryItemOptionsData,
 } from '@/data/inventory'
+import { findScheduledMaintenanceTools, findInventoryItemMaintenance } from '@/data/maintenance'
 
 function isP2002(error: unknown): boolean {
   return (
@@ -207,10 +208,7 @@ export async function updateMaintenanceData(
     return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
 
   try {
-    const item = await prisma.inventoryItem.findUnique({
-      where: { id: parsed.data.id },
-      select: { type: true, isDeleted: true },
-    })
+    const item = await findInventoryItemMaintenance(parsed.data.id)
     if (!item || item.isDeleted) return { success: false, error: 'Item not found.' }
     if (item.type !== 'TOOL') return { success: false, error: 'Maintenance only applies to tools.' }
 
@@ -236,10 +234,7 @@ export async function recordMaintenance(itemId: string): Promise<ActionResult<{ 
   if (!parsed.success) return { success: false, error: 'Invalid item ID.' }
 
   try {
-    const item = await prisma.inventoryItem.findUnique({
-      where: { id: parsed.data },
-      select: { type: true, maintenanceIntervalDays: true, isDeleted: true },
-    })
+    const item = await findInventoryItemMaintenance(parsed.data)
     if (!item || item.isDeleted) return { success: false, error: 'Item not found.' }
     if (item.type !== 'TOOL') return { success: false, error: 'Maintenance only applies to tools.' }
     if (!item.maintenanceIntervalDays)
@@ -270,15 +265,7 @@ export type MaintenanceDueItem = {
 
 export async function getOverdueMaintenanceItems(): Promise<ActionResult<MaintenanceDueItem[]>> {
   try {
-    const tools = await prisma.inventoryItem.findMany({
-      where: {
-        isDeleted: false,
-        type: 'TOOL',
-        lastMaintenanceDate: { not: null },
-        maintenanceIntervalDays: { not: null },
-      },
-      orderBy: { lastMaintenanceDate: 'asc' },
-    })
+    const tools = await findScheduledMaintenanceTools()
 
     const { isMaintenanceOverdue, getNextMaintenanceDate, getDaysOverdue } =
       await import('@/lib/maintenance')
