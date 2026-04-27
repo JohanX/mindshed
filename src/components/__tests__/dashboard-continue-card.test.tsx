@@ -49,6 +49,9 @@ const baseProject: RecentProject = {
     storageKey: 'images/photo-1.jpg',
     originalFilename: 'photo.jpg',
   },
+  totalSteps: 5,
+  completedSteps: 2,
+  derivedStatus: 'IN_PROGRESS',
 }
 
 describe('DashboardContinueCard', () => {

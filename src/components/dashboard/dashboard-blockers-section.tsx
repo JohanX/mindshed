@@ -16,6 +16,7 @@ export function DashboardBlockersSection({ blockers }: DashboardBlockersSectionP
     isResolved: false as const,
     createdAt: blocker.createdAt,
     step: {
+      id: blocker.step.id,
       name: blocker.step.name,
       project: {
         id: blocker.step.project.id,

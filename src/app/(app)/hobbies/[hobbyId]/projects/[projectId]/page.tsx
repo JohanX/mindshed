@@ -21,6 +21,7 @@ import { getInventoryItemOptions } from '@/actions/inventory'
 
 interface ProjectDetailPageProps {
   params: Promise<{ hobbyId: string; projectId: string }>
+  searchParams: Promise<{ step?: string }>
 }
 
 function getPublicImageUrl(storageKey: string): string {
@@ -43,8 +44,9 @@ function getThumbnailImageUrl(storageKey: string, width: number): string {
   }
 }
 
-export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
+export default async function ProjectDetailPage({ params, searchParams }: ProjectDetailPageProps) {
   const { hobbyId, projectId } = await params
+  const { step: focusedStepParam } = await searchParams
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     include: {
@@ -87,8 +89,16 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   const remindersResult = await getRemindersForTarget('PROJECT', projectId)
   const projectReminder = remindersResult.success ? (remindersResult.data[0] ?? null) : null
 
-  // Compute current step (first IN_PROGRESS or NOT_STARTED)
+  // Determine which step to expand on load.
+  // If ?step=<id> is provided AND matches a real step on this project (e.g.
+  // navigating from a dashboard blocker), focus that step. Otherwise default
+  // to the first IN_PROGRESS or NOT_STARTED step.
+  const focusedFromUrl =
+    focusedStepParam && project.steps.some((step) => step.id === focusedStepParam)
+      ? focusedStepParam
+      : null
   const currentStepId =
+    focusedFromUrl ??
     project.steps.find((step) => step.state === 'IN_PROGRESS')?.id ??
     project.steps.find((step) => step.state === 'NOT_STARTED')?.id ??
     null

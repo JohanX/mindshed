@@ -12,7 +12,11 @@ export const createInventoryItemSchema = z.object({
   quantity: z.number().min(0, 'Quantity must be 0 or more').optional(),
   unit: z.string().trim().max(50, 'Unit must be 50 characters or less').optional(),
   notes: z.string().trim().max(500, 'Notes must be 500 characters or less').optional(),
-  hobbyIds: z.array(z.uuid()).max(20).transform((ids) => [...new Set(ids)]).optional(),
+  hobbyIds: z
+    .array(z.uuid())
+    .max(20)
+    .transform((ids) => [...new Set(ids)])
+    .optional(),
 })
 
 export type CreateInventoryItemInput = z.infer<typeof createInventoryItemSchema>
@@ -28,7 +32,11 @@ export const updateInventoryItemSchema = z.object({
   quantity: z.number().min(0, 'Quantity must be 0 or more').optional(),
   unit: z.string().trim().max(50, 'Unit must be 50 characters or less').optional(),
   notes: z.string().trim().max(500, 'Notes must be 500 characters or less').optional(),
-  hobbyIds: z.array(z.uuid()).max(20).transform((ids) => [...new Set(ids)]).optional(),
+  hobbyIds: z
+    .array(z.uuid())
+    .max(20)
+    .transform((ids) => [...new Set(ids)])
+    .optional(),
 })
 
 export type UpdateInventoryItemInput = z.infer<typeof updateInventoryItemSchema>

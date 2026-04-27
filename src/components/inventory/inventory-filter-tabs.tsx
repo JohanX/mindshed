@@ -27,9 +27,7 @@ export function InventoryFilterTabs({ items, hobbies }: InventoryFilterTabsProps
     if (typeFilter && item.type !== typeFilter) return false
     if (hobbyFilter === 'UNTAGGED') return item.hobbies.length === 0
     if (hobbyFilter) {
-      return (
-        item.hobbies.some((h) => h.id === hobbyFilter) || item.hobbies.length === 0
-      )
+      return item.hobbies.some((h) => h.id === hobbyFilter) || item.hobbies.length === 0
     }
     return true
   })
@@ -45,7 +43,11 @@ export function InventoryFilterTabs({ items, hobbies }: InventoryFilterTabsProps
           className="min-h-[44px]"
           style={
             hobbyFilter === hobby.id
-              ? { backgroundColor: hobby.color, color: getContrastTextColor(hobby.color), borderColor: hobby.color }
+              ? {
+                  backgroundColor: hobby.color,
+                  color: getContrastTextColor(hobby.color),
+                  borderColor: hobby.color,
+                }
               : { borderColor: hobby.color, color: hobby.color }
           }
           onClick={() => setHobbyFilter(hobbyFilter === hobby.id ? null : hobby.id)}

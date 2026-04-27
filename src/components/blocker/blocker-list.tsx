@@ -34,7 +34,7 @@ function DashboardBlockerItem({ blocker }: { blocker: BlockerWithContext }) {
   return (
     <li>
       <Link
-        href={`/hobbies/${blocker.step.project.hobbyId}/projects/${blocker.step.project.id}`}
+        href={`/hobbies/${blocker.step.project.hobbyId}/projects/${blocker.step.project.id}?step=${blocker.step.id}`}
         className="block"
       >
         <div

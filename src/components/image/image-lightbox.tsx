@@ -15,7 +15,12 @@ interface ImageLightboxProps {
   showDelete?: boolean
 }
 
-export function ImageLightbox({ images, initialIndex, onClose, showDelete = true }: ImageLightboxProps) {
+export function ImageLightbox({
+  images,
+  initialIndex,
+  onClose,
+  showDelete = true,
+}: ImageLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [broken, setBroken] = useState(false)
 

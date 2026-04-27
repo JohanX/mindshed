@@ -15,6 +15,7 @@ import { getIdleThresholdDays } from '@/lib/settings'
 import { getCurrentStep } from '@/lib/project-utils'
 import { deriveProjectStatus } from '@/lib/project-status'
 import { nextCloneName } from '@/lib/project-clone'
+import { fetchLatestPhotosByProject, resolveProjectThumbnailUrl } from '@/lib/project-photos'
 
 export async function createProject(
   input: CreateProjectInput,
@@ -82,6 +83,8 @@ export async function getAllProjects(): Promise<ActionResult<ProjectWithHobby[]>
       },
     })
 
+    const latestPhotoByProject = await fetchLatestPhotosByProject(projects.map((p) => p.id))
+
     return {
       success: true,
       data: projects.map((project) => {
@@ -96,6 +99,7 @@ export async function getAllProjects(): Promise<ActionResult<ProjectWithHobby[]>
           completedSteps: project.steps.filter((step) => step.state === 'COMPLETED').length,
           derivedStatus: deriveProjectStatus(project.steps),
           currentStepName: currentStep?.name ?? null,
+          latestPhotoUrl: resolveProjectThumbnailUrl(latestPhotoByProject.get(project.id) ?? null),
           hobby: project.hobby,
         }
       }),
@@ -131,6 +135,8 @@ export async function getProjectsByHobby(
       },
     })
 
+    const latestPhotoByProject = await fetchLatestPhotosByProject(projects.map((p) => p.id))
+
     return {
       success: true,
       data: projects.map((project) => {
@@ -145,6 +151,7 @@ export async function getProjectsByHobby(
           completedSteps: project.steps.filter((step) => step.state === 'COMPLETED').length,
           derivedStatus: deriveProjectStatus(project.steps),
           currentStepName: currentStep?.name ?? null,
+          latestPhotoUrl: resolveProjectThumbnailUrl(latestPhotoByProject.get(project.id) ?? null),
           isArchived: project.isArchived,
           isCompleted: project.isCompleted,
         }

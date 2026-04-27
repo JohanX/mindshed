@@ -25,7 +25,12 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
           )}
           style={{ backgroundColor: color.value }}
         >
-          {value === color.value && <Check className="h-5 w-5 drop-shadow-sm" style={{ color: getContrastTextColor(color.value) }} />}
+          {value === color.value && (
+            <Check
+              className="h-5 w-5 drop-shadow-sm"
+              style={{ color: getContrastTextColor(color.value) }}
+            />
+          )}
         </button>
       ))}
     </div>

@@ -41,6 +41,9 @@ export interface RecentProject {
     storageKey: string | null
     originalFilename: string | null
   } | null
+  totalSteps: number
+  completedSteps: number
+  derivedStatus: import('@/lib/project-status').DerivedProjectStatus
 }
 
 export interface ActiveBlocker {

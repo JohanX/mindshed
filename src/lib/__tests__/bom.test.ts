@@ -135,9 +135,7 @@ describe('renderAvailable', () => {
 
   it('CONSUMED with null inventory qty → secondaryLabel is em-dash', () => {
     expect(
-      renderAvailable(
-        linked({ required: 100, available: null, consumptionState: 'CONSUMED' }),
-      ),
+      renderAvailable(linked({ required: 100, available: null, consumptionState: 'CONSUMED' })),
     ).toEqual({ label: 'Consumed', variant: 'consumed', secondaryLabel: '—' })
   })
 

@@ -22,7 +22,7 @@ Every story must follow this sequence:
    - QA navigates the feature, verifies behavior, identifies edge cases via live browser
    - Then writes E2E test scripts grounded in observed behavior
 3. Switch back to DEV agent to execute rest of the steps
-4. Run `pnpm lint`, `pnpm test run`, `pnpm build`
+4. Run `pnpm format`, `pnpm lint`, `pnpm test run`, `pnpm build`
 5. Run E2E tests
 6. Run code review (bmad-code-review skill)
 7. Auto-apply review patches (no pause for approval)

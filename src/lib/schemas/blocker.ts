@@ -37,6 +37,7 @@ export type BlockerWithContext = {
   isResolved: boolean
   createdAt: Date
   step: {
+    id: string
     name: string
     project: {
       id: string

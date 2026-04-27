@@ -1,27 +1,15 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
+import { ProjectCard } from '@/components/project/project-card'
 import { hobbyColorWithAlpha } from '@/lib/hobby-color'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
+import { resolveProjectThumbnailUrl } from '@/lib/project-photos'
 import type { RecentProject } from '@/lib/schemas/dashboard'
-import { getImageStorageAdapter, isImageProviderSelfOptimized } from '@/lib/image-storage/adapter'
-import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
 
 export interface DashboardContinueCardProps {
   project: RecentProject
   variant: 'primary' | 'secondary'
-}
-
-function resolvePhotoUrl(storageKey: string | null | undefined): string | null {
-  if (!storageKey) return null
-  try {
-    const adapter = getImageStorageAdapter()
-    if (!adapter) return null
-    return adapter.getThumbnailUrl(storageKey, THUMBNAIL_WIDTH.DASHBOARD_CARD)
-  } catch {
-    return null
-  }
 }
 
 function HobbyWatermark({ hobby }: { hobby: { icon: string | null; color: string } }) {
@@ -38,8 +26,6 @@ function HobbyWatermark({ hobby }: { hobby: { icon: string | null; color: string
 }
 
 export function DashboardContinueCard({ project, variant }: DashboardContinueCardProps) {
-  const photoUrl = resolvePhotoUrl(project.latestPhoto?.storageKey)
-
   if (variant === 'secondary') {
     return (
       <Link
@@ -66,36 +52,23 @@ export function DashboardContinueCard({ project, variant }: DashboardContinueCar
     )
   }
 
+  // Primary variant: delegate to the shared ProjectCard so the dashboard's
+  // featured project looks identical to project cards on /projects and on
+  // a hobby detail page (photo + name + step count + status badge + currentStep).
   return (
-    <Link
-      href={`/hobbies/${project.hobbyId}/projects/${project.id}`}
-      className="block min-h-[44px]"
-    >
-      <Card
-        className="relative overflow-hidden transition-opacity hover:opacity-90"
-        style={{ backgroundColor: hobbyColorWithAlpha(project.hobby.color) }}
-      >
-        <CardContent className="flex items-start gap-4">
-          {photoUrl && (
-            <Image
-              src={photoUrl}
-              alt={`Latest photo for ${project.name}`}
-              width={64}
-              height={64}
-              className="h-16 w-16 shrink-0 rounded-lg object-cover"
-              unoptimized={isImageProviderSelfOptimized()}
-            />
-          )}
-          <div className="min-w-0 flex-1 space-y-1">
-            <p className="text-base font-medium truncate">{project.name}</p>
-            <HobbyIdentity hobby={project.hobby} variant="badge" />
-            {project.currentStep && (
-              <p className="text-sm text-muted-foreground truncate">{project.currentStep.name}</p>
-            )}
-          </div>
-        </CardContent>
-        <HobbyWatermark hobby={project.hobby} />
-      </Card>
-    </Link>
+    <ProjectCard
+      project={{
+        id: project.id,
+        name: project.name,
+        hobbyId: project.hobbyId,
+        totalSteps: project.totalSteps,
+        completedSteps: project.completedSteps,
+        derivedStatus: project.derivedStatus,
+        currentStepName: project.currentStep?.name ?? null,
+        latestPhotoUrl: resolveProjectThumbnailUrl(project.latestPhoto),
+      }}
+      hobby={project.hobby}
+      showHobbyBadge
+    />
   )
 }

@@ -26,12 +26,7 @@ vi.mock('@/lib/image-storage/adapter', () => ({
   })),
 }))
 
-import {
-  getIdeaImage,
-  addIdeaImage,
-  addIdeaImageLink,
-  deleteIdeaImage,
-} from '../idea-image'
+import { getIdeaImage, addIdeaImage, addIdeaImageLink, deleteIdeaImage } from '../idea-image'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 import { prisma } from '@/lib/db'
 

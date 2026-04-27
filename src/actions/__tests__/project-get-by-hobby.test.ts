@@ -6,6 +6,9 @@ vi.mock('@/lib/db', () => ({
     project: {
       findMany: vi.fn(),
     },
+    stepImage: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
   },
 }))
 

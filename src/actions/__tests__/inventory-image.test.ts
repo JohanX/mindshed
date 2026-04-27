@@ -375,9 +375,7 @@ describe('deleteInventoryItemImage', () => {
       storageKey: null,
     } as never)
     mockDelete.mockResolvedValue({} as never)
-    mockBomFindMany.mockResolvedValue([
-      { project: { id: 'p1', hobbyId: 'h1' } },
-    ] as never)
+    mockBomFindMany.mockResolvedValue([{ project: { id: 'p1', hobbyId: 'h1' } }] as never)
 
     const { revalidatePath: mockRevalidatePath } = await import('next/cache')
     await deleteInventoryItemImage(VALID_UUID)

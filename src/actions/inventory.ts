@@ -195,9 +195,10 @@ export async function updateInventoryItem(
       return { success: false, error: 'Item name collided — please retry.' }
     }
     if (isP2025(error)) {
-      const msg = error instanceof Error && error.message === 'NOT_FOUND'
-        ? 'Item not found.'
-        : 'One or more selected hobbies no longer exist.'
+      const msg =
+        error instanceof Error && error.message === 'NOT_FOUND'
+          ? 'Item not found.'
+          : 'One or more selected hobbies no longer exist.'
       return { success: false, error: msg }
     }
     console.error('updateInventoryItem failed:', error)

@@ -262,8 +262,16 @@ export function IdeaEditDialog({ idea, open, onOpenChange }: IdeaEditDialogProps
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') { e.preventDefault(); handleLinkSave() }
-                    if (e.key === 'Escape') { e.preventDefault(); setLinkExpanded(false); setLinkUrl(''); setLinkError(null) }
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleLinkSave()
+                    }
+                    if (e.key === 'Escape') {
+                      e.preventDefault()
+                      setLinkExpanded(false)
+                      setLinkUrl('')
+                      setLinkError(null)
+                    }
                   }}
                   onPaste={handlePaste}
                   placeholder={isUploading ? 'Uploading pasted image…' : 'Paste image or URL'}
@@ -272,10 +280,25 @@ export function IdeaEditDialog({ idea, open, onOpenChange }: IdeaEditDialogProps
                 />
                 {linkError && <p className="text-sm text-destructive">{linkError}</p>}
                 <div className="flex gap-2">
-                  <Button size="sm" className="min-h-[44px]" onClick={handleLinkSave} disabled={isLinking}>
+                  <Button
+                    size="sm"
+                    className="min-h-[44px]"
+                    onClick={handleLinkSave}
+                    disabled={isLinking}
+                  >
                     {isLinking ? 'Saving...' : 'Save'}
                   </Button>
-                  <Button variant="outline" size="sm" className="min-h-[44px]" onClick={() => { setLinkExpanded(false); setLinkUrl(''); setLinkError(null) }} disabled={isLinking}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="min-h-[44px]"
+                    onClick={() => {
+                      setLinkExpanded(false)
+                      setLinkUrl('')
+                      setLinkError(null)
+                    }}
+                    disabled={isLinking}
+                  >
                     Cancel
                   </Button>
                 </div>
@@ -311,14 +334,14 @@ export function IdeaEditDialog({ idea, open, onOpenChange }: IdeaEditDialogProps
             </div>
           )}
 
-          {!photoLoading && !photo && (
-            <p className="text-sm text-muted-foreground">No photo yet</p>
-          )}
+          {!photoLoading && !photo && <p className="text-sm text-muted-foreground">No photo yet</p>}
         </div>
 
         <ConfirmDialog
           open={deletePhotoOpen}
-          onOpenChange={(v) => { if (!v) setDeletePhotoOpen(false) }}
+          onOpenChange={(v) => {
+            if (!v) setDeletePhotoOpen(false)
+          }}
           title="Delete this photo?"
           description="This cannot be undone."
           onConfirm={handlePhotoDelete}

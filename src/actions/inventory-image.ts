@@ -130,7 +130,8 @@ export async function addInventoryItemImage(
     console.error('addInventoryItemImage failed:', error)
     if (error instanceof Error) {
       if (error.message === 'ITEM_NOT_FOUND') return { success: false, error: 'Item not found.' }
-      if (error.message === 'ITEM_DELETED') return { success: false, error: 'Item has been deleted.' }
+      if (error.message === 'ITEM_DELETED')
+        return { success: false, error: 'Item has been deleted.' }
     }
     return { success: false, error: 'Failed to add image. Please try again.' }
   }
@@ -170,7 +171,8 @@ export async function addInventoryItemImageLink(
     console.error('addInventoryItemImageLink failed:', error)
     if (error instanceof Error) {
       if (error.message === 'ITEM_NOT_FOUND') return { success: false, error: 'Item not found.' }
-      if (error.message === 'ITEM_DELETED') return { success: false, error: 'Item has been deleted.' }
+      if (error.message === 'ITEM_DELETED')
+        return { success: false, error: 'Item has been deleted.' }
     }
     return { success: false, error: 'Failed to add image link.' }
   }
@@ -252,7 +254,8 @@ export async function uploadInventoryItemImageCloudinary(
     console.error('uploadInventoryItemImageCloudinary failed:', error)
     if (error instanceof Error) {
       if (error.message === 'ITEM_NOT_FOUND') return { success: false, error: 'Item not found.' }
-      if (error.message === 'ITEM_DELETED') return { success: false, error: 'Item has been deleted.' }
+      if (error.message === 'ITEM_DELETED')
+        return { success: false, error: 'Item has been deleted.' }
     }
     return { success: false, error: 'Failed to upload image. Please try again.' }
   }

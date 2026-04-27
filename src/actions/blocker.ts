@@ -318,6 +318,7 @@ export async function getActiveBlockers(): Promise<ActionResult<BlockerWithConte
         createdAt: true,
         step: {
           select: {
+            id: true,
             name: true,
             project: {
               select: {

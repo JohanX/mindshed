@@ -70,11 +70,7 @@ export function IdeaActionsMenu({ idea }: IdeaActionsMenuProps) {
             <Pencil className="h-4 w-4 mr-2" />
             Edit
           </DropdownMenuItem>
-          <DropdownMenuItem
-            className="min-h-[44px]"
-            onClick={handlePromote}
-            disabled={isPending}
-          >
+          <DropdownMenuItem className="min-h-[44px]" onClick={handlePromote} disabled={isPending}>
             <ArrowUpRight className="h-4 w-4 mr-2" />
             Promote to Project
           </DropdownMenuItem>
@@ -88,9 +84,7 @@ export function IdeaActionsMenu({ idea }: IdeaActionsMenuProps) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {editOpen && (
-        <IdeaEditDialog idea={idea} open={editOpen} onOpenChange={setEditOpen} />
-      )}
+      {editOpen && <IdeaEditDialog idea={idea} open={editOpen} onOpenChange={setEditOpen} />}
 
       <ConfirmDialog
         open={deleteOpen}

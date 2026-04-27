@@ -18,9 +18,26 @@ test.describe('Inventory — Hobby Associations (Story 21.3)', () => {
     testPrefix = `IH-${browserName}-${Date.now()}`
     hobbyA = await seedHobby({ name: `${testPrefix} Woodworking`, color: 'hsl(25, 45%, 40%)' })
     hobbyB = await seedHobby({ name: `${testPrefix} Pottery`, color: 'hsl(15, 60%, 50%)' })
-    await seedInventoryItem({ name: `${testPrefix} Plywood`, type: 'MATERIAL', quantity: 10, unit: 'sheets', hobbyIds: [hobbyA.id] })
-    await seedInventoryItem({ name: `${testPrefix} Glaze`, type: 'CONSUMABLE', quantity: 2, unit: 'liters', hobbyIds: [hobbyB.id] })
-    await seedInventoryItem({ name: `${testPrefix} Sandpaper`, type: 'CONSUMABLE', quantity: 50, unit: 'sheets' })
+    await seedInventoryItem({
+      name: `${testPrefix} Plywood`,
+      type: 'MATERIAL',
+      quantity: 10,
+      unit: 'sheets',
+      hobbyIds: [hobbyA.id],
+    })
+    await seedInventoryItem({
+      name: `${testPrefix} Glaze`,
+      type: 'CONSUMABLE',
+      quantity: 2,
+      unit: 'liters',
+      hobbyIds: [hobbyB.id],
+    })
+    await seedInventoryItem({
+      name: `${testPrefix} Sandpaper`,
+      type: 'CONSUMABLE',
+      quantity: 50,
+      unit: 'sheets',
+    })
   })
 
   test.afterAll(async () => {

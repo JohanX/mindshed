@@ -19,7 +19,9 @@ export function DashboardIdleSection({ projects }: DashboardIdleSectionProps) {
           <Clock className="h-5 w-5 text-primary" />
           Idle Projects
         </h2>
-        <p className="text-center text-muted-foreground py-8">No idle projects — everything is moving along!</p>
+        <p className="text-center text-muted-foreground py-8">
+          No idle projects — everything is moving along!
+        </p>
       </section>
     )
   }

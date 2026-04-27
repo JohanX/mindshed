@@ -48,9 +48,7 @@ export function EditInventoryItemDialog({
   const [quantity, setQuantity] = useState(item.quantity?.toString() ?? '')
   const [unit, setUnit] = useState(item.unit ?? '')
   const [notes, setNotes] = useState(item.notes ?? '')
-  const [selectedHobbyIds, setSelectedHobbyIds] = useState<string[]>(
-    item.hobbies.map((h) => h.id),
-  )
+  const [selectedHobbyIds, setSelectedHobbyIds] = useState<string[]>(item.hobbies.map((h) => h.id))
   const [isPending, startTransition] = useTransition()
 
   const [photos, setPhotos] = useState<InventoryItemImageWithDisplayUrl[]>([])
@@ -120,14 +118,20 @@ export function EditInventoryItemDialog({
   }
 
   function handleLinkSave() {
-    const parsed = addInventoryItemImageLinkSchema.safeParse({ inventoryItemId: item.id, url: linkUrl })
+    const parsed = addInventoryItemImageLinkSchema.safeParse({
+      inventoryItemId: item.id,
+      url: linkUrl,
+    })
     if (!parsed.success) {
       setLinkError(parsed.error.issues[0]?.message ?? 'Invalid URL')
       return
     }
     setLinkError(null)
     startLinkTransition(async () => {
-      const result = await addInventoryItemImageLink({ inventoryItemId: item.id, url: parsed.data.url })
+      const result = await addInventoryItemImageLink({
+        inventoryItemId: item.id,
+        url: parsed.data.url,
+      })
       if (result.success) {
         showSuccessToast('Image added')
         setLinkExpanded(false)
@@ -326,8 +330,16 @@ export function EditInventoryItemDialog({
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') { e.preventDefault(); handleLinkSave() }
-                    if (e.key === 'Escape') { e.preventDefault(); setLinkExpanded(false); setLinkUrl(''); setLinkError(null) }
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleLinkSave()
+                    }
+                    if (e.key === 'Escape') {
+                      e.preventDefault()
+                      setLinkExpanded(false)
+                      setLinkUrl('')
+                      setLinkError(null)
+                    }
                   }}
                   onPaste={handlePaste}
                   placeholder={isUploading ? 'Uploading pasted image…' : 'Paste image or URL'}
@@ -336,10 +348,25 @@ export function EditInventoryItemDialog({
                 />
                 {linkError && <p className="text-sm text-destructive">{linkError}</p>}
                 <div className="flex gap-2">
-                  <Button size="sm" className="min-h-[44px]" onClick={handleLinkSave} disabled={isLinking}>
+                  <Button
+                    size="sm"
+                    className="min-h-[44px]"
+                    onClick={handleLinkSave}
+                    disabled={isLinking}
+                  >
                     {isLinking ? 'Saving...' : 'Save'}
                   </Button>
-                  <Button variant="outline" size="sm" className="min-h-[44px]" onClick={() => { setLinkExpanded(false); setLinkUrl(''); setLinkError(null) }} disabled={isLinking}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="min-h-[44px]"
+                    onClick={() => {
+                      setLinkExpanded(false)
+                      setLinkUrl('')
+                      setLinkError(null)
+                    }}
+                    disabled={isLinking}
+                  >
                     Cancel
                   </Button>
                 </div>
@@ -386,7 +413,9 @@ export function EditInventoryItemDialog({
 
         <ConfirmDialog
           open={deletePhotoId !== null}
-          onOpenChange={(v) => { if (!v) setDeletePhotoId(null) }}
+          onOpenChange={(v) => {
+            if (!v) setDeletePhotoId(null)
+          }}
           title="Delete this photo?"
           description="This cannot be undone."
           onConfirm={handlePhotoDelete}

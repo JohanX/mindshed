@@ -13,6 +13,8 @@ import type {
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 import { DASHBOARD_LIMITS } from '@/lib/constants/dashboard-limits'
 import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
+import { fetchLatestPhotosByProject } from '@/lib/project-photos'
+import { deriveProjectStatus } from '@/lib/project-status'
 
 export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
   try {
@@ -140,34 +142,9 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
         .filter(Boolean),
     }))
 
-    // Batch fetch latest photo per project (avoids N+1)
-    const projectIds = rawRecentProjects.map((project) => project.id)
-    const allPhotos =
-      projectIds.length > 0
-        ? await prisma.stepImage.findMany({
-            where: { step: { projectId: { in: projectIds } } },
-            orderBy: { createdAt: 'desc' },
-            select: {
-              storageKey: true,
-              originalFilename: true,
-              step: { select: { projectId: true } },
-            },
-          })
-        : []
-
-    // Group: first photo per project = latest
-    const latestPhotoByProject = new Map<
-      string,
-      { storageKey: string | null; originalFilename: string | null }
-    >()
-    for (const photo of allPhotos) {
-      if (!latestPhotoByProject.has(photo.step.projectId)) {
-        latestPhotoByProject.set(photo.step.projectId, {
-          storageKey: photo.storageKey,
-          originalFilename: photo.originalFilename,
-        })
-      }
-    }
+    const latestPhotoByProject = await fetchLatestPhotosByProject(
+      rawRecentProjects.map((project) => project.id),
+    )
 
     const recentProjects: RecentProject[] = rawRecentProjects.map((project) => {
       const currentStepData =
@@ -184,6 +161,9 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
           ? { id: currentStepData.id, name: currentStepData.name }
           : null,
         latestPhoto: latestPhotoByProject.get(project.id) ?? null,
+        totalSteps: project.steps.length,
+        completedSteps: project.steps.filter((step) => step.state === 'COMPLETED').length,
+        derivedStatus: deriveProjectStatus(project.steps),
       }
     })
 

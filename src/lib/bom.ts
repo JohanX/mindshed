@@ -160,9 +160,7 @@ export function renderAvailable(row: BomItemData): AvailableCell {
   if (row.consumptionState === 'CONSUMED') {
     const inv = row.inventoryItem
     const secondaryLabel =
-      !inv || inv.isDeleted || inv.quantity === null
-        ? '—'
-        : formatQuantity(inv.quantity, row.unit)
+      !inv || inv.isDeleted || inv.quantity === null ? '—' : formatQuantity(inv.quantity, row.unit)
     return { label: 'Consumed', variant: 'consumed', secondaryLabel }
   }
   const inv = row.inventoryItem

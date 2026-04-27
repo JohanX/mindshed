@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  addInventoryItemImageSchema,
-  addInventoryItemImageLinkSchema,
-} from '../inventory-image'
+import { addInventoryItemImageSchema, addInventoryItemImageLinkSchema } from '../inventory-image'
 
 const VALID_UUID = '550e8400-e29b-41d4-a716-446655440000'
 
@@ -20,7 +17,9 @@ describe('addInventoryItemImageSchema', () => {
   })
 
   it('rejects non-uuid inventoryItemId', () => {
-    expect(addInventoryItemImageSchema.safeParse({ ...base, inventoryItemId: 'bad' }).success).toBe(false)
+    expect(addInventoryItemImageSchema.safeParse({ ...base, inventoryItemId: 'bad' }).success).toBe(
+      false,
+    )
   })
 
   it('rejects storageKey with wrong prefix', () => {
@@ -36,15 +35,13 @@ describe('addInventoryItemImageSchema', () => {
   })
 
   it('rejects negative sizeBytes', () => {
-    expect(
-      addInventoryItemImageSchema.safeParse({ ...base, sizeBytes: -1 }).success,
-    ).toBe(false)
+    expect(addInventoryItemImageSchema.safeParse({ ...base, sizeBytes: -1 }).success).toBe(false)
   })
 
   it('rejects sizeBytes over 10MB', () => {
-    expect(
-      addInventoryItemImageSchema.safeParse({ ...base, sizeBytes: 10_485_761 }).success,
-    ).toBe(false)
+    expect(addInventoryItemImageSchema.safeParse({ ...base, sizeBytes: 10_485_761 }).success).toBe(
+      false,
+    )
   })
 })
 

@@ -66,88 +66,81 @@ export function IdeaCard({ idea, hobby, showHobbyBadge = true }: IdeaCardProps) 
 
   return (
     <>
-    <Card
-      data-testid="idea-card"
-      className={`relative overflow-hidden ${idea.isPromoted ? 'opacity-60' : ''}`}
-      style={{ backgroundColor: hobbyColorWithAlpha(hobby.color) }}
-    >
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-2">
-          {idea.thumbnailUrl && (
-            <button
-              type="button"
-              className="h-12 w-12 shrink-0 overflow-hidden rounded-md min-h-[44px] min-w-[44px]"
-              onClick={() => void openLightbox()}
-              aria-label={`View photo of ${idea.title}`}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={idea.thumbnailUrl}
-                alt=""
-                className="h-full w-full object-cover"
-              />
-            </button>
-          )}
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <CardTitle className="text-base">{idea.title}</CardTitle>
-            {(showHobbyBadge ||
-              (idea.referenceLink && /^https?:\/\//.test(idea.referenceLink))) && (
-              <div className="flex flex-wrap items-center gap-2">
-                {showHobbyBadge && (
-                  <Badge
-                    variant="outline"
-                    className="text-xs"
-                    style={{ borderColor: hobby.color, color: hobby.color }}
-                  >
-                    {hobby.name}
-                  </Badge>
-                )}
-                {idea.referenceLink && /^https?:\/\//.test(idea.referenceLink) && (
-                  <a
-                    href={idea.referenceLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                    aria-label={`Open reference link for ${idea.title}`}
-                  >
-                    <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">{formatReferenceUrl(idea.referenceLink)}</span>
-                  </a>
-                )}
-              </div>
+      <Card
+        data-testid="idea-card"
+        className={`relative overflow-hidden ${idea.isPromoted ? 'opacity-60' : ''}`}
+        style={{ backgroundColor: hobbyColorWithAlpha(hobby.color) }}
+      >
+        <CardHeader className="pb-2">
+          <div className="flex items-start justify-between gap-2">
+            {idea.thumbnailUrl && (
+              <button
+                type="button"
+                className="h-12 w-12 shrink-0 overflow-hidden rounded-md min-h-[44px] min-w-[44px]"
+                onClick={() => void openLightbox()}
+                aria-label={`View photo of ${idea.title}`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={idea.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+              </button>
             )}
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <CardTitle className="text-base">{idea.title}</CardTitle>
+              {(showHobbyBadge ||
+                (idea.referenceLink && /^https?:\/\//.test(idea.referenceLink))) && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {showHobbyBadge && (
+                    <Badge
+                      variant="outline"
+                      className="text-xs"
+                      style={{ borderColor: hobby.color, color: hobby.color }}
+                    >
+                      {hobby.name}
+                    </Badge>
+                  )}
+                  {idea.referenceLink && /^https?:\/\//.test(idea.referenceLink) && (
+                    <a
+                      href={idea.referenceLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                      aria-label={`Open reference link for ${idea.title}`}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{formatReferenceUrl(idea.referenceLink)}</span>
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+            <IdeaActionsMenu idea={idea} />
           </div>
-          <IdeaActionsMenu idea={idea} />
-        </div>
-      </CardHeader>
-      {idea.description && (
-        <CardContent>
-          <p className="text-sm text-muted-foreground line-clamp-3">{idea.description}</p>
-        </CardContent>
-      )}
-      {watermarkIcon && (
-        <div
-          className="absolute bottom-2 right-2 z-10 pointer-events-none"
-          aria-hidden="true"
-        >
-          {watermarkIcon}
-        </div>
-      )}
-    </Card>
+        </CardHeader>
+        {idea.description && (
+          <CardContent>
+            <p className="text-sm text-muted-foreground line-clamp-3">{idea.description}</p>
+          </CardContent>
+        )}
+        {watermarkIcon && (
+          <div className="absolute bottom-2 right-2 z-10 pointer-events-none" aria-hidden="true">
+            {watermarkIcon}
+          </div>
+        )}
+      </Card>
 
-    {lightboxOpen && lightboxLoading && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-        <Loader2 className="h-8 w-8 animate-spin text-white" />
-      </div>
-    )}
-    {lightboxOpen && !lightboxLoading && lightboxImages.length > 0 && (
-      <ImageLightbox
-        images={lightboxImages}
-        initialIndex={0}
-        onClose={() => setLightboxOpen(false)}
-        showDelete={false}
-      />
-    )}
+      {lightboxOpen && lightboxLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+          <Loader2 className="h-8 w-8 animate-spin text-white" />
+        </div>
+      )}
+      {lightboxOpen && !lightboxLoading && lightboxImages.length > 0 && (
+        <ImageLightbox
+          images={lightboxImages}
+          initialIndex={0}
+          onClose={() => setLightboxOpen(false)}
+          showDelete={false}
+        />
+      )}
     </>
   )
 }

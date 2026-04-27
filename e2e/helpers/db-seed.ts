@@ -180,10 +180,10 @@ export async function seedInventoryItem(opts: {
 
   if (opts.hobbyIds?.length) {
     for (const hobbyId of opts.hobbyIds) {
-      await client.query(
-        `INSERT INTO "_HobbyToInventoryItem" ("A", "B") VALUES ($1, $2)`,
-        [hobbyId, id],
-      )
+      await client.query(`INSERT INTO "_HobbyToInventoryItem" ("A", "B") VALUES ($1, $2)`, [
+        hobbyId,
+        id,
+      ])
     }
   }
 

@@ -16,11 +16,13 @@ import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
 
 export type IdeaWithThumbnail = Idea & { thumbnailUrl: string | null }
 
-function deriveIdeaThumbnail(image: {
-  type: string
-  storageKey: string | null
-  url: string | null
-} | null): string | null {
+function deriveIdeaThumbnail(
+  image: {
+    type: string
+    storageKey: string | null
+    url: string | null
+  } | null,
+): string | null {
   if (!image) return null
   if (image.type === 'UPLOAD' && image.storageKey) {
     const adapter = getImageStorageAdapter()

@@ -25,8 +25,7 @@ const presignRequestSchema = z
       (data.prefix === 'inventory' && !!data.inventoryItemId) ||
       (data.prefix === 'ideas' && !!data.ideaId),
     {
-      message:
-        'stepId required for steps prefix, inventoryItemId for inventory, ideaId for ideas',
+      message: 'stepId required for steps prefix, inventoryItemId for inventory, ideaId for ideas',
     },
   )
 

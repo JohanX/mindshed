@@ -154,7 +154,12 @@ export function InventoryItemCard({ item, hobbies }: InventoryItemCardProps) {
         </CardContent>
       </Card>
 
-      <EditInventoryItemDialog item={item} hobbies={hobbies} open={editOpen} onOpenChange={setEditOpen} />
+      <EditInventoryItemDialog
+        item={item}
+        hobbies={hobbies}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
 
       <ConfirmDialog
         open={deleteOpen}
