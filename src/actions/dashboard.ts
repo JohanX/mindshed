@@ -1,208 +1,21 @@
 'use server'
 
-import { prisma } from '@/lib/db'
 import { getIdleThresholdDays } from '@/lib/settings'
 import type { ActionResult } from '@/lib/action-result'
-import type {
-  DashboardData,
-  RecentProject,
-  ActiveBlocker,
-  IdleProject,
-  PublicGallery,
-} from '@/lib/schemas/dashboard'
-import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
-import { DASHBOARD_LIMITS } from '@/lib/constants/dashboard-limits'
-import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
-import { fetchLatestPhotosByProject } from '@/lib/project-photos'
-import { deriveProjectStatus } from '@/lib/project-status'
+import type { DashboardData } from '@/lib/schemas/dashboard'
+import { findDashboardData } from '@/data/dashboard'
 
+/**
+ * Thin wrapper: resolves the idle-threshold setting, delegates to the
+ * data layer, wraps in `ActionResult`. The composition logic lives in
+ * `src/data/dashboard.ts` per architecture.md § "Data Access Layer".
+ */
 export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
   try {
     const idleThresholdDate = new Date()
     idleThresholdDate.setDate(idleThresholdDate.getDate() - (await getIdleThresholdDays()))
-
-    const [totalHobbies, rawRecentProjects, rawActiveBlockers, rawIdleProjects] = await Promise.all(
-      [
-        // Total hobby count
-        prisma.hobby.count(),
-
-        // 5 most recent active projects
-        prisma.project.findMany({
-          where: { isArchived: false, isCompleted: false },
-          orderBy: { lastActivityAt: 'desc' },
-          take: DASHBOARD_LIMITS.RECENT_PROJECTS,
-          include: {
-            hobby: { select: { id: true, name: true, color: true, icon: true } },
-            steps: {
-              select: { id: true, name: true, state: true, sortOrder: true },
-              orderBy: { sortOrder: 'asc' },
-            },
-          },
-        }),
-
-        // All active blockers with context
-        prisma.blocker.findMany({
-          where: { isResolved: false },
-          orderBy: { createdAt: 'desc' },
-          select: {
-            id: true,
-            description: true,
-            createdAt: true,
-            step: {
-              select: {
-                id: true,
-                name: true,
-                project: {
-                  select: {
-                    id: true,
-                    name: true,
-                    hobbyId: true,
-                    hobby: { select: { id: true, name: true, color: true, icon: true } },
-                  },
-                },
-              },
-            },
-          },
-        }),
-
-        // Idle projects
-        prisma.project.findMany({
-          where: {
-            isArchived: false,
-            isCompleted: false,
-            lastActivityAt: { lt: idleThresholdDate },
-          },
-          orderBy: { lastActivityAt: 'asc' },
-          take: DASHBOARD_LIMITS.IDLE_PROJECTS,
-          include: {
-            hobby: { select: { id: true, name: true, color: true, icon: true } },
-            steps: {
-              select: { id: true, name: true, state: true, sortOrder: true },
-              orderBy: { sortOrder: 'asc' },
-            },
-          },
-        }),
-      ],
-    )
-
-    // Public galleries (up to 3 most recent)
-    const rawGalleries = await prisma.project.findMany({
-      where: {
-        OR: [{ journeyGalleryEnabled: true }, { resultGalleryEnabled: true }],
-        gallerySlug: { not: null },
-      },
-      orderBy: { updatedAt: 'desc' },
-      take: DASHBOARD_LIMITS.PUBLIC_GALLERIES,
-      select: {
-        id: true,
-        name: true,
-        hobbyId: true,
-        gallerySlug: true,
-        journeyGalleryEnabled: true,
-        resultGalleryEnabled: true,
-        hobby: { select: { id: true, name: true, color: true, icon: true } },
-        steps: {
-          where: { excludeFromGallery: false },
-          orderBy: { sortOrder: 'asc' },
-          select: {
-            images: {
-              take: DASHBOARD_LIMITS.GALLERY_THUMBNAILS,
-              orderBy: { createdAt: 'desc' },
-              select: { storageKey: true, url: true, type: true },
-            },
-          },
-        },
-      },
-    })
-
-    const publicGalleries: PublicGallery[] = rawGalleries.map((gallery) => ({
-      id: gallery.id,
-      name: gallery.name,
-      hobbyId: gallery.hobbyId,
-      gallerySlug: gallery.gallerySlug!,
-      journeyGalleryEnabled: gallery.journeyGalleryEnabled,
-      resultGalleryEnabled: gallery.resultGalleryEnabled,
-      hobby: gallery.hobby,
-      thumbnails: gallery.steps
-        .flatMap((step) => step.images)
-        .slice(0, DASHBOARD_LIMITS.GALLERY_THUMBNAILS)
-        .map((img) => {
-          if (img.type === 'UPLOAD' && img.storageKey) {
-            const adapter = getImageStorageAdapter()
-            if (adapter) {
-              try {
-                return adapter.getThumbnailUrl(img.storageKey, THUMBNAIL_WIDTH.GALLERY_SECTION)
-              } catch {
-                /* fall through */
-              }
-            }
-          }
-          return img.url ?? ''
-        })
-        .filter(Boolean),
-    }))
-
-    const latestPhotoByProject = await fetchLatestPhotosByProject(
-      rawRecentProjects.map((project) => project.id),
-    )
-
-    const recentProjects: RecentProject[] = rawRecentProjects.map((project) => {
-      const currentStepData =
-        project.steps.find((step) => step.state === 'IN_PROGRESS') ??
-        project.steps.find((step) => step.state === 'NOT_STARTED')
-
-      return {
-        id: project.id,
-        name: project.name,
-        lastActivityAt: project.lastActivityAt,
-        hobbyId: project.hobbyId,
-        hobby: project.hobby,
-        currentStep: currentStepData
-          ? { id: currentStepData.id, name: currentStepData.name }
-          : null,
-        latestPhoto: latestPhotoByProject.get(project.id) ?? null,
-        totalSteps: project.steps.length,
-        completedSteps: project.steps.filter((step) => step.state === 'COMPLETED').length,
-        derivedStatus: deriveProjectStatus(project.steps),
-      }
-    })
-
-    const activeBlockers: ActiveBlocker[] = rawActiveBlockers.map((blocker) => ({
-      id: blocker.id,
-      description: blocker.description,
-      createdAt: blocker.createdAt,
-      step: {
-        id: blocker.step.id,
-        name: blocker.step.name,
-        project: {
-          id: blocker.step.project.id,
-          name: blocker.step.project.name,
-          hobbyId: blocker.step.project.hobbyId,
-          hobby: blocker.step.project.hobby,
-        },
-      },
-    }))
-
-    const idleProjects: IdleProject[] = rawIdleProjects.map((project) => {
-      const currentStepData =
-        project.steps.find((step) => step.state === 'IN_PROGRESS') ??
-        project.steps.find((step) => step.state === 'NOT_STARTED')
-      return {
-        id: project.id,
-        name: project.name,
-        lastActivityAt: project.lastActivityAt,
-        hobbyId: project.hobbyId,
-        hobby: project.hobby,
-        currentStep: currentStepData
-          ? { id: currentStepData.id, name: currentStepData.name }
-          : null,
-      }
-    })
-
-    return {
-      success: true,
-      data: { totalHobbies, recentProjects, activeBlockers, idleProjects, publicGalleries },
-    }
+    const data = await findDashboardData(idleThresholdDate)
+    return { success: true, data }
   } catch (error) {
     console.error('getDashboardData failed:', error)
     return { success: false, error: 'Failed to load dashboard' }
