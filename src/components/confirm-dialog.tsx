@@ -36,8 +36,8 @@ export function ConfirmDialog({
   return (
     <AlertDialog
       open={open}
-      onOpenChange={(v) => {
-        if (!loading) onOpenChange(v)
+      onOpenChange={(nextOpen) => {
+        if (!loading) onOpenChange(nextOpen)
       }}
     >
       <AlertDialogContent>

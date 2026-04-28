@@ -110,7 +110,7 @@ function DialogBody({
         ) : (
           <Select
             value={selectedStepId ?? undefined}
-            onValueChange={(v) => setSelectedStepId(v)}
+            onValueChange={(value) => setSelectedStepId(value)}
             disabled={isPending}
           >
             <SelectTrigger aria-label="Target step" className="min-h-[44px] w-full">
@@ -166,8 +166,8 @@ export function CreateBlockerDialog({ open, row, steps, onClose }: CreateBlocker
   return (
     <Dialog
       open={open}
-      onOpenChange={(v) => {
-        if (!v) onClose()
+      onOpenChange={(open) => {
+        if (!open) onClose()
       }}
     >
       {row && <DialogBody key={row.id} row={row} steps={steps} onClose={onClose} />}

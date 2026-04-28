@@ -92,19 +92,19 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
   const nameClass = nameIsMuted ? 'italic text-muted-foreground' : 'text-foreground'
 
   async function persistRequired() {
-    const num = Number(required)
-    if (!Number.isFinite(num) || num <= 0) {
+    const requiredNumber = Number(required)
+    if (!Number.isFinite(requiredNumber) || requiredNumber <= 0) {
       setRequired(String(row.requiredQuantity))
       return
     }
-    if (num === row.requiredQuantity) return
-    const result = await updateBomItem({ id: row.id, requiredQuantity: num })
+    if (requiredNumber === row.requiredQuantity) return
+    const result = await updateBomItem({ id: row.id, requiredQuantity: requiredNumber })
     if (!result.success) {
       showErrorToast(result.error)
       setRequired(String(row.requiredQuantity))
       return
     }
-    onUpdate(row.id, { requiredQuantity: num })
+    onUpdate(row.id, { requiredQuantity: requiredNumber })
     showSuccessToast('BOM item updated')
   }
 
@@ -166,8 +166,8 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
   const deleteDialog = (
     <ConfirmDialog
       open={deleteOpen}
-      onOpenChange={(v) => {
-        if (!isDeleting) setDeleteOpen(v)
+      onOpenChange={(open) => {
+        if (!isDeleting) setDeleteOpen(open)
       }}
       title="Delete BOM row?"
       description={`"${displayName}" will be removed from this project's Bill of Materials. The inventory item itself is unaffected.`}

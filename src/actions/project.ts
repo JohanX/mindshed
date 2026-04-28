@@ -227,7 +227,7 @@ export async function deleteProject(id: string): Promise<ActionResult<{ hobbyId:
         where: { projectId: parsed.data },
         select: { id: true },
       })
-      const targetIds = [parsed.data, ...steps.map((s) => s.id)]
+      const targetIds = [parsed.data, ...steps.map((step) => step.id)]
       await tx.reminder.deleteMany({ where: { targetId: { in: targetIds } } })
       return tx.project.delete({ where: { id: parsed.data } })
     })

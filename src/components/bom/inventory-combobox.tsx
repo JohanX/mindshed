@@ -78,10 +78,10 @@ export function InventoryCombobox({
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setHighlight((h) => (totalOptions === 0 ? 0 : (h + 1) % totalOptions))
+      setHighlight((prev) => (totalOptions === 0 ? 0 : (prev + 1) % totalOptions))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      setHighlight((h) => (totalOptions === 0 ? 0 : (h - 1 + totalOptions) % totalOptions))
+      setHighlight((prev) => (totalOptions === 0 ? 0 : (prev - 1 + totalOptions) % totalOptions))
     } else if (e.key === 'Enter') {
       e.preventDefault()
       commitHighlighted()
@@ -122,9 +122,9 @@ export function InventoryCombobox({
           {results.length === 0 && !showAddNew && (
             <li className="px-3 py-2 text-sm text-muted-foreground">No matches</li>
           )}
-          {results.map((o, i) => (
+          {results.map((option, i) => (
             <li
-              key={o.id}
+              key={option.id}
               id={`${listboxId}-opt-${i}`}
               role="option"
               aria-selected={effectiveHighlight === i}
@@ -136,14 +136,16 @@ export function InventoryCombobox({
               onMouseDown={(e) => {
                 // mouseDown (not click) so the outside-click handler doesn't fire first
                 e.preventDefault()
-                onPickExisting(o)
+                onPickExisting(option)
               }}
             >
-              <span aria-hidden>{TYPE_EMOJI[o.type]}</span>
-              <span className="flex-1 truncate">{o.name}</span>
-              <span className="text-xs text-muted-foreground">{formatQty(o.quantity, o.unit)}</span>
+              <span aria-hidden>{TYPE_EMOJI[option.type]}</span>
+              <span className="flex-1 truncate">{option.name}</span>
+              <span className="text-xs text-muted-foreground">
+                {formatQty(option.quantity, option.unit)}
+              </span>
               <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                {o.type}
+                {option.type}
               </span>
             </li>
           ))}

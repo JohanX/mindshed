@@ -89,5 +89,5 @@ export async function findOtherGallerySlugs(existingId: string) {
     where: { gallerySlug: { not: null }, id: { not: existingId } },
     select: { gallerySlug: true },
   })
-  return rows.map((r) => r.gallerySlug).filter((s): s is string => s !== null)
+  return rows.map((row) => row.gallerySlug).filter((slug): slug is string => slug !== null)
 }

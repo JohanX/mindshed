@@ -85,7 +85,7 @@ export function ReminderDatePicker({
           mode="single"
           selected={existingReminder ? new Date(existingReminder.dueDate) : undefined}
           onSelect={handleSelect}
-          disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))}
+          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
         />
         {existingReminder && (
           <div className="border-t p-2">

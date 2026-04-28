@@ -52,7 +52,7 @@ test.describe('Inventory Photos (Story 21.2)', () => {
     await expect(page.getByTestId('photos-section')).toBeVisible()
 
     await page.getByTestId('add-photo-link-prompt').click()
-    await page.getByPlaceholder('Paste image URL').fill('https://picsum.photos/200/200')
+    await page.getByPlaceholder('Paste image or URL').fill('https://picsum.photos/200/200')
     await page.getByTestId('photos-section').getByRole('button', { name: 'Save' }).click()
 
     await expect(page.getByTestId('photo-grid')).toBeVisible({ timeout: 5000 })

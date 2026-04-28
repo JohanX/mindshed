@@ -5,12 +5,19 @@
 ## Commands
 
 - `pnpm test run` — unit tests (vitest)
+- `pnpm format` — prettier
 - `pnpm lint` — eslint
 - `pnpm build` — production build
 - `pnpm test:e2e` — E2E tests (all browsers)
 - `pnpm test:e2e:chrome` — E2E chromium only
 
 Do NOT prefix PATH or use `pnpm exec` for things with scripts. Node and pnpm are in global PATH.
+Do NOT use compound commands with `cd directory && `.
+
+# Version control
+
+Root directory (`aine-sdd-project`) is a git repository. Origin remote is on github.
+The `mindshed/` directory is a git submodule. It has two remotes: `origin` and `mindshed-vercel`.
 
 ## Story Workflow
 
@@ -29,6 +36,7 @@ Every story must follow this sequence:
 8. Re-run all tests after patches
 9. Commit mindshed/ changes
 10. Commit \_bmad-output/ changes separately
+11. Push to git remotes
 
 ## Code Conventions
 
@@ -43,6 +51,7 @@ Every story must follow this sequence:
 - **Client components:** Use `useTransition` for pending state, `key` prop for remounting on prop changes (no setState in useEffect)
 - **Touch targets:** Minimum 44px on all interactive elements
 - **Accessibility:** `aria-label` on icon-only buttons, `aria-expanded` on expand/collapse, `aria-describedby` for error messages
+- **Variables:** ALWAYS use meaningful names that describe the value — no single letters and no abbreviations (`inv` → `inventoryItem`, `proj` → `project`, `req` → `request`). For loop iterators, use the singular noun of the collection (`hobbies.map(hobby => ...)`, not `(h => ...)`). For setState updaters, use `prev` (`setCount((prev) => prev + 1)`). For date predicates, use `date` (`disabled={(date) => date < today}`). Exceptions where short names are allowed: `(a, b)` in sort comparators; `(e)` for React/DOM event handlers; `_` for unused params; `i` as a numeric array index.
 
 ## Architecture
 

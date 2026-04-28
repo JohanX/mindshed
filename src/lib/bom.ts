@@ -82,10 +82,10 @@ export type BomSummary = {
  */
 export function isRowShort(row: BomItemData): boolean {
   if (row.consumptionState !== 'NOT_CONSUMED') return false
-  const inv = row.inventoryItem
-  if (!inv || inv.isDeleted) return false
-  if (inv.quantity === null) return false
-  return inv.quantity < row.requiredQuantity
+  const inventoryItem = row.inventoryItem
+  if (!inventoryItem || inventoryItem.isDeleted) return false
+  if (inventoryItem.quantity === null) return false
+  return inventoryItem.quantity < row.requiredQuantity
 }
 
 /**
@@ -114,10 +114,11 @@ export function shortageFingerprint(rows: BomItemData[]): string {
  * quantity). Template mandated by spec AC #3.
  */
 export function buildShortageBlockerDescription(row: BomItemData): string {
-  const inv = row.inventoryItem
-  if (!inv) throw new Error('buildShortageBlockerDescription requires a linked inventoryItem')
+  const inventoryItem = row.inventoryItem
+  if (!inventoryItem)
+    throw new Error('buildShortageBlockerDescription requires a linked inventoryItem')
   const unit = row.unit ? ` ${row.unit}` : ''
-  return `Need ${row.requiredQuantity}${unit} of ${inv.name} (have ${inv.quantity ?? 0})`
+  return `Need ${row.requiredQuantity}${unit} of ${inventoryItem.name} (have ${inventoryItem.quantity ?? 0})`
 }
 
 /**
@@ -163,8 +164,8 @@ function formatQuantity(qty: number, unit: string | null): string {
  */
 export function renderAvailable(row: BomItemData): AvailableCell {
   if (row.consumptionState === 'CONSUMED') {
-    const inv = row.inventoryItem
-    if (!inv || inv.isDeleted || inv.quantity === null) {
+    const inventoryItem = row.inventoryItem
+    if (!inventoryItem || inventoryItem.isDeleted || inventoryItem.quantity === null) {
       return {
         label: 'Consumed',
         variant: 'consumed',
@@ -175,31 +176,31 @@ export function renderAvailable(row: BomItemData): AvailableCell {
     // CONSUMED rows show the post-consumption inventory level. The "(N short)"
     // suffix is suppressed here because the row is already satisfied — any
     // shortfall is informational about future stock, not the current row.
-    if (inv.quantity < row.requiredQuantity) {
+    if (inventoryItem.quantity < row.requiredQuantity) {
       return {
         label: 'Consumed',
         variant: 'consumed',
-        secondaryLabel: formatQuantity(inv.quantity, row.unit),
+        secondaryLabel: formatQuantity(inventoryItem.quantity, row.unit),
         secondaryVariant: 'short',
       }
     }
     return {
       label: 'Consumed',
       variant: 'consumed',
-      secondaryLabel: formatQuantity(inv.quantity, row.unit),
+      secondaryLabel: formatQuantity(inventoryItem.quantity, row.unit),
       secondaryVariant: 'ok',
     }
   }
-  const inv = row.inventoryItem
-  if (!inv || inv.isDeleted || inv.quantity === null) {
+  const inventoryItem = row.inventoryItem
+  if (!inventoryItem || inventoryItem.isDeleted || inventoryItem.quantity === null) {
     return { label: '—', variant: 'missing' }
   }
-  if (inv.quantity < row.requiredQuantity) {
-    const shortBy = row.requiredQuantity - inv.quantity
+  if (inventoryItem.quantity < row.requiredQuantity) {
+    const shortBy = row.requiredQuantity - inventoryItem.quantity
     return {
-      label: `${formatQuantity(inv.quantity, row.unit)} (${shortBy} short)`,
+      label: `${formatQuantity(inventoryItem.quantity, row.unit)} (${shortBy} short)`,
       variant: 'short',
     }
   }
-  return { label: formatQuantity(inv.quantity, row.unit), variant: 'ok' }
+  return { label: formatQuantity(inventoryItem.quantity, row.unit), variant: 'ok' }
 }

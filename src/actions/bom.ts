@@ -56,11 +56,11 @@ export async function addBomItem(input: AddBomItemInput): Promise<ActionResult<{
       if (!project) throw Object.assign(new Error('PROJECT_NOT_FOUND'), { code: 'P2025' })
 
       if (inventoryItemId) {
-        const inv = await tx.inventoryItem.findUnique({
+        const inventoryItem = await tx.inventoryItem.findUnique({
           where: { id: inventoryItemId },
           select: { isDeleted: true },
         })
-        if (!inv || inv.isDeleted) throw new Error('INVENTORY_NOT_AVAILABLE')
+        if (!inventoryItem || inventoryItem.isDeleted) throw new Error('INVENTORY_NOT_AVAILABLE')
       }
 
       const maxSort = await tx.bomItem.aggregate({
@@ -331,8 +331,8 @@ export async function createBomShortageBlocker(
         },
       })
       if (!row) throw Object.assign(new Error('BOM_NOT_FOUND'), { code: 'P2025' })
-      const inv = row.inventoryItem
-      if (!inv || inv.isDeleted) throw new Error('BOM_ITEM_UNAVAILABLE')
+      const inventoryItem = row.inventoryItem
+      if (!inventoryItem || inventoryItem.isDeleted) throw new Error('BOM_ITEM_UNAVAILABLE')
       // Use the shared shortage predicate so server-side re-validation stays in
       // lockstep with the UI's isRowShort() — any future tweak (unit
       // normalization, threshold) applies to both paths without drift.
@@ -343,7 +343,7 @@ export async function createBomShortageBlocker(
         unit: row.unit,
         sortOrder: row.sortOrder,
         consumptionState: row.consumptionState,
-        inventoryItem: inv,
+        inventoryItem,
       }
       if (!isRowShort(shortRow)) throw new Error('NOT_SHORT')
 
@@ -358,7 +358,7 @@ export async function createBomShortageBlocker(
       // Dedup: an unresolved blocker for this (step, inventory item) already
       // exists — return it unchanged.
       const existing = await tx.blocker.findFirst({
-        where: { stepId: step.id, inventoryItemId: inv.id, isResolved: false },
+        where: { stepId: step.id, inventoryItemId: inventoryItem.id, isResolved: false },
         select: { id: true },
       })
       if (existing) {
@@ -379,7 +379,7 @@ export async function createBomShortageBlocker(
       // retries the whole action once — on retry the findFirst above sees
       // the now-committed raced blocker and returns alreadyExisted=true.
       const blocker = await tx.blocker.create({
-        data: { stepId: step.id, inventoryItemId: inv.id, description },
+        data: { stepId: step.id, inventoryItemId: inventoryItem.id, description },
       })
 
       // Cascade step state to BLOCKED (mirror createBlocker behavior).
@@ -484,18 +484,18 @@ export async function markBomItemConsumed(
       })
       if (!row) throw Object.assign(new Error('BOM_ITEM_NOT_FOUND'), { code: 'P2025' })
       if (row.consumptionState !== 'NOT_CONSUMED') throw new Error('ALREADY_CONSUMED')
-      const inv = row.inventoryItem
-      if (!inv || inv.isDeleted || inv.type !== 'MATERIAL') {
+      const inventoryItem = row.inventoryItem
+      if (!inventoryItem || inventoryItem.isDeleted || inventoryItem.type !== 'MATERIAL') {
         throw new Error('NOT_MATERIAL_LINKED')
       }
-      if (inv.quantity === null || inv.quantity < row.requiredQuantity) {
-        const err = new Error('INSUFFICIENT_INVENTORY')
-        ;(err as Error & { itemName?: string }).itemName = inv.name
-        throw err
+      if (inventoryItem.quantity === null || inventoryItem.quantity < row.requiredQuantity) {
+        const insufficientError = new Error('INSUFFICIENT_INVENTORY')
+        ;(insufficientError as Error & { itemName?: string }).itemName = inventoryItem.name
+        throw insufficientError
       }
 
       await tx.inventoryItem.update({
-        where: { id: inv.id },
+        where: { id: inventoryItem.id },
         data: { quantity: { decrement: row.requiredQuantity } },
       })
 
@@ -513,7 +513,7 @@ export async function markBomItemConsumed(
         id: parsed.data.id,
         projectId: row.projectId,
         hobbyId: row.project.hobbyId,
-        inventoryName: inv.name,
+        inventoryName: inventoryItem.name,
       }
     })
 

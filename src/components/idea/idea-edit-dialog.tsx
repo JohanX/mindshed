@@ -339,8 +339,8 @@ export function IdeaEditDialog({ idea, open, onOpenChange }: IdeaEditDialogProps
 
         <ConfirmDialog
           open={deletePhotoOpen}
-          onOpenChange={(v) => {
-            if (!v) setDeletePhotoOpen(false)
+          onOpenChange={(open) => {
+            if (!open) setDeletePhotoOpen(false)
           }}
           title="Delete this photo?"
           description="This cannot be undone."

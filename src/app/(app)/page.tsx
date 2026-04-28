@@ -61,8 +61,8 @@ export default async function DashboardPage() {
               Reminders
             </h2>
             <div className="space-y-2">
-              {reminders.map((r) => (
-                <DashboardReminderCard key={r.id} reminder={r} />
+              {reminders.map((reminder) => (
+                <DashboardReminderCard key={reminder.id} reminder={reminder} />
               ))}
             </div>
           </section>

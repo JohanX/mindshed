@@ -21,7 +21,7 @@ export async function findActiveInventoryNames(): Promise<string[]> {
     where: { isDeleted: false },
     select: { name: true },
   })
-  return rows.map((r) => r.name)
+  return rows.map((row) => row.name)
 }
 
 /** Active sibling names (excluding a given id) — used by update flow uniqueness pass. */
@@ -30,7 +30,7 @@ export async function findActiveInventoryNamesExcept(id: string): Promise<string
     where: { isDeleted: false, id: { not: id } },
     select: { name: true },
   })
-  return rows.map((r) => r.name)
+  return rows.map((row) => row.name)
 }
 
 /**

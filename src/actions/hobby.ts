@@ -101,14 +101,14 @@ export async function deleteHobby(id: string): Promise<ActionResult<null>> {
         where: { hobbyId: parsed.data },
         select: { id: true },
       })
-      const projectIds = projects.map((p) => p.id)
+      const projectIds = projects.map((project) => project.id)
       const steps = projectIds.length
         ? await tx.step.findMany({
             where: { projectId: { in: projectIds } },
             select: { id: true },
           })
         : []
-      const targetIds = [...projectIds, ...steps.map((s) => s.id)]
+      const targetIds = [...projectIds, ...steps.map((step) => step.id)]
       if (targetIds.length) {
         await tx.reminder.deleteMany({ where: { targetId: { in: targetIds } } })
       }

@@ -137,8 +137,8 @@ function NoteItem({ note, isProjectCompleted }: { note: NoteData; isProjectCompl
 
       <ConfirmDialog
         open={deleteOpen}
-        onOpenChange={(v) => {
-          if (!v) setDeleteOpen(false)
+        onOpenChange={(open) => {
+          if (!open) setDeleteOpen(false)
         }}
         title="Delete this note?"
         description="This note will be permanently removed."

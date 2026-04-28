@@ -411,8 +411,8 @@ export function StepList({
 
       <ConfirmDialog
         open={!!deleteStepId}
-        onOpenChange={(v) => {
-          if (!v) setDeleteStepId(null)
+        onOpenChange={(open) => {
+          if (!open) setDeleteStepId(null)
         }}
         title="Delete this step?"
         description="Notes, blockers, and images on this step will be removed."

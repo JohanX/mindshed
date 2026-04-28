@@ -163,8 +163,8 @@ export function InventoryItemCard({ item, hobbies }: InventoryItemCardProps) {
 
       <ConfirmDialog
         open={deleteOpen}
-        onOpenChange={(v) => {
-          if (!isDeleting) setDeleteOpen(v)
+        onOpenChange={(open) => {
+          if (!isDeleting) setDeleteOpen(open)
         }}
         title="Delete this item?"
         description="Any linked blockers will have their inventory link cleared."

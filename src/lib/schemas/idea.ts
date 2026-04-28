@@ -12,12 +12,12 @@ export const createIdeaSchema = z.object({
     .max(2000, 'Description must be under 2000 characters')
     .nullable()
     .optional()
-    .transform((v) => (v === '' ? null : v)),
+    .transform((value) => (value === '' ? null : value)),
   referenceLink: z
     .string()
     .nullable()
     .optional()
-    .transform((v) => (v === '' || v == null ? null : v))
+    .transform((value) => (value === '' || value == null ? null : value))
     .pipe(z.url('Please enter a valid URL').nullable()),
 })
 
@@ -31,12 +31,12 @@ export const updateIdeaSchema = z.object({
     .max(2000)
     .nullable()
     .optional()
-    .transform((v) => (v === '' ? null : v)),
+    .transform((value) => (value === '' ? null : value)),
   referenceLink: z
     .string()
     .nullable()
     .optional()
-    .transform((v) => (v === '' || v == null ? null : v))
+    .transform((value) => (value === '' || value == null ? null : value))
     .pipe(z.url('Please enter a valid URL').nullable()),
 })
 

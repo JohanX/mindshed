@@ -197,8 +197,8 @@ export function ProjectActions({ project }: ProjectActionsProps) {
 
       <ConfirmDialog
         open={deleteOpen}
-        onOpenChange={(v) => {
-          if (!isDeleting) setDeleteOpen(v)
+        onOpenChange={(open) => {
+          if (!isDeleting) setDeleteOpen(open)
         }}
         title={`Delete ${project.name}?`}
         description="All steps, notes, and photos will be removed."

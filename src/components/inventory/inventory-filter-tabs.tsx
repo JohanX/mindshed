@@ -27,7 +27,7 @@ export function InventoryFilterTabs({ items, hobbies }: InventoryFilterTabsProps
     if (typeFilter && item.type !== typeFilter) return false
     if (hobbyFilter === 'UNTAGGED') return item.hobbies.length === 0
     if (hobbyFilter) {
-      return item.hobbies.some((h) => h.id === hobbyFilter) || item.hobbies.length === 0
+      return item.hobbies.some((hobby) => hobby.id === hobbyFilter) || item.hobbies.length === 0
     }
     return true
   })

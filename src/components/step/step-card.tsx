@@ -253,8 +253,8 @@ export function StepCard({ step, variant, isProjectCompleted }: StepCardProps) {
 
       <ConfirmDialog
         open={deleteOpen}
-        onOpenChange={(v) => {
-          if (!v) setDeleteOpen(false)
+        onOpenChange={(open) => {
+          if (!open) setDeleteOpen(false)
         }}
         title="Delete this step?"
         description="Notes, blockers, and images on this step will be removed."

@@ -243,7 +243,7 @@ export async function deleteHobbyCascade(hobbyId: string): Promise<void> {
     'SELECT id FROM project WHERE hobby_id = $1',
     [hobbyId],
   )
-  const projectIds = projectRows.map((r) => r.id)
+  const projectIds = projectRows.map((row) => row.id)
   // Note: Prisma maps `String` to Postgres TEXT columns — not `uuid`. Use
   // text[] in ANY() or Postgres will throw `operator does not exist: text = uuid`.
   const { rows: stepRows } = projectIds.length
@@ -251,7 +251,7 @@ export async function deleteHobbyCascade(hobbyId: string): Promise<void> {
         projectIds,
       ])
     : { rows: [] }
-  const stepIds = stepRows.map((r) => r.id)
+  const stepIds = stepRows.map((row) => row.id)
 
   const targetIds = [...projectIds, ...stepIds]
   if (targetIds.length > 0) {

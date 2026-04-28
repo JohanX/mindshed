@@ -9,7 +9,7 @@ export default async function InventoryPage() {
   const [itemsResult, hobbiesResult] = await Promise.all([getInventoryItems(), getHobbies()])
   const items = itemsResult.success ? itemsResult.data : []
   const hobbies = hobbiesResult.success
-    ? hobbiesResult.data.map((h) => ({ id: h.id, name: h.name, color: h.color }))
+    ? hobbiesResult.data.map((hobby) => ({ id: hobby.id, name: hobby.name, color: hobby.color }))
     : []
 
   return (

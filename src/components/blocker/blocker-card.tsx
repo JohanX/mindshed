@@ -149,8 +149,8 @@ export function BlockerCard({ id, description, inventoryItem }: BlockerCardProps
 
       <ConfirmDialog
         open={deleteOpen}
-        onOpenChange={(v) => {
-          if (!v) setDeleteOpen(false)
+        onOpenChange={(open) => {
+          if (!open) setDeleteOpen(false)
         }}
         title="Delete this blocker?"
         description="This will permanently remove the blocker."

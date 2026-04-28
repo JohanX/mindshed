@@ -88,8 +88,8 @@ export function IdeaActionsMenu({ idea }: IdeaActionsMenuProps) {
 
       <ConfirmDialog
         open={deleteOpen}
-        onOpenChange={(v) => {
-          if (!v) setDeleteOpen(false)
+        onOpenChange={(open) => {
+          if (!open) setDeleteOpen(false)
         }}
         title={`Delete "${idea.title}"?`}
         description="This idea will be permanently removed."

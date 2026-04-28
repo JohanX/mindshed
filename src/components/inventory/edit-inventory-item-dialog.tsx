@@ -48,7 +48,9 @@ export function EditInventoryItemDialog({
   const [quantity, setQuantity] = useState(item.quantity?.toString() ?? '')
   const [unit, setUnit] = useState(item.unit ?? '')
   const [notes, setNotes] = useState(item.notes ?? '')
-  const [selectedHobbyIds, setSelectedHobbyIds] = useState<string[]>(item.hobbies.map((h) => h.id))
+  const [selectedHobbyIds, setSelectedHobbyIds] = useState<string[]>(
+    item.hobbies.map((hobby) => hobby.id),
+  )
   const [isPending, startTransition] = useTransition()
 
   const [photos, setPhotos] = useState<InventoryItemImageWithDisplayUrl[]>([])
@@ -413,8 +415,8 @@ export function EditInventoryItemDialog({
 
         <ConfirmDialog
           open={deletePhotoId !== null}
-          onOpenChange={(v) => {
-            if (!v) setDeletePhotoId(null)
+          onOpenChange={(open) => {
+            if (!open) setDeletePhotoId(null)
           }}
           title="Delete this photo?"
           description="This cannot be undone."
