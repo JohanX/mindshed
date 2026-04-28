@@ -10,6 +10,7 @@ import {
 } from '@/lib/schemas/inventory-image'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES } from '@/lib/constants/image-upload'
+import { IMAGE_LIMITS, inventoryImageLimitError } from '@/lib/constants/image-limits'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 import {
@@ -63,6 +64,12 @@ export async function addInventoryItemImage(
       if (!item) throw new Error('ITEM_NOT_FOUND')
       if (item.isDeleted) throw new Error('ITEM_DELETED')
 
+      // FR118: max IMAGE_LIMITS.inventory images per inventory item.
+      const existingCount = await tx.inventoryItemImage.count({
+        where: { inventoryItemId: parsed.data.inventoryItemId },
+      })
+      if (existingCount >= IMAGE_LIMITS.inventory) throw new Error('INVENTORY_IMAGE_LIMIT_REACHED')
+
       return tx.inventoryItemImage.create({
         data: {
           inventoryItemId: parsed.data.inventoryItemId,
@@ -96,6 +103,8 @@ export async function addInventoryItemImage(
       if (error.message === 'ITEM_NOT_FOUND') return { success: false, error: 'Item not found.' }
       if (error.message === 'ITEM_DELETED')
         return { success: false, error: 'Item has been deleted.' }
+      if (error.message === 'INVENTORY_IMAGE_LIMIT_REACHED')
+        return { success: false, error: inventoryImageLimitError() }
     }
     return { success: false, error: 'Failed to add image. Please try again.' }
   }
@@ -118,6 +127,12 @@ export async function addInventoryItemImageLink(
       if (!item) throw new Error('ITEM_NOT_FOUND')
       if (item.isDeleted) throw new Error('ITEM_DELETED')
 
+      // FR118: max IMAGE_LIMITS.inventory images per inventory item.
+      const existingCount = await tx.inventoryItemImage.count({
+        where: { inventoryItemId: parsed.data.inventoryItemId },
+      })
+      if (existingCount >= IMAGE_LIMITS.inventory) throw new Error('INVENTORY_IMAGE_LIMIT_REACHED')
+
       return tx.inventoryItemImage.create({
         data: {
           inventoryItemId: parsed.data.inventoryItemId,
@@ -137,6 +152,8 @@ export async function addInventoryItemImageLink(
       if (error.message === 'ITEM_NOT_FOUND') return { success: false, error: 'Item not found.' }
       if (error.message === 'ITEM_DELETED')
         return { success: false, error: 'Item has been deleted.' }
+      if (error.message === 'INVENTORY_IMAGE_LIMIT_REACHED')
+        return { success: false, error: inventoryImageLimitError() }
     }
     return { success: false, error: 'Failed to add image link.' }
   }
@@ -187,6 +204,13 @@ export async function uploadInventoryItemImageCloudinary(
         if (!item) throw new Error('ITEM_NOT_FOUND')
         if (item.isDeleted) throw new Error('ITEM_DELETED')
 
+        // FR118: max IMAGE_LIMITS.inventory images per inventory item.
+        const existingCount = await tx.inventoryItemImage.count({
+          where: { inventoryItemId: parsedId.data },
+        })
+        if (existingCount >= IMAGE_LIMITS.inventory)
+          throw new Error('INVENTORY_IMAGE_LIMIT_REACHED')
+
         return tx.inventoryItemImage.create({
           data: {
             inventoryItemId: parsedId.data,
@@ -220,6 +244,8 @@ export async function uploadInventoryItemImageCloudinary(
       if (error.message === 'ITEM_NOT_FOUND') return { success: false, error: 'Item not found.' }
       if (error.message === 'ITEM_DELETED')
         return { success: false, error: 'Item has been deleted.' }
+      if (error.message === 'INVENTORY_IMAGE_LIMIT_REACHED')
+        return { success: false, error: inventoryImageLimitError() }
     }
     return { success: false, error: 'Failed to upload image. Please try again.' }
   }

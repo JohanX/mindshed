@@ -12,6 +12,7 @@ import { ImageGallery, type GalleryImage } from '@/components/image/image-galler
 import { ImageUploadButton } from '@/components/image/image-upload-button'
 import { CameraCaptureButton } from '@/components/image/camera-capture-button'
 import { ImageLinkInput } from '@/components/image/image-link-input'
+import { IMAGE_LIMITS } from '@/lib/constants/image-limits'
 import { InlineBlockerInput } from '@/components/blocker/inline-blocker-input'
 import { BlockerCard } from '@/components/blocker/blocker-card'
 import {
@@ -211,13 +212,18 @@ export function StepCard({ step, variant, isProjectCompleted }: StepCardProps) {
                     Add photos to document your progress.
                   </p>
                 )}
-                {!isProjectCompleted && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    <ImageUploadButton stepId={step.id} />
-                    <CameraCaptureButton stepId={step.id} />
-                    <ImageLinkInput stepId={step.id} />
-                  </div>
-                )}
+                {!isProjectCompleted &&
+                  (step.images.length >= IMAGE_LIMITS.step ? (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Image limit reached ({IMAGE_LIMITS.step}). Delete a photo to add another.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <ImageUploadButton stepId={step.id} />
+                      <CameraCaptureButton stepId={step.id} />
+                      <ImageLinkInput stepId={step.id} />
+                    </div>
+                  ))}
               </section>
 
               <Separator className="my-3" />

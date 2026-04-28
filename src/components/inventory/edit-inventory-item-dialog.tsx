@@ -23,6 +23,7 @@ import {
 } from '@/actions/inventory-image'
 import { addInventoryItemImageLinkSchema } from '@/lib/schemas/inventory-image'
 import { uploadInventoryImageToStorage } from '@/lib/upload-inventory-image'
+import { IMAGE_LIMITS } from '@/lib/constants/image-limits'
 import { ACCEPTED_IMAGE_TYPES } from '@/lib/constants/image-upload'
 import { updateInventoryItemSchema } from '@/lib/schemas/inventory'
 import type { InventoryItemData } from '@/lib/schemas/inventory'
@@ -283,98 +284,104 @@ export function EditInventoryItemDialog({
         <div className="space-y-3 border-t pt-4" data-testid="photos-section">
           <span className="text-sm font-medium">Photos</span>
 
-          <div className="flex flex-wrap gap-2">
-            <input
-              ref={uploadInputRef}
-              type="file"
-              accept={ACCEPTED_IMAGE_TYPES.join(',')}
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) void handlePhotoUpload(file)
-              }}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="min-h-[44px]"
-              disabled={isUploading}
-              onClick={() => uploadInputRef.current?.click()}
-            >
-              {isUploading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Upload className="mr-2 h-4 w-4" />
-              )}
-              Upload Photo
-            </Button>
-
-            {!linkExpanded ? (
+          {photos.length >= IMAGE_LIMITS.inventory ? (
+            <p className="text-xs text-muted-foreground">
+              Image limit reached ({IMAGE_LIMITS.inventory}). Delete a photo to add another.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <input
+                ref={uploadInputRef}
+                type="file"
+                accept={ACCEPTED_IMAGE_TYPES.join(',')}
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) void handlePhotoUpload(file)
+                }}
+              />
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 className="min-h-[44px]"
-                onClick={() => {
-                  setLinkExpanded(true)
-                  requestAnimationFrame(() => linkInputRef.current?.focus())
-                }}
-                data-testid="add-photo-link-prompt"
+                disabled={isUploading}
+                onClick={() => uploadInputRef.current?.click()}
               >
-                Paste Image / Link
+                {isUploading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="mr-2 h-4 w-4" />
+                )}
+                Upload Photo
               </Button>
-            ) : (
-              <div className="w-full space-y-2">
-                <Input
-                  ref={linkInputRef}
-                  type="url"
-                  value={linkUrl}
-                  onChange={(e) => setLinkUrl(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      handleLinkSave()
-                    }
-                    if (e.key === 'Escape') {
-                      e.preventDefault()
-                      setLinkExpanded(false)
-                      setLinkUrl('')
-                      setLinkError(null)
-                    }
+
+              {!linkExpanded ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="min-h-[44px]"
+                  onClick={() => {
+                    setLinkExpanded(true)
+                    requestAnimationFrame(() => linkInputRef.current?.focus())
                   }}
-                  onPaste={handlePaste}
-                  placeholder={isUploading ? 'Uploading pasted image…' : 'Paste image or URL'}
-                  disabled={isLinking || isUploading}
-                  aria-invalid={linkError ? true : undefined}
-                />
-                {linkError && <p className="text-sm text-destructive">{linkError}</p>}
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    className="min-h-[44px]"
-                    onClick={handleLinkSave}
-                    disabled={isLinking}
-                  >
-                    {isLinking ? 'Saving...' : 'Save'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="min-h-[44px]"
-                    onClick={() => {
-                      setLinkExpanded(false)
-                      setLinkUrl('')
-                      setLinkError(null)
+                  data-testid="add-photo-link-prompt"
+                >
+                  Paste Image / Link
+                </Button>
+              ) : (
+                <div className="w-full space-y-2">
+                  <Input
+                    ref={linkInputRef}
+                    type="url"
+                    value={linkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleLinkSave()
+                      }
+                      if (e.key === 'Escape') {
+                        e.preventDefault()
+                        setLinkExpanded(false)
+                        setLinkUrl('')
+                        setLinkError(null)
+                      }
                     }}
-                    disabled={isLinking}
-                  >
-                    Cancel
-                  </Button>
+                    onPaste={handlePaste}
+                    placeholder={isUploading ? 'Uploading pasted image…' : 'Paste image or URL'}
+                    disabled={isLinking || isUploading}
+                    aria-invalid={linkError ? true : undefined}
+                  />
+                  {linkError && <p className="text-sm text-destructive">{linkError}</p>}
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="min-h-[44px]"
+                      onClick={handleLinkSave}
+                      disabled={isLinking}
+                    >
+                      {isLinking ? 'Saving...' : 'Save'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="min-h-[44px]"
+                      onClick={() => {
+                        setLinkExpanded(false)
+                        setLinkUrl('')
+                        setLinkError(null)
+                      }}
+                      disabled={isLinking}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {photosLoading && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">

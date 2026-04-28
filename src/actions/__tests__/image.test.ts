@@ -11,6 +11,7 @@ vi.mock('@/lib/db', () => ({
       findMany: vi.fn(),
       findUnique: vi.fn(),
       delete: vi.fn(),
+      count: vi.fn().mockResolvedValue(0),
     },
     project: {
       update: vi.fn(),
@@ -73,7 +74,7 @@ describe('addStepImageLink', () => {
     mockTx.mockImplementation(async (fn) => {
       const tx = {
         step: { findUnique: vi.fn().mockResolvedValue(null) },
-        stepImage: { create: vi.fn() },
+        stepImage: { create: vi.fn(), count: vi.fn().mockResolvedValue(0) },
         project: { update: vi.fn() },
       }
       return fn(tx as never)
@@ -94,7 +95,7 @@ describe('addStepImageLink', () => {
             project: { id: 'p1', hobbyId: 'h1', isCompleted: true },
           }),
         },
-        stepImage: { create: vi.fn() },
+        stepImage: { create: vi.fn(), count: vi.fn().mockResolvedValue(0) },
         project: { update: vi.fn() },
       }
       return fn(tx as never)
@@ -117,7 +118,7 @@ describe('addStepImageLink', () => {
             project: { id: 'p1', hobbyId: 'h1', isCompleted: false },
           }),
         },
-        stepImage: { create: mockCreate },
+        stepImage: { create: mockCreate, count: vi.fn().mockResolvedValue(0) },
         project: { update: mockUpdate },
       }
       return fn(tx as never)
@@ -130,6 +131,29 @@ describe('addStepImageLink', () => {
     expect(mockCreate).toHaveBeenCalledWith({
       data: { stepId: VALID_UUID, type: 'LINK', url: VALID_URL, storageKey: null },
     })
+  })
+
+  it('rejects when step already has 5 images (FR117)', async () => {
+    const mockCreate = vi.fn()
+    const mockTx = vi.mocked(prisma.$transaction)
+    mockTx.mockImplementation(async (fn) => {
+      const tx = {
+        step: {
+          findUnique: vi.fn().mockResolvedValue({
+            projectId: 'p1',
+            project: { id: 'p1', hobbyId: 'h1', isCompleted: false },
+          }),
+        },
+        stepImage: { create: mockCreate, count: vi.fn().mockResolvedValue(5) },
+        project: { update: vi.fn() },
+      }
+      return fn(tx as never)
+    })
+
+    const result = await addStepImageLink({ stepId: VALID_UUID, url: VALID_URL })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toContain('limit reached (5)')
+    expect(mockCreate).not.toHaveBeenCalled()
   })
 })
 
@@ -183,7 +207,7 @@ describe('addStepImage', () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         step: { findUnique: vi.fn().mockResolvedValue(null) },
-        stepImage: { create: vi.fn() },
+        stepImage: { create: vi.fn(), count: vi.fn().mockResolvedValue(0) },
         project: { update: vi.fn() },
       }
       return fn(tx as never)
@@ -206,7 +230,7 @@ describe('addStepImage', () => {
             project: { id: 'p1', hobbyId: 'h1' },
           }),
         },
-        stepImage: { create: mockImageCreate },
+        stepImage: { create: mockImageCreate, count: vi.fn().mockResolvedValue(0) },
         project: { update: mockProjUpdate },
       }
       return fn(tx as never)

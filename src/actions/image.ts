@@ -10,6 +10,7 @@ import {
 } from '@/lib/schemas/image'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES } from '@/lib/constants/image-upload'
+import { IMAGE_LIMITS, stepImageLimitError } from '@/lib/constants/image-limits'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 import {
@@ -60,6 +61,12 @@ export async function addStepImageLink(
       if (!step) throw new Error('STEP_NOT_FOUND')
       if (step.project.isCompleted) throw new Error('PROJECT_COMPLETED')
 
+      // FR117: max IMAGE_LIMITS.step images per step.
+      const existingCount = await tx.stepImage.count({
+        where: { stepId: parsed.data.stepId },
+      })
+      if (existingCount >= IMAGE_LIMITS.step) throw new Error('STEP_IMAGE_LIMIT_REACHED')
+
       const created = await tx.stepImage.create({
         data: { stepId: parsed.data.stepId, type: 'LINK', url: parsed.data.url, storageKey: null },
       })
@@ -84,6 +91,8 @@ export async function addStepImageLink(
       if (error.message === 'STEP_NOT_FOUND') return { success: false, error: 'Step not found.' }
       if (error.message === 'PROJECT_COMPLETED')
         return { success: false, error: 'Cannot add images to a completed project.' }
+      if (error.message === 'STEP_IMAGE_LIMIT_REACHED')
+        return { success: false, error: stepImageLimitError() }
     }
     return { success: false, error: 'Failed to add image link.' }
   }
@@ -109,6 +118,12 @@ export async function addStepImage(
       })
       if (!step) throw new Error('STEP_NOT_FOUND')
       if (step.project.isCompleted) throw new Error('PROJECT_COMPLETED')
+
+      // FR117: max IMAGE_LIMITS.step images per step.
+      const existingCount = await tx.stepImage.count({
+        where: { stepId: parsed.data.stepId },
+      })
+      if (existingCount >= IMAGE_LIMITS.step) throw new Error('STEP_IMAGE_LIMIT_REACHED')
 
       const created = await tx.stepImage.create({
         data: {
@@ -158,6 +173,8 @@ export async function addStepImage(
       if (error.message === 'STEP_NOT_FOUND') return { success: false, error: 'Step not found.' }
       if (error.message === 'PROJECT_COMPLETED')
         return { success: false, error: 'Cannot add images to a completed project.' }
+      if (error.message === 'STEP_IMAGE_LIMIT_REACHED')
+        return { success: false, error: stepImageLimitError() }
     }
     return { success: false, error: 'Failed to add image. Please try again.' }
   }
@@ -211,6 +228,10 @@ export async function uploadImageCloudinary(
         if (!step) throw new Error('STEP_NOT_FOUND')
         if (step.project.isCompleted) throw new Error('PROJECT_COMPLETED')
 
+        // FR117: max IMAGE_LIMITS.step images per step.
+        const existingCount = await tx.stepImage.count({ where: { stepId: parsedStepId.data } })
+        if (existingCount >= IMAGE_LIMITS.step) throw new Error('STEP_IMAGE_LIMIT_REACHED')
+
         const created = await tx.stepImage.create({
           data: {
             stepId: parsedStepId.data,
@@ -256,6 +277,8 @@ export async function uploadImageCloudinary(
       if (error.message === 'STEP_NOT_FOUND') return { success: false, error: 'Step not found.' }
       if (error.message === 'PROJECT_COMPLETED')
         return { success: false, error: 'Cannot add images to a completed project.' }
+      if (error.message === 'STEP_IMAGE_LIMIT_REACHED')
+        return { success: false, error: stepImageLimitError() }
     }
     return { success: false, error: 'Failed to upload image. Please try again.' }
   }

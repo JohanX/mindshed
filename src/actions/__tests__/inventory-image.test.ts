@@ -8,6 +8,7 @@ vi.mock('@/lib/db', () => ({
       findUnique: vi.fn(),
       create: vi.fn(),
       delete: vi.fn(),
+      count: vi.fn().mockResolvedValue(0),
     },
     inventoryItem: {
       findUnique: vi.fn(),
@@ -154,7 +155,7 @@ describe('addInventoryItemImageLink', () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         inventoryItem: { findUnique: vi.fn().mockResolvedValue(null) },
-        inventoryItemImage: { create: vi.fn() },
+        inventoryItemImage: { create: vi.fn(), count: vi.fn().mockResolvedValue(0) },
       }
       return fn(tx as never)
     })
@@ -168,7 +169,7 @@ describe('addInventoryItemImageLink', () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         inventoryItem: { findUnique: vi.fn().mockResolvedValue({ isDeleted: true }) },
-        inventoryItemImage: { create: vi.fn() },
+        inventoryItemImage: { create: vi.fn(), count: vi.fn().mockResolvedValue(0) },
       }
       return fn(tx as never)
     })
@@ -183,7 +184,7 @@ describe('addInventoryItemImageLink', () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         inventoryItem: { findUnique: vi.fn().mockResolvedValue({ isDeleted: false }) },
-        inventoryItemImage: { create: mockCreate },
+        inventoryItemImage: { create: mockCreate, count: vi.fn().mockResolvedValue(0) },
       }
       return fn(tx as never)
     })
@@ -201,11 +202,30 @@ describe('addInventoryItemImageLink', () => {
     })
   })
 
+  it('rejects when inventory item already has 3 images (FR118)', async () => {
+    const mockCreate = vi.fn()
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        inventoryItem: { findUnique: vi.fn().mockResolvedValue({ isDeleted: false }) },
+        inventoryItemImage: { create: mockCreate, count: vi.fn().mockResolvedValue(3) },
+      }
+      return fn(tx as never)
+    })
+
+    const result = await addInventoryItemImageLink({ inventoryItemId: VALID_UUID, url: VALID_URL })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toContain('limit reached (3)')
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
   it('revalidates BOM project paths after adding image link', async () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         inventoryItem: { findUnique: vi.fn().mockResolvedValue({ isDeleted: false }) },
-        inventoryItemImage: { create: vi.fn().mockResolvedValue({ id: 'img1' }) },
+        inventoryItemImage: {
+          create: vi.fn().mockResolvedValue({ id: 'img1' }),
+          count: vi.fn().mockResolvedValue(0),
+        },
       }
       return fn(tx as never)
     })
@@ -250,7 +270,7 @@ describe('addInventoryItemImage', () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         inventoryItem: { findUnique: vi.fn().mockResolvedValue(null) },
-        inventoryItemImage: { create: vi.fn() },
+        inventoryItemImage: { create: vi.fn(), count: vi.fn().mockResolvedValue(0) },
       }
       return fn(tx as never)
     })
@@ -265,7 +285,7 @@ describe('addInventoryItemImage', () => {
     mockTransaction.mockImplementation(async (fn) => {
       const tx = {
         inventoryItem: { findUnique: vi.fn().mockResolvedValue({ isDeleted: false }) },
-        inventoryItemImage: { create: mockCreate },
+        inventoryItemImage: { create: mockCreate, count: vi.fn().mockResolvedValue(0) },
       }
       return fn(tx as never)
     })
