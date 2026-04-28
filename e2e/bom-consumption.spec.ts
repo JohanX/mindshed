@@ -119,14 +119,13 @@ test.describe('BOM Consumption (Mark / Undo) + Clone Integration', () => {
     await expect(page.getByText(`Marked ${matName} as consumed`)).toBeVisible({ timeout: 5000 })
     // Available cell shows "Consumed"
     await expect(matRow.getByText('Consumed', { exact: true })).toBeVisible()
-    // qty-before-badge fix: qty appears BEFORE the Consumed badge,
-    // and is colored as 'ok' (text-step-completed) since available >= required.
-    // (We don't assert the exact qty number — client state may still show the
-    // pre-consumption snapshot until page reload; the structural ordering is
-    // the fix being verified here.)
+    // qty-before-badge fix: qty appears BEFORE the Consumed badge, and is
+    // colored as 'ok' (text-step-completed) since available >= required.
+    // The qty also reflects the post-consumption value live (200 - 50 = 150)
+    // — no page reload needed (BOM qty refresh fix).
     const availableSpans = matRow.locator('td').nth(3).locator('> span > span')
     await expect(availableSpans).toHaveCount(2)
-    await expect(availableSpans.nth(0)).toHaveText(/\d+\s*g/)
+    await expect(availableSpans.nth(0)).toHaveText('150 g')
     await expect(availableSpans.nth(0)).toHaveClass(/text-step-completed/)
     await expect(availableSpans.nth(1)).toHaveText('Consumed')
     // Inventory decremented (200 - 50 = 150)

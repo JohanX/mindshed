@@ -4,6 +4,7 @@ import { ProjectActions } from '@/components/project/project-actions'
 import { ProjectStatusBadge } from '@/components/project/project-status-badge'
 import { type StepCardData, type StepCardImage } from '@/components/step/step-card'
 import { StepCardList } from '@/components/step/step-card-list'
+import { StepFocusScroll } from '@/components/step/step-focus-scroll'
 import { AddStepForm } from '@/components/step/add-step-form'
 import { EmptyStateCard } from '@/components/empty-state-card'
 import type { StepState } from '@/lib/step-states'
@@ -189,13 +190,21 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
       {project.description && <p className="text-muted-foreground">{project.description}</p>}
 
       {stepCards.length > 0 ? (
-        <StepCardList
-          key={stepKey}
-          initialSteps={stepCards}
-          currentStepId={currentStepId}
-          isProjectCompleted={isCompleted}
-          projectId={project.id}
-        />
+        <>
+          <StepCardList
+            key={stepKey}
+            initialSteps={stepCards}
+            currentStepId={currentStepId}
+            isProjectCompleted={isCompleted}
+            projectId={project.id}
+          />
+          {/*
+            FR116: scroll the focused step into view. Rendered OUTSIDE the
+            keyed StepCardList so it isn't remounted by every revalidate
+            (which would re-fire the scroll on note/image/blocker mutations).
+          */}
+          <StepFocusScroll focusedStepId={currentStepId} />
+        </>
       ) : null}
 
       {!isCompleted && <AddStepForm projectId={project.id} />}

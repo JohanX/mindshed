@@ -23,7 +23,7 @@ export function SortableStepCard({ step, variant, isProjectCompleted }: Sortable
   }
 
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-2">
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2" data-step-id={step.id}>
       {!isProjectCompleted && (
         <button
           className="hidden sm:flex items-center justify-center min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing shrink-0"

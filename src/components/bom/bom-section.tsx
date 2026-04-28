@@ -127,20 +127,25 @@ export function BomSection({
       label?: string
       consumptionState?: BomConsumptionState
       consumedAt?: Date | null
+      inventoryQuantity?: number | null
     },
   ) {
     setRows((prev) =>
-      prev.map((row) =>
-        row.id === id
-          ? {
-              ...row,
-              requiredQuantity: patch.requiredQuantity ?? row.requiredQuantity,
-              unit: patch.unit === undefined ? row.unit : patch.unit,
-              label: patch.label ?? row.label,
-              consumptionState: patch.consumptionState ?? row.consumptionState,
-            }
-          : row,
-      ),
+      prev.map((row) => {
+        if (row.id !== id) return row
+        const inventoryItem =
+          patch.inventoryQuantity !== undefined && row.inventoryItem
+            ? { ...row.inventoryItem, quantity: patch.inventoryQuantity }
+            : row.inventoryItem
+        return {
+          ...row,
+          requiredQuantity: patch.requiredQuantity ?? row.requiredQuantity,
+          unit: patch.unit === undefined ? row.unit : patch.unit,
+          label: patch.label ?? row.label,
+          consumptionState: patch.consumptionState ?? row.consumptionState,
+          inventoryItem,
+        }
+      }),
     )
   }
 

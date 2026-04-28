@@ -43,6 +43,15 @@ interface BomRowProps {
       label?: string
       consumptionState?: BomConsumptionState
       consumedAt?: Date | null
+      /**
+       * Replacement value for the linked InventoryItem.quantity in the local
+       * row state. Used to keep the Available cell in sync after Mark
+       * Consumed / Undo without a page reload. Pass `undefined` (or omit) to
+       * leave qty unchanged; pass a `number` to overwrite the local snapshot.
+       * `null` is currently unused at call sites but kept in the type to
+       * mirror the model field's nullability if the qty becomes unknown.
+       */
+      inventoryQuantity?: number | null
     },
   ) => void
   onDelete: (id: string) => void
@@ -146,7 +155,15 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
         showErrorToast(result.error)
         return
       }
-      onUpdate(row.id, { consumptionState: 'CONSUMED', consumedAt: new Date() })
+      // Mirror the server-side decrement locally so the Available cell
+      // refreshes immediately without a page reload.
+      const currentQuantity = row.inventoryItem?.quantity ?? null
+      const nextQuantity = currentQuantity !== null ? currentQuantity - row.requiredQuantity : null
+      onUpdate(row.id, {
+        consumptionState: 'CONSUMED',
+        consumedAt: new Date(),
+        inventoryQuantity: nextQuantity,
+      })
       showSuccessToast(`Marked ${displayName} as consumed`)
     })
   }
@@ -158,7 +175,14 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
         showErrorToast(result.error)
         return
       }
-      onUpdate(row.id, { consumptionState: 'NOT_CONSUMED' })
+      // Mirror the server-side increment locally — the inventory qty is
+      // credited back by exactly `requiredQuantity`.
+      const currentQuantity = row.inventoryItem?.quantity ?? null
+      const nextQuantity = currentQuantity !== null ? currentQuantity + row.requiredQuantity : null
+      onUpdate(row.id, {
+        consumptionState: 'NOT_CONSUMED',
+        inventoryQuantity: nextQuantity,
+      })
       showSuccessToast(`Reverted consumption of ${displayName}`)
     })
   }
