@@ -225,6 +225,51 @@ export async function deleteInventoryItemsByPrefix(prefix: string): Promise<void
   await client.query(`DELETE FROM inventory_item WHERE name LIKE $1`, [`${prefix}%`])
 }
 
+export interface SeededReminder {
+  id: string
+  targetType: 'STEP' | 'PROJECT'
+  targetId: string
+  dueDate: Date
+}
+
+/**
+ * Seed a Reminder for a Step or Project. Used by reminder-cascade specs to
+ * verify that deleting the parent removes the polymorphic reminder.
+ *
+ * `dueDate` defaults to 24 hours from now so the reminder lands inside the
+ * dashboard's 7-day window without being already overdue.
+ */
+export async function seedReminder(opts: {
+  targetType: 'STEP' | 'PROJECT'
+  targetId: string
+  dueDate?: Date
+}): Promise<SeededReminder> {
+  const client = await getClient()
+  const id = randomUUID()
+  const dueDate = opts.dueDate ?? new Date(Date.now() + 24 * 60 * 60 * 1000)
+
+  await client.query(
+    `INSERT INTO reminder (id, target_type, target_id, due_date, is_dismissed, created_at, updated_at)
+     VALUES ($1, $2::"ReminderTargetType", $3, $4, false, now(), now())`,
+    [id, opts.targetType, opts.targetId, dueDate.toISOString()],
+  )
+
+  return { id, targetType: opts.targetType, targetId: opts.targetId, dueDate }
+}
+
+/**
+ * Count reminders by id — handy for cascade-cleanup assertions in specs.
+ * Returns 0 if no rows match (= reminder was deleted).
+ */
+export async function countReminderById(reminderId: string): Promise<number> {
+  const client = await getClient()
+  const { rows } = await client.query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count FROM reminder WHERE id = $1`,
+    [reminderId],
+  )
+  return Number(rows[0]?.count ?? 0)
+}
+
 /**
  * Hard-delete a hobby and let cascade tear down projects/steps/blockers/etc.
  * Prefer this in `afterAll` blocks over the UI delete flow — cleaner and
