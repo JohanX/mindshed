@@ -79,7 +79,7 @@ test.describe('BOM Autocomplete + Inline Inventory Creation', () => {
     await page.goto(projectUrl)
     await page.waitForLoadState('networkidle')
 
-    await page.getByRole('button', { name: /Add row/ }).click()
+    await page.getByRole('button', { name: /Add item/ }).click()
     const combobox = page.getByPlaceholder('Type to search inventory…')
     await expect(combobox).toBeVisible()
     await combobox.fill(materialName.slice(0, 8)) // partial prefix
@@ -104,7 +104,7 @@ test.describe('BOM Autocomplete + Inline Inventory Creation', () => {
     await page.goto(projectUrl)
     await page.waitForLoadState('networkidle')
 
-    await page.getByRole('button', { name: /Add row/ }).click()
+    await page.getByRole('button', { name: /Add item/ }).click()
     const combobox = page.getByPlaceholder('Type to search inventory…')
     await combobox.fill(materialName.slice(0, 8))
 
@@ -119,7 +119,7 @@ test.describe('BOM Autocomplete + Inline Inventory Creation', () => {
     await page.goto(projectUrl)
     await page.waitForLoadState('networkidle')
 
-    await page.getByRole('button', { name: /Add row/ }).click()
+    await page.getByRole('button', { name: /Add item/ }).click()
     const combobox = page.getByPlaceholder('Type to search inventory…')
     await combobox.fill(newItemName)
 
@@ -153,7 +153,7 @@ test.describe('BOM Autocomplete + Inline Inventory Creation', () => {
 
     const rowCountBefore = await page.locator('table tbody tr').count()
 
-    await page.getByRole('button', { name: /Add row/ }).click()
+    await page.getByRole('button', { name: /Add item/ }).click()
     const combobox = page.getByPlaceholder('Type to search inventory…')
     await combobox.fill('random typed text')
     await combobox.press('Escape')

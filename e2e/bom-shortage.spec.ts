@@ -77,7 +77,7 @@ test.describe('BOM Shortage → Per-Row Create Blocker with Step Picker', () => 
 
   async function addBomLinkedRow(page: Page, itemName: string, required: string) {
     await expect(page.getByPlaceholder('Type to search inventory…')).toHaveCount(0)
-    await page.getByRole('button', { name: /Add row/ }).click()
+    await page.getByRole('button', { name: /Add item/ }).click()
     const combobox = page.getByPlaceholder('Type to search inventory…')
     await expect(combobox).toBeVisible()
     await combobox.fill(itemName)

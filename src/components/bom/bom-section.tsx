@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useMemo, useRef, useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Plus, ChevronDown } from 'lucide-react'
@@ -60,6 +60,14 @@ export function BomSection({
   const [addState, setAddState] = useState<AddState>({ phase: 'closed' })
   const [expanded, setExpanded] = useState(true)
   const [blockerDialogRow, setBlockerDialogRow] = useState<BomItemData | null>(null)
+  // Story 25.3: track the trigger element so the dialog can return focus
+  // to it on close. The trigger is the row's overflow `<Button>` —
+  // captured when BomRow's "Create blocker…" menu item is clicked.
+  const blockerDialogTriggerRef = useRef<HTMLElement | null>(null)
+  function handleRequestCreateBlocker(row: BomItemData, trigger: HTMLElement | null) {
+    blockerDialogTriggerRef.current = trigger
+    setBlockerDialogRow(row)
+  }
 
   const pillMemo = useMemo(() => <BomStatusPill rows={rows} />, [rows])
 
@@ -192,7 +200,7 @@ export function BomSection({
           }}
         >
           <Plus className="mr-1 h-4 w-4" />
-          Add row
+          Add item
         </Button>
       </summary>
 
@@ -226,7 +234,7 @@ export function BomSection({
                     variant="desktop"
                     onUpdate={handleRowUpdate}
                     onDelete={handleRowDelete}
-                    onRequestCreateBlocker={setBlockerDialogRow}
+                    onRequestCreateBlocker={handleRequestCreateBlocker}
                   />
                 ))}
               </tbody>
@@ -243,7 +251,7 @@ export function BomSection({
                 variant="mobile"
                 onUpdate={handleRowUpdate}
                 onDelete={handleRowDelete}
-                onRequestCreateBlocker={setBlockerDialogRow}
+                onRequestCreateBlocker={handleRequestCreateBlocker}
               />
             ))}
           </div>
@@ -307,6 +315,7 @@ export function BomSection({
         row={blockerDialogRow}
         steps={projectSteps}
         onClose={() => setBlockerDialogRow(null)}
+        triggerRef={blockerDialogTriggerRef}
       />
     </details>
   )

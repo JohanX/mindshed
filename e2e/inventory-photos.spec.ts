@@ -125,7 +125,7 @@ test.describe('Inventory Photos (Story 21.2)', () => {
     await page.goto(`/hobbies/${hobby.id}/projects/${project.id}`)
     await page.waitForLoadState('networkidle')
 
-    await page.getByRole('button', { name: 'Add row' }).click()
+    await page.getByRole('button', { name: 'Add item' }).click()
     await page.getByRole('combobox', { name: 'Type to search inventory…' }).fill(testPrefix)
 
     const option = page.getByRole('option', { name: new RegExp(`${testPrefix} Clay`) })

@@ -63,7 +63,7 @@ test.describe('BOM Basic CRUD', () => {
     await expect(page.getByRole('heading', { name: 'Bill of Materials' })).toBeVisible()
     await expect(page.getByText('0 items')).toBeVisible()
     await expect(page.getByText('Plan your materials before you start.')).toBeVisible()
-    await expect(page.getByRole('button', { name: /Add row/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Add item/ })).toBeVisible()
   })
 
   test('can add via combobox Add-new, edit, and delete BOM rows; pill reflects state', async ({
@@ -77,7 +77,7 @@ test.describe('BOM Basic CRUD', () => {
     const item2 = `BBC2-${testInfo.project.name}-${Date.now() + 1}`
 
     async function addViaCombobox(name: string, required: string, unit: string) {
-      await page.getByRole('button', { name: /Add row/ }).click()
+      await page.getByRole('button', { name: /Add item/ }).click()
       const combobox = page.getByPlaceholder('Type to search inventory…')
       await combobox.fill(name)
       await page.getByRole('option', { name: new RegExp(`Add new "${name}"`) }).click()

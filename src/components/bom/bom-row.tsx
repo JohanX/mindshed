@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -55,7 +55,7 @@ interface BomRowProps {
     },
   ) => void
   onDelete: (id: string) => void
-  onRequestCreateBlocker?: (row: BomItemData) => void
+  onRequestCreateBlocker?: (row: BomItemData, trigger: HTMLElement | null) => void
 }
 
 function AvailableCell({ row }: { row: BomItemData }) {
@@ -81,6 +81,12 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
   const [unit, setUnit] = useState<string>(row.unit ?? '')
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [isDeleting, startDeleteTransition] = useTransition()
+  // Story 25.3: refs to the overflow-trigger buttons so the parent section
+  // can return focus to the row's trigger after the Create-blocker dialog
+  // closes (avoids focus falling to <body> when the DropdownMenuItem
+  // unmounts).
+  const desktopTriggerRef = useRef<HTMLButtonElement>(null)
+  const mobileTriggerRef = useRef<HTMLButtonElement>(null)
   const [isConsuming, startConsumeTransition] = useTransition()
   const [isUndoing, startUndoTransition] = useTransition()
 
@@ -252,6 +258,7 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
+            ref={desktopTriggerRef}
             variant="ghost"
             size="icon"
             className="min-h-[44px] min-w-[44px]"
@@ -264,7 +271,7 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
           {canCreateBlocker && (
             <DropdownMenuItem
               className="min-h-[44px]"
-              onClick={() => onRequestCreateBlocker?.(row)}
+              onClick={() => onRequestCreateBlocker?.(row, desktopTriggerRef.current)}
             >
               <AlertCircle className="mr-2 h-4 w-4" />
               Create blocker…
@@ -291,6 +298,7 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
+            ref={mobileTriggerRef}
             variant="ghost"
             size="icon"
             className="min-h-[44px] min-w-[44px]"
@@ -303,7 +311,7 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
           {canCreateBlocker && (
             <DropdownMenuItem
               className="min-h-[44px]"
-              onClick={() => onRequestCreateBlocker?.(row)}
+              onClick={() => onRequestCreateBlocker?.(row, mobileTriggerRef.current)}
             >
               <AlertCircle className="mr-2 h-4 w-4" />
               Create blocker…

@@ -35,6 +35,14 @@ interface CreateBlockerDialogProps {
   row: BomItemData | null
   steps: PickerStep[]
   onClose: () => void
+  /**
+   * Story 25.3: ref to the element that opened this dialog (the BOM row's
+   * overflow trigger button). Used by `onCloseAutoFocus` to return focus
+   * to a stable element — the original `DropdownMenuItem` trigger has
+   * unmounted by close-time, so Radix's default body-focus fallback would
+   * lose keyboard users' place.
+   */
+  triggerRef?: React.RefObject<HTMLElement | null>
 }
 
 function pickDefaultStepId(selectable: PickerStep[]): string | null {
@@ -51,10 +59,12 @@ function DialogBody({
   row,
   steps,
   onClose,
+  triggerRef,
 }: {
   row: BomItemData
   steps: PickerStep[]
   onClose: () => void
+  triggerRef?: React.RefObject<HTMLElement | null>
 }) {
   const selectable = useMemo(
     () =>
@@ -92,7 +102,28 @@ function DialogBody({
   }
 
   return (
-    <DialogContent>
+    <DialogContent
+      onCloseAutoFocus={(event) => {
+        // Story 25.3: prevent Radix's default body-focus fallback (the
+        // original DropdownMenuItem trigger has unmounted) and explicitly
+        // restore focus to the row's overflow button so keyboard users
+        // don't lose their place.
+        //
+        // We resolve the target lazily here (not during open) because the
+        // BomRow may have re-rendered between open and close — the ref
+        // captured at open-time could point to a stale, detached node.
+        // A fresh DOM query by aria-label always finds the live element.
+        const target =
+          triggerRef?.current ??
+          document.querySelector<HTMLElement>(`[aria-label="Actions for ${CSS.escape(itemName)}"]`)
+        if (target) {
+          event.preventDefault()
+          // Defer the focus so it lands AFTER Radix unmounts the dialog
+          // content (otherwise focus-trap will yank it back).
+          setTimeout(() => target.focus(), 0)
+        }
+      }}
+    >
       <DialogHeader>
         <DialogTitle>Block: {itemName}</DialogTitle>
       </DialogHeader>
@@ -162,7 +193,13 @@ function DialogBody({
   )
 }
 
-export function CreateBlockerDialog({ open, row, steps, onClose }: CreateBlockerDialogProps) {
+export function CreateBlockerDialog({
+  open,
+  row,
+  steps,
+  onClose,
+  triggerRef,
+}: CreateBlockerDialogProps) {
   return (
     <Dialog
       open={open}
@@ -170,7 +207,15 @@ export function CreateBlockerDialog({ open, row, steps, onClose }: CreateBlocker
         if (!open) onClose()
       }}
     >
-      {row && <DialogBody key={row.id} row={row} steps={steps} onClose={onClose} />}
+      {row && (
+        <DialogBody
+          key={row.id}
+          row={row}
+          steps={steps}
+          onClose={onClose}
+          triggerRef={triggerRef}
+        />
+      )}
     </Dialog>
   )
 }
