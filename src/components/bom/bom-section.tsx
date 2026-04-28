@@ -204,7 +204,7 @@ export function BomSection({
                   <th className="w-28 py-2 pr-3">Required</th>
                   <th className="w-20 py-2 pr-3">Unit</th>
                   <th className="w-48 py-2 pr-3">Available</th>
-                  <th className="w-20 py-2 pr-3 text-right">Actions</th>
+                  <th className="w-52 py-2 pr-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>

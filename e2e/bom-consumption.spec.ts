@@ -113,9 +113,9 @@ test.describe('BOM Consumption (Mark / Undo) + Clone Integration', () => {
     await addBomLinkedRow(page, toolName, '1')
 
     // === Scenario 1: Mark consumed on the MATERIAL row ===
+    // FR114: Mark Consumed is now an inline button on the row, not a dropdown menuitem.
     const matRow = page.locator('table tbody tr').filter({ hasText: matName })
-    await matRow.getByRole('button', { name: /Actions for / }).click()
-    await page.getByRole('menuitem', { name: 'Mark consumed' }).click()
+    await matRow.getByRole('button', { name: /Mark consumed/ }).click()
     await expect(page.getByText(`Marked ${matName} as consumed`)).toBeVisible({ timeout: 5000 })
     // Available cell shows "Consumed"
     await expect(matRow.getByText('Consumed', { exact: true })).toBeVisible()
@@ -159,8 +159,7 @@ test.describe('BOM Consumption (Mark / Undo) + Clone Integration', () => {
     await expect(matRow2Fresh.getByLabel('Required quantity')).toBeEnabled()
 
     // === Scenario 3: Re-consume after undo (NOT_CONSUMED cycle) ===
-    await matRow2Fresh.getByRole('button', { name: /Actions for / }).click()
-    await page.getByRole('menuitem', { name: 'Mark consumed' }).click()
+    await matRow2Fresh.getByRole('button', { name: /Mark consumed/ }).click()
     await expect(page.getByText(`Marked ${matName} as consumed`)).toBeVisible({ timeout: 5000 })
     await expect(matRow2Fresh.getByText('Consumed', { exact: true })).toBeVisible()
     // Undo again to leave row in NOT_CONSUMED for clone test
@@ -169,14 +168,11 @@ test.describe('BOM Consumption (Mark / Undo) + Clone Integration', () => {
       timeout: 5000,
     })
 
-    // === Scenario 4: Mark consumed hidden on TOOL row ===
+    // === Scenario 4: Mark consumed hidden on TOOL row (FR114: inline button absent) ===
     await page.goto(projectUrl)
     await page.waitForLoadState('networkidle')
     const toolRow = page.locator('table tbody tr').filter({ hasText: toolName })
-    await toolRow.getByRole('button', { name: /Actions for / }).click()
-    await expect(page.getByRole('menuitem', { name: 'Mark consumed' })).toHaveCount(0)
-    // Close the menu
-    await page.keyboard.press('Escape')
+    await expect(toolRow.getByRole('button', { name: /Mark consumed/ })).toHaveCount(0)
   })
 
   test('mobile viewport: Undo button is inline with Available row (size xs)', async ({ page }) => {
@@ -185,12 +181,15 @@ test.describe('BOM Consumption (Mark / Undo) + Clone Integration', () => {
     await page.goto(projectUrl)
     await page.waitForLoadState('networkidle')
 
-    // matName is NOT_CONSUMED at this point. On mobile, "Mark consumed" is a
-    // full-width button on the card (not in the dropdown).
+    // matName is NOT_CONSUMED at this point. FR114: on mobile, "Mark consumed"
+    // is an inline xs button on the Available row (parity with Undo).
+    // Scope strictly to the mobile-only container (md:hidden); the desktop
+    // table also contains the same matName text but is display:none here.
     const mobileCard = page
-      .locator('div.rounded-md.border')
+      .locator('div.md\\:hidden div.rounded-md.border')
       .filter({ has: page.getByText(matName) })
-    await mobileCard.getByRole('button', { name: 'Mark consumed' }).click()
+      .first()
+    await mobileCard.getByRole('button', { name: /Mark consumed/ }).click()
     await expect(page.getByText(`Marked ${matName} as consumed`)).toBeVisible({ timeout: 5000 })
 
     // The Available row contains the Undo button on the same line (not a

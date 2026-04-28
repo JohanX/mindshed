@@ -176,9 +176,33 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
     />
   )
 
-  // Desktop: inline Undo + dropdown with Mark-consumed inside.
+  // FR114: Mark Consumed and Undo are mutually exclusive primary actions on
+  // the row, presented inline (never in the dropdown). The dropdown retains
+  // only secondary/destructive actions (Create blocker…, Delete row).
   const desktopActions = (
     <div className="flex items-center justify-end gap-1">
+      {canMarkConsumed && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="min-h-[44px]"
+          onClick={handleMarkConsumed}
+          disabled={isConsuming}
+        >
+          {isConsuming ? (
+            <>
+              <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+              Mark consumed
+            </>
+          ) : (
+            <>
+              <CheckSquare className="mr-1 h-3.5 w-3.5" />
+              Mark consumed
+            </>
+          )}
+        </Button>
+      )}
       {canUndo && (
         <Button
           type="button"
@@ -213,16 +237,6 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {canMarkConsumed && (
-            <DropdownMenuItem
-              className="min-h-[44px]"
-              onClick={handleMarkConsumed}
-              disabled={isConsuming}
-            >
-              <CheckSquare className="mr-2 h-4 w-4" />
-              Mark consumed
-            </DropdownMenuItem>
-          )}
           {canCreateBlocker && (
             <DropdownMenuItem
               className="min-h-[44px]"
@@ -245,8 +259,9 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
     </div>
   )
 
-  // Mobile: header has only the dropdown (Delete + Create blocker…);
-  // Mark-consumed and Undo surface as full-width buttons at the bottom.
+  // Mobile: header has only the dropdown (Delete + Create blocker…).
+  // Per FR114, Mark Consumed and Undo are inline xs buttons on the
+  // Available row below — see the mobile JSX further down.
   const mobileHeaderActions = (
     <>
       <DropdownMenu>
@@ -392,10 +407,28 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
           <span className="text-xs text-muted-foreground">Available: </span>
           <AvailableCell row={row} />
         </div>
+        {/*
+          FR114: Mark Consumed and Undo are mutually exclusive inline buttons
+          on mobile too. Deliberate sub-44px touch target — xs button (h-6)
+          matches the Consumed badge height so the row stays a single line.
+        */}
+        {canMarkConsumed && (
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            onClick={handleMarkConsumed}
+            disabled={isConsuming}
+          >
+            {isConsuming ? (
+              <Loader2 className="size-3 animate-spin" />
+            ) : (
+              <CheckSquare className="size-3" />
+            )}
+            Mark consumed
+          </Button>
+        )}
         {canUndo && (
-          // Deliberate sub-44px touch target: product asked for the Undo
-          // button to match the Consumed-badge height so the Available row
-          // stays a single line on mobile. xs button (h-6) sits inline.
           <Button
             type="button"
             variant="outline"
@@ -408,27 +441,6 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
           </Button>
         )}
       </div>
-      {canMarkConsumed && (
-        <Button
-          type="button"
-          variant="outline"
-          className="mt-3 min-h-[44px] w-full"
-          onClick={handleMarkConsumed}
-          disabled={isConsuming}
-        >
-          {isConsuming ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Marking…
-            </>
-          ) : (
-            <>
-              <CheckSquare className="mr-2 h-4 w-4" />
-              Mark consumed
-            </>
-          )}
-        </Button>
-      )}
     </div>
   )
 }
