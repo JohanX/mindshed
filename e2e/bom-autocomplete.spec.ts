@@ -88,6 +88,10 @@ test.describe('BOM Autocomplete + Inline Inventory Creation', () => {
     await expect(option).toBeVisible()
     await option.click()
 
+    // Single-click fix: combobox unmounts immediately on click (before the
+    // server roundtrip), preventing duplicate-add from a confused second click.
+    await expect(combobox).toBeHidden({ timeout: 1000 })
+
     // Row is added immediately with required=0 — no intermediate form
     await expect(page.getByText(materialName).first()).toBeVisible({ timeout: 5000 })
     await expect(page.locator('table').getByLabel('Required quantity').first()).toHaveValue('0')

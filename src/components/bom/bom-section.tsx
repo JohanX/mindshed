@@ -77,6 +77,10 @@ export function BomSection({
 
   const [isAddingLinked, startAddLinkedTransition] = useTransition()
   function handlePickExisting(opt: InventoryOption) {
+    // Close the combobox immediately so a second click can't fire a duplicate
+    // addBomItem before the first one returns. On server failure we re-open
+    // it so the user has an obvious retry affordance.
+    setAddState({ phase: 'closed' })
     startAddLinkedTransition(async () => {
       const result = await addBomItem({
         projectId,
@@ -86,6 +90,7 @@ export function BomSection({
       })
       if (!result.success) {
         showErrorToast(result.error)
+        setAddState({ phase: 'combobox' })
         return
       }
       setRows((prev) => {
@@ -111,7 +116,6 @@ export function BomSection({
         ]
       })
       showSuccessToast('BOM item added')
-      setAddState({ phase: 'closed' })
     })
   }
 

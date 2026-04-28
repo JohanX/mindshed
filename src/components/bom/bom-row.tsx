@@ -18,7 +18,19 @@ import {
   undoBomItemConsumption,
 } from '@/actions/bom'
 import { showErrorToast, showSuccessToast } from '@/lib/toast'
-import { renderAvailable, isRowShort, type BomConsumptionState, type BomItemData } from '@/lib/bom'
+import {
+  renderAvailable,
+  isRowShort,
+  type AvailableVariant,
+  type BomConsumptionState,
+  type BomItemData,
+} from '@/lib/bom'
+
+function variantClassName(variant: AvailableVariant | undefined): string {
+  if (variant === 'ok') return 'text-step-completed'
+  if (variant === 'short') return 'text-step-blocked font-medium'
+  return 'text-muted-foreground'
+}
 
 interface BomRowProps {
   row: BomItemData
@@ -38,26 +50,21 @@ interface BomRowProps {
 }
 
 function AvailableCell({ row }: { row: BomItemData }) {
-  const { label, variant, secondaryLabel } = renderAvailable(row)
+  const { label, variant, secondaryLabel, secondaryVariant } = renderAvailable(row)
   if (variant === 'consumed') {
+    const showSecondary = secondaryLabel !== undefined && secondaryVariant !== 'missing'
     return (
       <span className="inline-flex items-center gap-1.5">
+        {showSecondary && (
+          <span className={variantClassName(secondaryVariant)}>{secondaryLabel}</span>
+        )}
         <span className="inline-flex items-center rounded-full bg-step-completed px-2 py-0.5 text-xs text-white">
           {label}
         </span>
-        {secondaryLabel && secondaryLabel !== '—' && (
-          <span className="text-sm text-muted-foreground">{secondaryLabel}</span>
-        )}
       </span>
     )
   }
-  const className =
-    variant === 'ok'
-      ? 'text-step-completed'
-      : variant === 'short'
-        ? 'text-step-blocked font-medium'
-        : 'text-muted-foreground'
-  return <span className={className}>{label}</span>
+  return <span className={variantClassName(variant)}>{label}</span>
 }
 
 export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocker }: BomRowProps) {
@@ -380,9 +387,26 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
           />
         </div>
       </div>
-      <div className="mt-2 text-sm">
-        <span className="text-xs text-muted-foreground">Available: </span>
-        <AvailableCell row={row} />
+      <div className="mt-2 flex items-center justify-between gap-2 text-sm">
+        <div>
+          <span className="text-xs text-muted-foreground">Available: </span>
+          <AvailableCell row={row} />
+        </div>
+        {canUndo && (
+          // Deliberate sub-44px touch target: product asked for the Undo
+          // button to match the Consumed-badge height so the Available row
+          // stays a single line on mobile. xs button (h-6) sits inline.
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            onClick={handleUndo}
+            disabled={isUndoing}
+          >
+            {isUndoing ? <Loader2 className="size-3 animate-spin" /> : <Undo2 className="size-3" />}
+            Undo
+          </Button>
+        )}
       </div>
       {canMarkConsumed && (
         <Button
@@ -401,27 +425,6 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
             <>
               <CheckSquare className="mr-2 h-4 w-4" />
               Mark consumed
-            </>
-          )}
-        </Button>
-      )}
-      {canUndo && (
-        <Button
-          type="button"
-          variant="outline"
-          className="mt-3 min-h-[44px] w-full"
-          onClick={handleUndo}
-          disabled={isUndoing}
-        >
-          {isUndoing ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Undoing…
-            </>
-          ) : (
-            <>
-              <Undo2 className="mr-2 h-4 w-4" />
-              Undo
             </>
           )}
         </Button>

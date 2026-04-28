@@ -119,6 +119,16 @@ test.describe('BOM Consumption (Mark / Undo) + Clone Integration', () => {
     await expect(page.getByText(`Marked ${matName} as consumed`)).toBeVisible({ timeout: 5000 })
     // Available cell shows "Consumed"
     await expect(matRow.getByText('Consumed', { exact: true })).toBeVisible()
+    // qty-before-badge fix: qty appears BEFORE the Consumed badge,
+    // and is colored as 'ok' (text-step-completed) since available >= required.
+    // (We don't assert the exact qty number — client state may still show the
+    // pre-consumption snapshot until page reload; the structural ordering is
+    // the fix being verified here.)
+    const availableSpans = matRow.locator('td').nth(3).locator('> span > span')
+    await expect(availableSpans).toHaveCount(2)
+    await expect(availableSpans.nth(0)).toHaveText(/\d+\s*g/)
+    await expect(availableSpans.nth(0)).toHaveClass(/text-step-completed/)
+    await expect(availableSpans.nth(1)).toHaveText('Consumed')
     // Inventory decremented (200 - 50 = 150)
     await page.goto('/inventory')
     await page.waitForLoadState('networkidle')
@@ -167,6 +177,42 @@ test.describe('BOM Consumption (Mark / Undo) + Clone Integration', () => {
     await expect(page.getByRole('menuitem', { name: 'Mark consumed' })).toHaveCount(0)
     // Close the menu
     await page.keyboard.press('Escape')
+  })
+
+  test('mobile viewport: Undo button is inline with Available row (size xs)', async ({ page }) => {
+    test.setTimeout(60_000)
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto(projectUrl)
+    await page.waitForLoadState('networkidle')
+
+    // matName is NOT_CONSUMED at this point. On mobile, "Mark consumed" is a
+    // full-width button on the card (not in the dropdown).
+    const mobileCard = page
+      .locator('div.rounded-md.border')
+      .filter({ has: page.getByText(matName) })
+    await mobileCard.getByRole('button', { name: 'Mark consumed' }).click()
+    await expect(page.getByText(`Marked ${matName} as consumed`)).toBeVisible({ timeout: 5000 })
+
+    // The Available row contains the Undo button on the same line (not a
+    // full-width button below). Locate the flex container that holds both
+    // the "Available:" label and the Undo button.
+    const availableRow = mobileCard
+      .locator('div.flex.items-center.justify-between')
+      .filter({ hasText: /Available:/ })
+    await expect(availableRow).toBeVisible()
+    const undo = availableRow.getByRole('button', { name: /Undo/ })
+    await expect(undo).toBeVisible()
+    // size="xs" → h-6 (24px); we assert the rendered height is small enough
+    // to be considered "inline with the badge" (< 32px), not the previous 44px.
+    const undoHeight = await undo.evaluate((el) => (el as HTMLElement).offsetHeight)
+    expect(undoHeight).toBeLessThan(32)
+
+    // Restore state for the next (clone) test.
+    await undo.click()
+    await expect(page.getByText(`Reverted consumption of ${matName}`)).toBeVisible({
+      timeout: 5000,
+    })
+    await page.setViewportSize({ width: 1280, height: 720 })
   })
 
   test('clone project copies BOM rows with consumption state reset', async ({ page }) => {

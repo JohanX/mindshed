@@ -113,16 +113,37 @@ describe('renderAvailable', () => {
     })
   })
 
-  it('CONSUMED → consumed chip + live qty in secondaryLabel', () => {
+  it('CONSUMED → consumed chip + live qty (short variant when post-consumption qty < required, no "(N short)" suffix)', () => {
     expect(
       renderAvailable(linked({ required: 100, available: 0, consumptionState: 'CONSUMED' })),
-    ).toEqual({ label: 'Consumed', variant: 'consumed', secondaryLabel: '0 g' })
+    ).toEqual({
+      label: 'Consumed',
+      variant: 'consumed',
+      secondaryLabel: '0 g',
+      secondaryVariant: 'short',
+    })
   })
 
-  it('CONSUMED with non-zero remaining qty → secondaryLabel reflects live stock', () => {
+  it('CONSUMED with non-zero remaining qty → secondaryLabel reflects live stock (ok)', () => {
     expect(
       renderAvailable(linked({ required: 50, available: 250, consumptionState: 'CONSUMED' })),
-    ).toEqual({ label: 'Consumed', variant: 'consumed', secondaryLabel: '250 g' })
+    ).toEqual({
+      label: 'Consumed',
+      variant: 'consumed',
+      secondaryLabel: '250 g',
+      secondaryVariant: 'ok',
+    })
+  })
+
+  it('CONSUMED with available exactly equal to required → ok (>= boundary)', () => {
+    expect(
+      renderAvailable(linked({ required: 100, available: 100, consumptionState: 'CONSUMED' })),
+    ).toEqual({
+      label: 'Consumed',
+      variant: 'consumed',
+      secondaryLabel: '100 g',
+      secondaryVariant: 'ok',
+    })
   })
 
   it('CONSUMED with soft-deleted inventory → secondaryLabel is em-dash', () => {
@@ -130,13 +151,23 @@ describe('renderAvailable', () => {
       renderAvailable(
         linked({ required: 100, available: 0, consumptionState: 'CONSUMED', isDeleted: true }),
       ),
-    ).toEqual({ label: 'Consumed', variant: 'consumed', secondaryLabel: '—' })
+    ).toEqual({
+      label: 'Consumed',
+      variant: 'consumed',
+      secondaryLabel: '—',
+      secondaryVariant: 'missing',
+    })
   })
 
   it('CONSUMED with null inventory qty → secondaryLabel is em-dash', () => {
     expect(
       renderAvailable(linked({ required: 100, available: null, consumptionState: 'CONSUMED' })),
-    ).toEqual({ label: 'Consumed', variant: 'consumed', secondaryLabel: '—' })
+    ).toEqual({
+      label: 'Consumed',
+      variant: 'consumed',
+      secondaryLabel: '—',
+      secondaryVariant: 'missing',
+    })
   })
 
   it('soft-deleted inventory → missing em-dash', () => {

@@ -140,6 +140,11 @@ export type AvailableCell = {
   variant: AvailableVariant
   /** Live inventory quantity rendered alongside the badge for consumed rows. */
   secondaryLabel?: string
+  /**
+   * For CONSUMED rows: classification of `secondaryLabel` so the view can
+   * apply the same green/red/grey color treatment used on unconsumed rows.
+   */
+  secondaryVariant?: AvailableVariant
 }
 
 function formatQuantity(qty: number, unit: string | null): string {
@@ -159,9 +164,31 @@ function formatQuantity(qty: number, unit: string | null): string {
 export function renderAvailable(row: BomItemData): AvailableCell {
   if (row.consumptionState === 'CONSUMED') {
     const inv = row.inventoryItem
-    const secondaryLabel =
-      !inv || inv.isDeleted || inv.quantity === null ? '—' : formatQuantity(inv.quantity, row.unit)
-    return { label: 'Consumed', variant: 'consumed', secondaryLabel }
+    if (!inv || inv.isDeleted || inv.quantity === null) {
+      return {
+        label: 'Consumed',
+        variant: 'consumed',
+        secondaryLabel: '—',
+        secondaryVariant: 'missing',
+      }
+    }
+    // CONSUMED rows show the post-consumption inventory level. The "(N short)"
+    // suffix is suppressed here because the row is already satisfied — any
+    // shortfall is informational about future stock, not the current row.
+    if (inv.quantity < row.requiredQuantity) {
+      return {
+        label: 'Consumed',
+        variant: 'consumed',
+        secondaryLabel: formatQuantity(inv.quantity, row.unit),
+        secondaryVariant: 'short',
+      }
+    }
+    return {
+      label: 'Consumed',
+      variant: 'consumed',
+      secondaryLabel: formatQuantity(inv.quantity, row.unit),
+      secondaryVariant: 'ok',
+    }
   }
   const inv = row.inventoryItem
   if (!inv || inv.isDeleted || inv.quantity === null) {
