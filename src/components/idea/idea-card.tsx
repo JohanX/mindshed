@@ -10,7 +10,7 @@ import type { GalleryImage } from '@/components/image/image-gallery'
 import { getIdeaImage } from '@/actions/idea-image'
 import { showErrorToast } from '@/lib/toast'
 import { formatReferenceUrl } from '@/lib/idea-utils'
-import { hobbyColorWithAlpha } from '@/lib/hobby-color'
+import { hobbyColorWithAlpha, getReadableHobbyColor } from '@/lib/hobby-color'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
 import { ExternalLink, Loader2 } from 'lucide-react'
 
@@ -29,9 +29,10 @@ interface IdeaCardProps {
 }
 
 export function IdeaCard({ idea, hobby, showHobbyBadge = true }: IdeaCardProps) {
+  // FR107: darkened-if-light hobby color so watermark stays visible.
   const watermarkIcon = renderHobbyIcon(hobby.icon, {
     className: 'h-10 w-10 watermark-icon',
-    style: { color: hobby.color },
+    style: { color: getReadableHobbyColor(hobby.color) },
   })
 
   const [lightboxOpen, setLightboxOpen] = useState(false)

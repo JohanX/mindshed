@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { ProjectStatusBadge } from '@/components/project/project-status-badge'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
-import { hobbyColorWithAlpha } from '@/lib/hobby-color'
+import { hobbyColorWithAlpha, getReadableHobbyColor } from '@/lib/hobby-color'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
 import type { DerivedProjectStatus } from '@/lib/project-status'
 
@@ -27,10 +27,12 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project, hobby, showHobbyBadge }: ProjectCardProps) {
+  // FR107: darkened-if-light hobby color so the watermark icon stays visible
+  // against the default card background even with pale hobby colors.
   const watermarkIcon = hobby
     ? renderHobbyIcon(hobby.icon, {
         className: 'h-10 w-10 watermark-icon',
-        style: { color: hobby.color },
+        style: { color: getReadableHobbyColor(hobby.color) },
       })
     : null
 

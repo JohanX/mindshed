@@ -8,7 +8,7 @@ import { BrainIcon } from '@/components/icons/brain-icon'
 import { cn } from '@/lib/utils'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
 import { getHobbyContext } from '@/lib/hobby-utils'
-import { getContrastTextColor } from '@/lib/hobby-color'
+import { getContrastTextColor, getReadableHobbyColor } from '@/lib/hobby-color'
 import { HobbyFormDialog } from '@/components/hobby/hobby-form'
 import { ThemeToggle } from '@/components/theme-toggle'
 import type { HobbyWithCounts } from '@/lib/schemas/hobby'
@@ -95,7 +95,11 @@ export function TopBar({ hobbies }: TopBarProps) {
                   <span
                     className="inline-block w-3 h-3 rounded-full shrink-0"
                     style={{
-                      backgroundColor: activeHobby ? textColor : hobby.color,
+                      // FR107: when on the default navbar (light bg), darken
+                      // light hobby colors so the dot stays visible. When inside
+                      // an active hobby tab (already on hobby-colored bg), use
+                      // the contrasting textColor to stand out from the bg.
+                      backgroundColor: activeHobby ? textColor : getReadableHobbyColor(hobby.color),
                       opacity: isActive ? 1 : 0.6,
                     }}
                   />

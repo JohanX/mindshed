@@ -8,6 +8,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { getReadableHobbyColor } from '@/lib/hobby-color'
 import {
   Select,
   SelectContent,
@@ -112,7 +113,7 @@ export function IdeaFormDialog({ hobbyId, hobbies }: IdeaFormDialogProps) {
                       <span className="flex items-center gap-2">
                         <span
                           className="inline-block h-3 w-3 rounded-full"
-                          style={{ backgroundColor: hobby.color }}
+                          style={{ backgroundColor: getReadableHobbyColor(hobby.color) }}
                         />
                         {hobby.name}
                       </span>

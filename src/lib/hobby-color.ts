@@ -99,6 +99,23 @@ export function getContrastTextColor(color: string): 'white' | 'black' {
 }
 
 /**
+ * FR107 Strategy B helper — return a version of the hobby color that's
+ * readable when used as a foreground (text/icon) on the default page
+ * background.
+ *
+ * If the input color's luminance is above the readability threshold
+ * (0.55), darken it to 0.45 (just below the threshold) so the foreground
+ * stays visible against white/light page backgrounds. Dark hobby colors
+ * pass through unchanged. Hue and saturation are preserved so the visual
+ * tie to the hobby is intact.
+ */
+export function getReadableHobbyColor(color: string): string {
+  const { h, s, l } = parseColor(color)
+  if (l <= 0.55) return color
+  return hslString(h, s, 0.45)
+}
+
+/**
  * Generate CSS custom property records for both light and dark hobby palettes.
  * The hobby layout sets both sets of vars; .dark selector activates the right ones.
  */

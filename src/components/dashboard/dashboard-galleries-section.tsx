@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
-import { hobbyColorWithAlpha } from '@/lib/hobby-color'
+import { hobbyColorWithAlpha, getReadableHobbyColor } from '@/lib/hobby-color'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
 import { Copy, Check, Globe } from 'lucide-react'
 import type { PublicGallery } from '@/lib/schemas/dashboard'
@@ -56,9 +56,11 @@ export function DashboardGalleriesSection({ galleries }: DashboardGalleriesSecti
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {galleries.map((gallery) => {
+          // FR107: darkened-if-light hobby color so watermark stays visible.
+          const readableHobbyColor = getReadableHobbyColor(gallery.hobby.color)
           const watermarkIcon = renderHobbyIcon(gallery.hobby.icon, {
             className: 'h-10 w-10 watermark-icon',
-            style: { color: gallery.hobby.color },
+            style: { color: readableHobbyColor },
           })
           const thumbUrls = gallery.thumbnails
 
@@ -99,7 +101,7 @@ export function DashboardGalleriesSection({ galleries }: DashboardGalleriesSecti
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs font-medium hover:underline"
-                        style={{ color: gallery.hobby.color }}
+                        style={{ color: readableHobbyColor }}
                       >
                         Journey
                       </a>
@@ -113,7 +115,7 @@ export function DashboardGalleriesSection({ galleries }: DashboardGalleriesSecti
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs font-medium hover:underline"
-                        style={{ color: gallery.hobby.color }}
+                        style={{ color: readableHobbyColor }}
                       >
                         Result
                       </a>

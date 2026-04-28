@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
+import { getReadableHobbyColor } from '@/lib/hobby-color'
 
 type HobbyIdentityProps = {
   hobby: {
@@ -48,9 +49,12 @@ export function HobbyIdentity({ hobby, variant, className, children }: HobbyIden
       )
 
     case 'full': {
+      // FR107: render the icon with a darkened-if-light hobby color so it
+      // remains visible against the default page background. Light-yellow
+      // hobbies would otherwise produce an invisible icon on white bg.
       const iconElement = renderHobbyIcon(hobby.icon, {
         className: 'h-5 w-5',
-        style: { color: hobby.color },
+        style: { color: getReadableHobbyColor(hobby.color) },
       })
       return (
         <div className={cn('flex items-center gap-2', className)}>

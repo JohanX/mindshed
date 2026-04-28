@@ -4,6 +4,7 @@ import {
   generateHobbyStyleVars,
   hobbyColorWithAlpha,
   getContrastTextColor,
+  getReadableHobbyColor,
 } from '@/lib/hobby-color'
 
 describe('generateHobbyPalette', () => {
@@ -165,6 +166,25 @@ describe('getContrastTextColor', () => {
 
   it('returns black for hex white', () => {
     expect(getContrastTextColor('#FFFFFF')).toBe('black')
+  })
+})
+
+describe('getReadableHobbyColor', () => {
+  it('returns dark hobby colors unchanged (already readable on white bg)', () => {
+    expect(getReadableHobbyColor('hsl(25, 45%, 40%)')).toBe('hsl(25, 45%, 40%)') // Walnut
+    expect(getReadableHobbyColor('hsl(215, 40%, 50%)')).toBe('hsl(215, 40%, 50%)') // Denim
+    expect(getReadableHobbyColor('hsl(15, 55%, 55%)')).toBe('hsl(15, 55%, 55%)') // Terracotta — at threshold
+  })
+
+  it('darkens light hobby colors to lightness=45%', () => {
+    expect(getReadableHobbyColor('hsl(50, 90%, 80%)')).toBe('hsl(50, 90%, 45%)') // Light yellow
+    expect(getReadableHobbyColor('hsl(200, 55%, 65%)')).toBe('hsl(200, 55%, 45%)') // Sky
+    expect(getReadableHobbyColor('hsl(48, 70%, 62%)')).toBe('hsl(48, 70%, 45%)') // Sunshine
+  })
+
+  it('preserves hue and saturation when darkening', () => {
+    // 220 deg, 80% sat, 75% lightness → darkened to 45% but keeps hue + sat.
+    expect(getReadableHobbyColor('hsl(220, 80%, 75%)')).toBe('hsl(220, 80%, 45%)')
   })
 })
 
