@@ -168,10 +168,16 @@ export function BomSection({
             aria-hidden
             className="h-4 w-4 shrink-0 transition-transform group-open:rotate-0 -rotate-90"
           />
-          <h3 id="bom-section-title" className="text-base font-semibold">
-            Bill of Materials
-          </h3>
-          {pillMemo}
+          {/*
+            On mobile (<sm), stack title above the status pill so the title
+            fits on one line. From sm: up, lay them inline as before.
+          */}
+          <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3 min-w-0">
+            <h3 id="bom-section-title" className="text-base font-semibold">
+              Bill of Materials
+            </h3>
+            {pillMemo}
+          </div>
         </div>
         <Button
           type="button"
