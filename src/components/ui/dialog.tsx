@@ -25,17 +25,28 @@ function DialogClose({ ...props }: React.ComponentProps<typeof DialogPrimitive.C
 
 function DialogOverlay({
   className,
+  children,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
   return (
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        'fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0',
+        // FR119 (Story 26.1, revised): the overlay is the scroll container,
+        // not the dialog content. This is the community-validated pattern
+        // (shadcn-ui issue #16) that sidesteps iOS Safari/Chrome's quirks
+        // around `position: fixed` + `top: 50%` versus the visual viewport
+        // when the soft keyboard is open. Layout: items-start on mobile so
+        // the dialog anchors near the top (reachable + scrollable through
+        // the overlay even with the keyboard up); items-center on sm+ for
+        // the classic vertically-centered modal.
+        'fixed inset-0 isolate z-50 flex items-start justify-center overflow-y-auto bg-black/10 p-4 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 sm:items-center',
         className,
       )}
       {...props}
-    />
+    >
+      {children}
+    </DialogPrimitive.Overlay>
   )
 }
 
@@ -49,35 +60,31 @@ function DialogContent({
 }) {
   return (
     <DialogPortal>
-      <DialogOverlay />
-      <DialogPrimitive.Content
-        data-slot="dialog-content"
-        className={cn(
-          // FR119 (Story 26.1): on mobile, anchor the dialog to the top
-          // (with a small margin) instead of vertically centering. Reason:
-          // iOS resolves `top: 50%` against the LAYOUT viewport, so even
-          // with a `dvh`-based max-height the centered dialog still sits
-          // in the middle of the full screen — its bottom (and the
-          // focused input) ends up behind the keyboard with no way to
-          // scroll up. Anchoring to top + sizing to `dvh` keeps the whole
-          // dialog reachable, and `overflow-y-auto` lets long forms
-          // scroll within the dialog. Desktop (sm+) keeps the original
-          // vertically-centered layout via `sm:` overrides.
-          'fixed top-4 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] max-h-[calc(100dvh-2rem)] overflow-y-auto -translate-x-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:top-1/2 sm:-translate-y-1/2 sm:max-h-[90dvh] sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
-          className,
-        )}
-        {...props}
-      >
-        {children}
-        {showCloseButton && (
-          <DialogPrimitive.Close data-slot="dialog-close" asChild>
-            <Button variant="ghost" className="absolute top-2 right-2" size="icon-sm">
-              <XIcon />
-              <span className="sr-only">Close</span>
-            </Button>
-          </DialogPrimitive.Close>
-        )}
-      </DialogPrimitive.Content>
+      <DialogOverlay>
+        <DialogPrimitive.Content
+          data-slot="dialog-content"
+          className={cn(
+            // Content is a normal flow child of the scrolling overlay
+            // (NOT position:fixed, NOT translated). The overlay handles
+            // overflow scroll; content sizes intrinsically and grows as
+            // needed. `relative` needed so the absolutely-positioned
+            // close button anchors here.
+            'relative grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
+            className,
+          )}
+          {...props}
+        >
+          {children}
+          {showCloseButton && (
+            <DialogPrimitive.Close data-slot="dialog-close" asChild>
+              <Button variant="ghost" className="absolute top-2 right-2" size="icon-sm">
+                <XIcon />
+                <span className="sr-only">Close</span>
+              </Button>
+            </DialogPrimitive.Close>
+          )}
+        </DialogPrimitive.Content>
+      </DialogOverlay>
     </DialogPortal>
   )
 }
