@@ -12,6 +12,15 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Loader2 } from 'lucide-react'
 
+// Build the progressive form for the loading label by stripping a single
+// trailing silent 'e' before appending 'ing'. Handles the common confirm
+// verbs — "Delete" → "Deleting", "Save" → "Saving", "Remove" → "Removing".
+// Pass an explicit `loadingLabel` for irregular verbs.
+function defaultLoadingLabel(confirmLabel: string): string {
+  const stem = confirmLabel.endsWith('e') ? confirmLabel.slice(0, -1) : confirmLabel
+  return `${stem}ing...`
+}
+
 interface ConfirmDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -60,7 +69,7 @@ export function ConfirmDialog({
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                {loadingLabel ?? `${confirmLabel}ing...`}
+                {loadingLabel ?? defaultLoadingLabel(confirmLabel)}
               </>
             ) : (
               confirmLabel
