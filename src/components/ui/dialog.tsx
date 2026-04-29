@@ -26,23 +26,25 @@ function DialogClose({ ...props }: React.ComponentProps<typeof DialogPrimitive.C
 function DialogOverlay({
   className,
   children,
+  style,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
   return (
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        // FR119 (Story 26.1, revised): the overlay is the scroll container,
-        // not the dialog content. This is the community-validated pattern
-        // (shadcn-ui issue #16) that sidesteps iOS Safari/Chrome's quirks
-        // around `position: fixed` + `top: 50%` versus the visual viewport
-        // when the soft keyboard is open. Layout: items-start on mobile so
-        // the dialog anchors near the top (reachable + scrollable through
-        // the overlay even with the keyboard up); items-center on sm+ for
-        // the classic vertically-centered modal.
-        'fixed inset-0 isolate z-50 flex items-start justify-center overflow-y-auto bg-black/10 p-4 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 sm:items-center',
+        // FR119 (Story 26.1): scrollable-overlay pattern (shadcn-ui#16) —
+        // the overlay is the scroll container, not the content. The
+        // overlay's bottom edge is shrunk by `--kb-inset` so on iOS the
+        // visible scrollable area sits above the soft keyboard (the
+        // visualViewport-driven inset is set by ViewportInsetTracker).
+        // Layout: items-start on mobile so the dialog anchors near the
+        // top and the user can scroll the bottom of a tall dialog into
+        // view; items-center on sm+ for the classic centred modal.
+        'fixed inset-x-0 top-0 isolate z-50 flex items-start justify-center overflow-y-auto bg-black/10 p-4 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 sm:items-center',
         className,
       )}
+      style={{ bottom: 'var(--kb-inset, 0px)', ...style }}
       {...props}
     >
       {children}

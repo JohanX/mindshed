@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
+import { ViewportInsetTracker } from '@/components/layout/viewport-inset-tracker'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -8,16 +9,14 @@ export const metadata: Metadata = {
   description: 'A hobby project tracker for crafters and makers',
 }
 
-// Story 26.1: `interactiveWidget: 'resizes-content'` tells iOS Safari /
-// Chrome to resize the *layout* viewport (not just the visual one) when
-// the soft keyboard appears. Without this, `position: fixed` overlays
-// stay anchored to the full layout height and their bottom edge sits
-// permanently behind the keyboard — so even with `overflow-y-auto` on
-// the dialog overlay (the shadcn-ui#16 pattern) the user can't scroll
-// the dialog's bottom into the visible area above the keyboard. With
-// it, `inset-0` / `100dvh` shrink to match the visible area, scroll
-// works as expected, and the bottom-anchored mobile nav repositions
-// above the keyboard instead of being obscured by it.
+// Story 26.1: `interactiveWidget: 'resizes-content'` is the standards-
+// track way to make the browser resize the *layout* viewport when the
+// soft keyboard appears. Chrome (Android) honours it; iOS Safari /
+// Chrome do not in practice as of iOS 18, so we additionally drive a
+// CSS `--kb-inset` variable from the visualViewport API (see
+// ViewportInsetTracker) and consume it in the dialog overlay. The
+// viewport hint is left in place because it costs nothing and helps
+// browsers that DO honour it.
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
@@ -33,6 +32,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans antialiased">
         <ThemeProvider>
+          <ViewportInsetTracker />
           {children}
           <Toaster />
         </ThemeProvider>
