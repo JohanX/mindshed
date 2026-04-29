@@ -367,8 +367,10 @@ describe('getStepImages', () => {
       expect(result.data.images[0].displayUrl).toBe(
         'https://r2.example.com/bucket/steps/abc/def.jpg',
       )
+      // Story 26.3: thumbnailUrl uses PHOTO_GRID (160) for the small
+      // photo-grid surface. Lightbox / full views use displayUrl (no width).
       expect(result.data.images[0].thumbnailUrl).toBe(
-        'https://r2.example.com/bucket/steps/abc/def.jpg?w=800',
+        'https://r2.example.com/bucket/steps/abc/def.jpg?w=160',
       )
     }
   })

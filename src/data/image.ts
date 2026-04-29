@@ -70,7 +70,7 @@ export async function findStepImagesWithDisplayUrl(
       createdAt: img.createdAt,
       displayUrl: isUpload ? adapter.getPublicUrl(img.storageKey!) : fallback(img),
       thumbnailUrl: isUpload
-        ? adapter.getThumbnailUrl(img.storageKey!, THUMBNAIL_WIDTH.GRID)
+        ? adapter.getThumbnailUrl(img.storageKey!, THUMBNAIL_WIDTH.PHOTO_GRID)
         : fallback(img),
     }
   })
