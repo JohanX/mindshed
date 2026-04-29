@@ -35,9 +35,17 @@ import {
 import { uploadImage } from '@/lib/upload-image'
 import { IMAGE_LIMITS } from '@/lib/constants/image-limits'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
-import { Plus, Loader2, Trash2 } from 'lucide-react'
+import { Plus, Loader2, Trash2, X } from 'lucide-react'
 import { HobbyToggleChips } from './hobby-toggle-chips'
 import { ImageFormInputs } from '@/components/image/image-form-inputs'
+
+// A photo staged in the create dialog before the inventory item exists.
+// `previewUrl` on the file variant holds a `URL.createObjectURL` blob URL
+// that's revoked when the staged photo is removed, when staging is reset,
+// or after the photo is committed to the server.
+type StagedPhoto =
+  | { id: string; kind: 'file'; file: File; previewUrl: string }
+  | { id: string; kind: 'url'; url: string }
 
 /**
  * Story 27.1 (FR121): unified inventory-item form covering both CREATE
@@ -83,9 +91,13 @@ export function InventoryItemFormDialog({
   )
   const [isPending, startTransition] = useTransition()
 
-  // Create-mode only: staged photo state + idempotency cache.
-  const [stagedFile, setStagedFile] = useState<File | null>(null)
-  const [stagedUrl, setStagedUrl] = useState<string | null>(null)
+  // Create-mode only: staged photos queue + idempotency cache. Each
+  // staged photo gets a local UUID for keying and individual unstage. On
+  // submit, the queue is processed in order; successful uploads remove
+  // entries one-by-one so that retries after partial failure resume from
+  // exactly where they left off (FR120 idempotent invariant: at most ONE
+  // item per dialog session, photos uploaded incrementally).
+  const [stagedPhotos, setStagedPhotos] = useState<StagedPhoto[]>([])
   const [createdItemId, setCreatedItemId] = useState<string | null>(null)
 
   // Edit-mode only: photo grid state.
@@ -95,7 +107,13 @@ export function InventoryItemFormDialog({
   const [isPhotoDeleting, startPhotoDeleteTransition] = useTransition()
 
   const isInRetryState = createdItemId !== null
-  const hasStagedPhoto = stagedFile !== null || stagedUrl !== null
+  const stagedAtCap = stagedPhotos.length >= IMAGE_LIMITS.inventory
+
+  function revokeStagedFileUrls(photos: StagedPhoto[]) {
+    for (const staged of photos) {
+      if (staged.kind === 'file') URL.revokeObjectURL(staged.previewUrl)
+    }
+  }
 
   function resetCreateState() {
     setName('')
@@ -104,8 +122,8 @@ export function InventoryItemFormDialog({
     setUnit('')
     setNotes('')
     setSelectedHobbyIds([])
-    setStagedFile(null)
-    setStagedUrl(null)
+    revokeStagedFileUrls(stagedPhotos)
+    setStagedPhotos([])
     setCreatedItemId(null)
   }
 
@@ -174,18 +192,27 @@ export function InventoryItemFormDialog({
     )
   }
 
-  // ----- Stage handlers (mutually exclusive: stage one, clear the other) -----
+  // ----- Stage handlers (append to queue; cap enforced by parent UI) -----
   function handleStageFile(file: File) {
-    setStagedFile(file)
-    setStagedUrl(null)
+    setStagedPhotos((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        kind: 'file',
+        file,
+        previewUrl: URL.createObjectURL(file),
+      },
+    ])
   }
   function handleStageUrl(url: string) {
-    setStagedUrl(url)
-    setStagedFile(null)
+    setStagedPhotos((prev) => [...prev, { id: crypto.randomUUID(), kind: 'url', url }])
   }
-  function handleClearStaged() {
-    setStagedFile(null)
-    setStagedUrl(null)
+  function handleUnstage(stagedId: string) {
+    setStagedPhotos((prev) => {
+      const removed = prev.find((staged) => staged.id === stagedId)
+      if (removed?.kind === 'file') URL.revokeObjectURL(removed.previewUrl)
+      return prev.filter((staged) => staged.id !== stagedId)
+    })
   }
 
   // ----- Submit -----
@@ -227,6 +254,7 @@ export function InventoryItemFormDialog({
   function handleCreateSubmit() {
     startTransition(async () => {
       let itemId = createdItemId
+      const hadStagedPhotosAtStart = stagedPhotos.length > 0
 
       // Step 1: create the inventory item if not yet created in this session.
       if (itemId === null) {
@@ -252,29 +280,32 @@ export function InventoryItemFormDialog({
         setCreatedItemId(itemId)
       }
 
-      // Step 2: attach the staged photo (File or URL) if any.
-      if (stagedFile) {
-        const upload = await uploadImage({
-          kind: 'inventory',
-          parentId: itemId,
-          file: stagedFile,
-        })
-        if (!upload.success) {
-          showErrorToast(`Photo upload failed: ${upload.error}`)
+      // Step 2: attach each staged photo, in order. On success, drop the
+      // entry from state so retries (after partial failure) resume from
+      // exactly where they left off.
+      const queue = stagedPhotos
+      for (const staged of queue) {
+        const result =
+          staged.kind === 'file'
+            ? await uploadImage({
+                kind: 'inventory',
+                parentId: itemId,
+                file: staged.file,
+              })
+            : await addInventoryItemImageLink({
+                inventoryItemId: itemId,
+                url: staged.url,
+              })
+        if (!result.success) {
+          const action = staged.kind === 'file' ? 'upload' : 'link'
+          showErrorToast(`Photo ${action} failed: ${result.error}`)
           return
         }
-      } else if (stagedUrl) {
-        const linkResult = await addInventoryItemImageLink({
-          inventoryItemId: itemId,
-          url: stagedUrl,
-        })
-        if (!linkResult.success) {
-          showErrorToast(`Photo link failed: ${linkResult.error}`)
-          return
-        }
+        if (staged.kind === 'file') URL.revokeObjectURL(staged.previewUrl)
+        setStagedPhotos((prev) => prev.filter((entry) => entry.id !== staged.id))
       }
 
-      showSuccessToast(stagedFile || stagedUrl ? 'Item added with photo' : 'Item added')
+      showSuccessToast(hadStagedPhotosAtStart ? 'Item added with photos' : 'Item added')
       resetCreateState()
       handleOpenChange(false)
     })
@@ -288,7 +319,7 @@ export function InventoryItemFormDialog({
       return 'Adding…'
     }
     if (isEditMode) return 'Save'
-    if (isInRetryState) return hasStagedPhoto ? 'Retry photo upload' : 'Done'
+    if (isInRetryState) return stagedPhotos.length > 0 ? 'Retry photo upload' : 'Done'
     return 'Add Item'
   }
 
@@ -391,21 +422,56 @@ export function InventoryItemFormDialog({
           onToggle={fieldsDisabled ? () => {} : toggleHobby}
         />
 
-        {/* Photo input: staged in create mode, live in edit mode */}
+        {/* Create-mode photo section: controls on top, staged-photo grid
+            below — same layout as edit mode (photos accumulate beneath
+            the Upload/Paste-Link controls until the cap is reached). */}
         {!isEditMode ? (
-          <div className="space-y-2">
-            <span className="text-sm font-medium">Photo</span>
+          <div className="space-y-2" data-testid="staged-photos-section">
+            <span className="text-sm font-medium">Photos</span>
             <span className="ml-2 text-xs text-muted-foreground">optional</span>
-            <ImageFormInputs
-              mode="staged"
-              entityKind="inventory"
-              stagedFile={stagedFile}
-              stagedUrl={stagedUrl}
-              onStageFile={handleStageFile}
-              onStageUrl={handleStageUrl}
-              onClear={handleClearStaged}
-              disabled={isPending}
-            />
+
+            {stagedAtCap ? (
+              <p className="text-xs text-muted-foreground">
+                Image limit reached ({IMAGE_LIMITS.inventory}). Remove a photo to add another.
+              </p>
+            ) : (
+              <ImageFormInputs
+                mode="staged"
+                entityKind="inventory"
+                onStageFile={handleStageFile}
+                onStageUrl={handleStageUrl}
+                disabled={isPending}
+              />
+            )}
+
+            {stagedPhotos.length > 0 && (
+              <div
+                className="grid grid-cols-[repeat(auto-fill,80px)] gap-2"
+                data-testid="staged-photo-grid"
+              >
+                {stagedPhotos.map((staged) => (
+                  <div key={staged.id} className="relative h-20 w-20 rounded-md">
+                    <div className="h-full w-full overflow-hidden rounded-md">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={staged.kind === 'file' ? staged.previewUrl : staged.url}
+                        alt="Staged photo preview"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="absolute -right-2 -top-2 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white"
+                      aria-label="Remove staged photo"
+                      onClick={() => handleUnstage(staged.id)}
+                      disabled={isPending}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ) : null}
 
@@ -460,7 +526,7 @@ export function InventoryItemFormDialog({
                   </div>
                   <button
                     type="button"
-                    className="absolute -right-2 -top-2 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                    className="absolute -right-2 -top-2 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white"
                     aria-label="Delete photo"
                     onClick={() => setDeletePhotoId(photo.id)}
                   >

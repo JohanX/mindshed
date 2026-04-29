@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Loader2, Upload, X } from 'lucide-react'
+import { Loader2, Upload } from 'lucide-react'
 import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES } from '@/lib/constants/image-upload'
 import { uploadImage, type ImageKind } from '@/lib/upload-image'
 import { addInventoryItemImageLink } from '@/actions/inventory-image'
@@ -13,44 +13,35 @@ import { addIdeaImageLinkSchema } from '@/lib/schemas/idea-image'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
 
 /**
- * Story 27.1 (FR121): unified photo-input subcomponent shared by the
- * inventory item form and (in 27.2) the idea form. Replaces the narrower
- * `staged-photo-input.tsx` from Story 26.2 — adds Paste/Link parity AND
- * the live-mode that the edit dialogs use.
+ * Story 27.1 (FR121): unified photo-input controls — Upload + Paste/Link.
+ * Renders only the input affordances (no preview, no list — the parent
+ * owns the photo grid in both create and edit flows).
  *
  * Two modes via discriminated union on `mode`:
  *
- * - `mode='staged'` (create flow): the entity does not yet exist, so
- *   actions cannot be fired. The component STAGES the user's choice
- *   (File OR URL) in the parent's state via `onStageFile` / `onStageUrl`.
- *   The parent commits the staged value after the entity is created
- *   (see FR120 idempotent atomic-create-with-retry pattern in
- *   `inventory-item-form.tsx`). File and URL slots are mutually
- *   exclusive — the parent's stage handlers MUST clear the other slot
- *   when staging one (e.g. `onStageFile` calls
- *   `setStagedFile(file); setStagedUrl(null)`).
+ * - `mode='staged'` (create flow): the entity does not yet exist. The
+ *   component fires `onStageFile` / `onStageUrl` with the picked value
+ *   and the parent appends it to its staged-photos list. The parent
+ *   renders the staged-photos grid (with X-icon corner delete) just like
+ *   the edit-mode existing-photos grid — same look, different action.
  *
  * - `mode='live'` (edit flow): the entity exists, so the component fires
- *   the appropriate server action immediately — `uploadImage` for files,
+ *   the appropriate action immediately — `uploadImage` for files,
  *   `addInventoryItemImageLink` / `addIdeaImageLink` for URLs (whichever
  *   matches `entityKind`). Calls `onChange` after success so the parent
- *   can refetch / refresh.
+ *   can refetch.
  *
- * Renders TWO input affordances only — Upload + Paste/Link. NO dedicated
- * Camera / Take Photo button: `<input type="file" accept="image/*">`
- * already surfaces iOS's native action sheet ("Take Photo or Video" /
- * "Photo Library" / "Choose Files"), and forcing `capture="environment"`
- * on the picker denies users the library option.
+ * NO dedicated Camera / Take Photo button: `<input type="file"
+ * accept="image/*">` already surfaces iOS's native action sheet ("Take
+ * Photo or Video" / "Photo Library" / "Choose Files"), and forcing
+ * `capture="environment"` on the picker denies users the library option.
  */
 
 type StagedModeProps = {
   mode: 'staged'
   entityKind: ImageKind
-  stagedFile: File | null
-  stagedUrl: string | null
   onStageFile: (file: File) => void
   onStageUrl: (url: string) => void
-  onClear: () => void
   disabled?: boolean
 }
 
@@ -65,75 +56,6 @@ type LiveModeProps = {
 export type ImageFormInputsProps = StagedModeProps | LiveModeProps
 
 export function ImageFormInputs(props: ImageFormInputsProps) {
-  const isStaged = props.mode === 'staged'
-  const stagedFile = isStaged ? props.stagedFile : null
-  const stagedUrl = isStaged ? props.stagedUrl : null
-  const stagedAny = isStaged && (stagedFile !== null || stagedUrl !== null)
-
-  return (
-    <div className="space-y-2" data-testid="image-form-inputs">
-      {stagedAny ? (
-        <StagedPreview
-          stagedFile={stagedFile}
-          stagedUrl={stagedUrl}
-          onClear={(props as StagedModeProps).onClear}
-          disabled={(props as StagedModeProps).disabled}
-        />
-      ) : (
-        <ImageInputControls {...props} />
-      )}
-    </div>
-  )
-}
-
-function StagedPreview({
-  stagedFile,
-  stagedUrl,
-  onClear,
-  disabled,
-}: {
-  stagedFile: File | null
-  stagedUrl: string | null
-  onClear: () => void
-  disabled?: boolean
-}) {
-  const filePreviewUrl = useMemo(
-    () => (stagedFile ? URL.createObjectURL(stagedFile) : null),
-    [stagedFile],
-  )
-  useEffect(() => {
-    return () => {
-      if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl)
-    }
-  }, [filePreviewUrl])
-
-  const previewSrc = filePreviewUrl ?? stagedUrl ?? ''
-
-  return (
-    <div className="flex items-center gap-3" data-testid="image-form-inputs-preview">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={previewSrc}
-        alt="Staged photo preview"
-        className="h-16 w-16 rounded-md object-cover ring-1 ring-border"
-      />
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="min-h-[44px]"
-        onClick={onClear}
-        disabled={disabled}
-        aria-label="Remove staged photo"
-      >
-        <X className="mr-1 h-3.5 w-3.5" />
-        Remove
-      </Button>
-    </div>
-  )
-}
-
-function ImageInputControls(props: ImageFormInputsProps) {
   const uploadInputRef = useRef<HTMLInputElement>(null)
   const linkInputRef = useRef<HTMLInputElement>(null)
   const [linkExpanded, setLinkExpanded] = useState(false)
@@ -160,6 +82,7 @@ function ImageInputControls(props: ImageFormInputsProps) {
 
     if (props.mode === 'staged') {
       props.onStageFile(file)
+      if (uploadInputRef.current) uploadInputRef.current.value = ''
       return
     }
 
@@ -264,95 +187,97 @@ function ImageInputControls(props: ImageFormInputsProps) {
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
-      <input
-        ref={uploadInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        data-testid="image-form-inputs-file"
-        onChange={(event) => handleFile(event.target.files?.[0])}
-      />
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="min-h-[44px]"
-        disabled={disabled || isUploadingFile}
-        onClick={() => uploadInputRef.current?.click()}
-      >
-        {isUploadingFile ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-          <Upload className="mr-2 h-4 w-4" />
-        )}
-        Upload
-      </Button>
-
-      {!linkExpanded ? (
+    <div className="space-y-2" data-testid="image-form-inputs">
+      <div className="flex flex-wrap gap-2">
+        <input
+          ref={uploadInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          data-testid="image-form-inputs-file"
+          onChange={(event) => handleFile(event.target.files?.[0])}
+        />
         <Button
           type="button"
           variant="outline"
           size="sm"
           className="min-h-[44px]"
-          disabled={disabled}
-          onClick={() => {
-            setLinkExpanded(true)
-            requestAnimationFrame(() => linkInputRef.current?.focus())
-          }}
-          data-testid="image-form-inputs-link-prompt"
+          disabled={disabled || isUploadingFile}
+          onClick={() => uploadInputRef.current?.click()}
         >
-          Paste Image / Link
+          {isUploadingFile ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Upload className="mr-2 h-4 w-4" />
+          )}
+          Upload
         </Button>
-      ) : (
-        <div className="w-full space-y-2">
-          <Input
-            ref={linkInputRef}
-            type="url"
-            value={linkUrl}
-            onChange={(event) => setLinkUrl(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault()
-                handleLinkSave()
-              }
-              if (event.key === 'Escape') {
-                event.preventDefault()
-                handleLinkCancel()
-              }
-            }}
-            onPaste={handlePaste}
-            placeholder={isUploadingFile ? 'Uploading pasted image…' : 'Paste image or URL'}
-            disabled={disabled || isLinkSaving || isUploadingFile}
-            aria-invalid={linkError ? true : undefined}
-            data-testid="image-form-inputs-link-input"
-          />
-          {linkError && <p className="text-sm text-destructive">{linkError}</p>}
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              size="sm"
-              className="min-h-[44px]"
-              onClick={handleLinkSave}
-              disabled={disabled || isLinkSaving}
-            >
-              {isLinkSaving ? 'Saving…' : 'Save'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="min-h-[44px]"
-              onClick={handleLinkCancel}
-              disabled={disabled || isLinkSaving}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      )}
 
-      {fileError && <p className="w-full text-sm text-destructive">{fileError}</p>}
+        {!linkExpanded ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="min-h-[44px]"
+            disabled={disabled}
+            onClick={() => {
+              setLinkExpanded(true)
+              requestAnimationFrame(() => linkInputRef.current?.focus())
+            }}
+            data-testid="image-form-inputs-link-prompt"
+          >
+            Paste Image / Link
+          </Button>
+        ) : (
+          <div className="w-full space-y-2">
+            <Input
+              ref={linkInputRef}
+              type="url"
+              value={linkUrl}
+              onChange={(event) => setLinkUrl(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  handleLinkSave()
+                }
+                if (event.key === 'Escape') {
+                  event.preventDefault()
+                  handleLinkCancel()
+                }
+              }}
+              onPaste={handlePaste}
+              placeholder={isUploadingFile ? 'Uploading pasted image…' : 'Paste image or URL'}
+              disabled={disabled || isLinkSaving || isUploadingFile}
+              aria-invalid={linkError ? true : undefined}
+              data-testid="image-form-inputs-link-input"
+            />
+            {linkError && <p className="text-sm text-destructive">{linkError}</p>}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                className="min-h-[44px]"
+                onClick={handleLinkSave}
+                disabled={disabled || isLinkSaving}
+              >
+                {isLinkSaving ? 'Saving…' : 'Save'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="min-h-[44px]"
+                onClick={handleLinkCancel}
+                disabled={disabled || isLinkSaving}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {fileError && <p className="text-sm text-destructive">{fileError}</p>}
     </div>
   )
 }

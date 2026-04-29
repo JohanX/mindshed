@@ -33,21 +33,17 @@ beforeEach(() => {
 })
 
 describe('ImageFormInputs — staged mode', () => {
-  it('renders Upload + Paste/Link controls when nothing is staged', () => {
+  it('renders Upload + Paste/Link controls', () => {
     render(
       <ImageFormInputs
         mode="staged"
         entityKind="inventory"
-        stagedFile={null}
-        stagedUrl={null}
         onStageFile={vi.fn()}
         onStageUrl={vi.fn()}
-        onClear={vi.fn()}
       />,
     )
     expect(screen.getByRole('button', { name: /^upload$/i })).toBeInTheDocument()
     expect(screen.getByTestId('image-form-inputs-link-prompt')).toBeInTheDocument()
-    expect(screen.queryByTestId('image-form-inputs-preview')).not.toBeInTheDocument()
   })
 
   it('does NOT render a Camera or Take Photo button', () => {
@@ -55,49 +51,12 @@ describe('ImageFormInputs — staged mode', () => {
       <ImageFormInputs
         mode="staged"
         entityKind="inventory"
-        stagedFile={null}
-        stagedUrl={null}
         onStageFile={vi.fn()}
         onStageUrl={vi.fn()}
-        onClear={vi.fn()}
       />,
     )
     expect(screen.queryByRole('button', { name: /camera/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /take photo/i })).not.toBeInTheDocument()
-  })
-
-  it('renders preview + Remove when a file is staged', () => {
-    const file = makeFile('photo.jpg', 'image/jpeg', 5000)
-    render(
-      <ImageFormInputs
-        mode="staged"
-        entityKind="inventory"
-        stagedFile={file}
-        stagedUrl={null}
-        onStageFile={vi.fn()}
-        onStageUrl={vi.fn()}
-        onClear={vi.fn()}
-      />,
-    )
-    expect(screen.getByTestId('image-form-inputs-preview')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /remove staged photo/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^upload$/i })).not.toBeInTheDocument()
-  })
-
-  it('renders preview + Remove when a URL is staged', () => {
-    render(
-      <ImageFormInputs
-        mode="staged"
-        entityKind="inventory"
-        stagedFile={null}
-        stagedUrl="https://example.com/photo.jpg"
-        onStageFile={vi.fn()}
-        onStageUrl={vi.fn()}
-        onClear={vi.fn()}
-      />,
-    )
-    expect(screen.getByTestId('image-form-inputs-preview')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /remove staged photo/i })).toBeInTheDocument()
   })
 
   it('calls onStageFile with a valid JPEG file', () => {
@@ -106,11 +65,8 @@ describe('ImageFormInputs — staged mode', () => {
       <ImageFormInputs
         mode="staged"
         entityKind="inventory"
-        stagedFile={null}
-        stagedUrl={null}
         onStageFile={onStageFile}
         onStageUrl={vi.fn()}
-        onClear={vi.fn()}
       />,
     )
     const file = makeFile('photo.jpg', 'image/jpeg', 5000)
@@ -126,11 +82,8 @@ describe('ImageFormInputs — staged mode', () => {
       <ImageFormInputs
         mode="staged"
         entityKind="inventory"
-        stagedFile={null}
-        stagedUrl={null}
         onStageFile={onStageFile}
         onStageUrl={vi.fn()}
-        onClear={vi.fn()}
       />,
     )
     const tooBig = makeFile('big.jpg', 'image/jpeg', 11 * 1024 * 1024)
@@ -146,11 +99,8 @@ describe('ImageFormInputs — staged mode', () => {
       <ImageFormInputs
         mode="staged"
         entityKind="inventory"
-        stagedFile={null}
-        stagedUrl={null}
         onStageFile={onStageFile}
         onStageUrl={vi.fn()}
-        onClear={vi.fn()}
       />,
     )
     const pdf = makeFile('doc.pdf', 'application/pdf', 1000)
@@ -166,11 +116,8 @@ describe('ImageFormInputs — staged mode', () => {
       <ImageFormInputs
         mode="staged"
         entityKind="inventory"
-        stagedFile={null}
-        stagedUrl={null}
         onStageFile={vi.fn()}
         onStageUrl={onStageUrl}
-        onClear={vi.fn()}
       />,
     )
     fireEvent.click(screen.getByTestId('image-form-inputs-link-prompt'))
@@ -189,11 +136,8 @@ describe('ImageFormInputs — staged mode', () => {
       <ImageFormInputs
         mode="staged"
         entityKind="inventory"
-        stagedFile={null}
-        stagedUrl={null}
         onStageFile={vi.fn()}
         onStageUrl={onStageUrl}
-        onClear={vi.fn()}
       />,
     )
     fireEvent.click(screen.getByTestId('image-form-inputs-link-prompt'))
@@ -203,27 +147,26 @@ describe('ImageFormInputs — staged mode', () => {
     await waitFor(() => {
       expect(onStageUrl).not.toHaveBeenCalled()
     })
-    // An inline error message is rendered (the exact zod copy can drift, so
-    // assert by aria-invalid on the input — that's the contract we own).
     expect(linkInput).toHaveAttribute('aria-invalid', 'true')
   })
 
-  it('calls onClear when Remove is clicked on a staged file', () => {
-    const onClear = vi.fn()
-    const file = makeFile('photo.jpg', 'image/jpeg', 5000)
+  it('clears the file input value after staging so the same file can be re-picked', () => {
+    const onStageFile = vi.fn()
     render(
       <ImageFormInputs
         mode="staged"
         entityKind="inventory"
-        stagedFile={file}
-        stagedUrl={null}
-        onStageFile={vi.fn()}
+        onStageFile={onStageFile}
         onStageUrl={vi.fn()}
-        onClear={onClear}
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: /remove staged photo/i }))
-    expect(onClear).toHaveBeenCalledTimes(1)
+    const file = makeFile('photo.jpg', 'image/jpeg', 5000)
+    const fileInput = screen.getByTestId('image-form-inputs-file') as HTMLInputElement
+    fireEvent.change(fileInput, { target: { files: [file] } })
+    expect(onStageFile).toHaveBeenCalled()
+    // After staging, the input is cleared so the same file picked again
+    // re-fires onChange (same-value pick is otherwise a no-op).
+    expect(fileInput.value).toBe('')
   })
 })
 

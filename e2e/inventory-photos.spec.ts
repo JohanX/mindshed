@@ -125,11 +125,14 @@ test.describe('Inventory Photos (Story 21.2)', () => {
     // Stage a URL via the Paste/Link expandable in the create dialog.
     await page.getByTestId('image-form-inputs-link-prompt').click()
     await page.getByPlaceholder('Paste image or URL').fill('https://picsum.photos/200/200')
-    // The expand's Save button stages the URL; the form's outer Save commits it.
+    // The expand's Save button stages the URL into the queue.
     await page.getByRole('button', { name: 'Save', exact: true }).click()
 
-    // Staged-state UI: preview + Remove visible, Upload + Paste/Link hidden.
-    await expect(page.getByTestId('image-form-inputs-preview')).toBeVisible()
+    // Staged-photo grid renders below the upload controls (controls remain
+    // visible — user can stage MORE photos until the cap of 3 is reached).
+    await expect(page.getByTestId('staged-photo-grid')).toBeVisible()
+    await expect(page.getByTestId('staged-photo-grid').locator('img')).toHaveCount(1)
+    await expect(page.getByRole('button', { name: 'Remove staged photo' })).toBeVisible()
 
     // Submit the create form (outer "Add Item" submit).
     await page.getByRole('button', { name: 'Add Item' }).last().click()
