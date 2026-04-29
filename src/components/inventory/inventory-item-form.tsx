@@ -35,7 +35,7 @@ import {
 import { uploadImage } from '@/lib/upload-image'
 import { IMAGE_LIMITS } from '@/lib/constants/image-limits'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
-import { Plus, Loader2, Trash2, X } from 'lucide-react'
+import { Plus, Loader2, Trash2 } from 'lucide-react'
 import { HobbyToggleChips } from './hobby-toggle-chips'
 import { ImageFormInputs } from '@/components/image/image-form-inputs'
 
@@ -466,7 +466,7 @@ export function InventoryItemFormDialog({
                       onClick={() => handleUnstage(staged.id)}
                       disabled={isPending}
                     >
-                      <X className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 ))}
