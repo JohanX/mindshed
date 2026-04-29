@@ -23,19 +23,22 @@ test.describe('Dialog mobile viewport sizing (Story 26.1)', () => {
     const dialog = page.locator('[data-slot="dialog-content"]').first()
     await expect(dialog).toBeVisible({ timeout: 5000 })
 
-    // Verify the inline className OR the computed maxHeight references dvh.
-    // `getComputedStyle` resolves `90dvh` to a pixel value at observation
-    // time, so we check the rendered style attribute / Tailwind class
-    // string directly (which preserves the `dvh` literal).
+    // Verify the dialog is anchored to the top on mobile (not vertically
+    // centered) AND sized via `dvh`. iOS resolves `top: 50%` against the
+    // LAYOUT viewport, leaving a centered dialog partially behind the
+    // soft keyboard — the only reliable cross-browser fix is to anchor
+    // the dialog to the top on small viewports.
     const classAttr = (await dialog.getAttribute('class')) ?? ''
-    expect(classAttr).toMatch(/max-h-\[90dvh\]/)
+    expect(classAttr).toMatch(/top-4/) // mobile: anchored to top
+    expect(classAttr).toMatch(/100dvh/) // dvh-based max-height
+    expect(classAttr).toMatch(/sm:top-1\/2/) // desktop: vertically centered (sm+)
 
     // Computed max-height should resolve to a positive pixel value below
-    // the layout viewport (812 × 0.9 = 730.8). This sanity-checks the
-    // Tailwind arbitrary-value made it to CSS.
+    // the layout viewport. This sanity-checks the Tailwind arbitrary-value
+    // made it to CSS.
     const computedMaxHeight = await dialog.evaluate((el) => window.getComputedStyle(el).maxHeight)
     const px = parseFloat(computedMaxHeight)
     expect(px).toBeGreaterThan(0)
-    expect(px).toBeLessThanOrEqual(812 * 0.9 + 1) // small tolerance for rounding
+    expect(px).toBeLessThanOrEqual(812) // can be up to layout viewport
   })
 })

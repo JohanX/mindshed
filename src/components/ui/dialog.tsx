@@ -53,12 +53,17 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          // FR119 (Story 26.1): use `dvh` (dynamic viewport height) instead
-          // of `vh` so the dialog respects the visual viewport when the
-          // soft keyboard is up on mobile. `vh` resolves to the layout
-          // viewport (full screen) and breaks scroll-to-reach for fields
-          // below the keyboard fold; `dvh` subtracts the keyboard region.
-          'fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] max-h-[90dvh] overflow-y-auto -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
+          // FR119 (Story 26.1): on mobile, anchor the dialog to the top
+          // (with a small margin) instead of vertically centering. Reason:
+          // iOS resolves `top: 50%` against the LAYOUT viewport, so even
+          // with a `dvh`-based max-height the centered dialog still sits
+          // in the middle of the full screen — its bottom (and the
+          // focused input) ends up behind the keyboard with no way to
+          // scroll up. Anchoring to top + sizing to `dvh` keeps the whole
+          // dialog reachable, and `overflow-y-auto` lets long forms
+          // scroll within the dialog. Desktop (sm+) keeps the original
+          // vertically-centered layout via `sm:` overrides.
+          'fixed top-4 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] max-h-[calc(100dvh-2rem)] overflow-y-auto -translate-x-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:top-1/2 sm:-translate-y-1/2 sm:max-h-[90dvh] sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
           className,
         )}
         {...props}
