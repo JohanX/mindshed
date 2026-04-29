@@ -38,8 +38,8 @@ test.describe('Inventory Photos (Story 21.2)', () => {
 
     await page.getByRole('button', { name: `Edit ${testPrefix} Clay` }).click()
     await expect(page.getByTestId('photos-section')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Upload Photo' })).toBeVisible()
-    await expect(page.getByTestId('add-photo-link-prompt')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Upload' })).toBeVisible()
+    await expect(page.getByTestId('image-form-inputs-link-prompt')).toBeVisible()
     await expect(page.getByText('No photos yet')).toBeVisible()
     await page.getByRole('button', { name: 'Close' }).click()
   })
@@ -51,7 +51,7 @@ test.describe('Inventory Photos (Story 21.2)', () => {
     await page.getByRole('button', { name: `Edit ${testPrefix} Clay` }).click()
     await expect(page.getByTestId('photos-section')).toBeVisible()
 
-    await page.getByTestId('add-photo-link-prompt').click()
+    await page.getByTestId('image-form-inputs-link-prompt').click()
     await page.getByPlaceholder('Paste image or URL').fill('https://picsum.photos/200/200')
     await page.getByTestId('photos-section').getByRole('button', { name: 'Save' }).click()
 
@@ -107,6 +107,39 @@ test.describe('Inventory Photos (Story 21.2)', () => {
 
     const heroButton = page.getByRole('button', { name: `View photos of ${testPrefix} Clay` })
     await expect(heroButton).not.toBeVisible()
+  })
+
+  test('create inventory item with pasted-link photo (FR121 parity)', async ({ page }) => {
+    // Story 27.1 / FR121: the Create dialog now exposes Upload + Paste/Link
+    // (parity with the edit dialog), with photo committed atomically after
+    // the create step (FR120 idempotent flow). Verifies the parity-gap
+    // closure that was the whole point of Epic 27.
+    const itemName = `${testPrefix}-Linked-${Date.now()}`
+    await page.goto('/inventory')
+    await page.waitForLoadState('networkidle')
+
+    // Open create dialog and fill fields.
+    await page.getByRole('button', { name: 'Add Item' }).first().click()
+    await page.getByLabel('Name').fill(itemName)
+
+    // Stage a URL via the Paste/Link expandable in the create dialog.
+    await page.getByTestId('image-form-inputs-link-prompt').click()
+    await page.getByPlaceholder('Paste image or URL').fill('https://picsum.photos/200/200')
+    // The expand's Save button stages the URL; the form's outer Save commits it.
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+
+    // Staged-state UI: preview + Remove visible, Upload + Paste/Link hidden.
+    await expect(page.getByTestId('image-form-inputs-preview')).toBeVisible()
+
+    // Submit the create form (outer "Add Item" submit).
+    await page.getByRole('button', { name: 'Add Item' }).last().click()
+    await page.waitForTimeout(1500)
+
+    // Item created. Reload and verify it has the linked photo.
+    await page.goto('/inventory')
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText(itemName).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: `View photos of ${itemName}` })).toBeVisible()
   })
 
   test('BOM row shows micro-thumbnail for item with photo', async ({ page }) => {

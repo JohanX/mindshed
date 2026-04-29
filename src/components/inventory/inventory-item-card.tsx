@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { EditInventoryItemDialog } from '@/components/inventory/edit-inventory-item-dialog'
+import { InventoryItemFormDialog } from '@/components/inventory/inventory-item-form'
 import { MaintenanceSection } from '@/components/inventory/maintenance-section'
 import { ImageLightbox } from '@/components/image/image-lightbox'
 import { deleteInventoryItem } from '@/actions/inventory'
@@ -154,7 +154,7 @@ export function InventoryItemCard({ item, hobbies }: InventoryItemCardProps) {
         </CardContent>
       </Card>
 
-      <EditInventoryItemDialog
+      <InventoryItemFormDialog
         item={item}
         hobbies={hobbies}
         open={editOpen}
