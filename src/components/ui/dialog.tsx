@@ -41,7 +41,7 @@ function DialogOverlay({
         // Layout: items-start on mobile so the dialog anchors near the
         // top and the user can scroll the bottom of a tall dialog into
         // view; items-center on sm+ for the classic centred modal.
-        'fixed inset-x-0 top-0 isolate z-50 flex items-start justify-center overflow-y-auto bg-black/10 p-4 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 sm:items-center',
+        'anim-dialog-overlay fixed inset-x-0 top-0 isolate z-50 flex items-start justify-center overflow-y-auto bg-black/10 p-4 supports-backdrop-filter:backdrop-blur-xs sm:items-center',
         className,
       )}
       style={{ bottom: 'var(--kb-inset, 0px)', ...style }}
@@ -71,7 +71,7 @@ function DialogContent({
             // overflow scroll; content sizes intrinsically and grows as
             // needed. `relative` needed so the absolutely-positioned
             // close button anchors here.
-            'relative grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
+            'anim-dialog-content relative grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 outline-none sm:max-w-sm',
             className,
           )}
           {...props}

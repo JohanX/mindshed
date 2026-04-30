@@ -292,20 +292,45 @@
   }
 }
 
-/* FR123 — Lightbox-specific animation utility classes (Story 29.1).
+/* FR123 / FR124 — Animation utility classes scoped by surface size.
  *
- * Story 29.2 will sweep the rest of the dialog primitives; until then,
- * scope these classes to the lightbox by name so the change doesn't bleed
- * into other Dialog/AlertDialog instances. */
-.anim-lightbox-content[data-state='open'] {
-  animation: anim-reveal var(--anim-duration-slow) var(--anim-easing);
-}
-.anim-lightbox-content[data-state='closed'] {
-  animation: anim-settle var(--anim-duration-slow) var(--anim-easing);
-}
+ * Three duration tiers driven by `--anim-duration-{fast,medium,slow}`:
+ *   - lightbox: slow (320ms) — the most prominent reveal in the app
+ *   - dialog/alert-dialog: medium (220ms) — body-of-the-app modals
+ *   - dropdown/popover: fast (150ms) — should feel responsive, not slow
+ *
+ * All four classes use the same anim-reveal/anim-settle keyframes; only
+ * the duration token differs. Apply by adding the class alongside the
+ * existing data-state-driven Tailwind classes; the data-state attribute
+ * selectors here drive the animation. */
+.anim-lightbox-content[data-state='open'],
 .anim-lightbox-overlay[data-state='open'] {
   animation: anim-reveal var(--anim-duration-slow) var(--anim-easing);
 }
+.anim-lightbox-content[data-state='closed'],
 .anim-lightbox-overlay[data-state='closed'] {
   animation: anim-settle var(--anim-duration-slow) var(--anim-easing);
+}
+
+.anim-dialog-content[data-state='open'],
+.anim-dialog-overlay[data-state='open'] {
+  animation: anim-reveal var(--anim-duration-medium) var(--anim-easing);
+}
+.anim-dialog-content[data-state='closed'],
+.anim-dialog-overlay[data-state='closed'] {
+  animation: anim-settle var(--anim-duration-medium) var(--anim-easing);
+}
+
+.anim-popup-content[data-state='open'] {
+  animation: anim-reveal var(--anim-duration-fast) var(--anim-easing);
+}
+.anim-popup-content[data-state='closed'] {
+  animation: anim-settle var(--anim-duration-fast) var(--anim-easing);
+}
+
+/* FR123 — Acknowledge primitive (Story 29.3). Replays animation on
+ * mount; surfaces use a `key` change OR re-render to trigger the
+ * keyframe each time the underlying state transitions. */
+.anim-acknowledge-on-mount {
+  animation: anim-acknowledge var(--anim-duration-fast) var(--anim-easing);
 }
