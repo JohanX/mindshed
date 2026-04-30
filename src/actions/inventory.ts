@@ -14,6 +14,7 @@ import {
 } from '@/lib/schemas/inventory'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
+import { cleanupStorageKeys } from '@/lib/storage-cleanup'
 import { nextUniqueInventoryName } from '@/lib/inventory-name'
 import {
   findInventoryItemsList,
@@ -166,12 +167,30 @@ export async function deleteInventoryItem(itemId: string): Promise<ActionResult<
   }
 
   try {
-    await prisma.$transaction(async (tx) => {
+    const storageKeys = await prisma.$transaction(async (tx) => {
+      // FR122 / Story 28.2: collect UPLOAD-image storage keys BEFORE the
+      // soft-delete update so they're captured atomically with the state
+      // transition. Photo DB rows REMAIN linked to the soft-deleted item
+      // (no row deletion, no schema change) — only the underlying storage
+      // blobs are revoked. Storage follows user intent, not DB lifecycle.
+      const storageKeys = await tx.inventoryItemImage.findMany({
+        where: {
+          inventoryItemId: parsed.data,
+          type: 'UPLOAD',
+          storageKey: { not: null },
+        },
+        select: { storageKey: true },
+      })
       await tx.inventoryItem.update({
         where: { id: parsed.data },
         data: { isDeleted: true, deletedAt: new Date() },
       })
+      return storageKeys
     })
+
+    // Best-effort post-commit storage cleanup. Failures NEVER fail the
+    // action — see FR122 best-effort guarantee.
+    await cleanupStorageKeys(storageKeys)
 
     revalidatePath('/inventory')
     return { success: true, data: null }

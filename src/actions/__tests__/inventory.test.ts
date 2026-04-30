@@ -15,6 +15,10 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
+vi.mock('@/lib/image-storage/adapter', () => ({
+  getImageStorageAdapter: vi.fn(),
+}))
+
 import {
   createInventoryItem,
   getInventoryItems,
@@ -26,11 +30,13 @@ import {
   updateMaintenanceData,
 } from '../inventory'
 import { prisma } from '@/lib/db'
+import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 
 const mockFindMany = vi.mocked(prisma.inventoryItem.findMany)
 const mockFindUnique = vi.mocked(prisma.inventoryItem.findUnique)
 const mockUpdate = vi.mocked(prisma.inventoryItem.update)
 const mockTransaction = vi.mocked(prisma.$transaction)
+const mockGetAdapter = vi.mocked(getImageStorageAdapter)
 
 const validId = '550e8400-e29b-41d4-a716-446655440000'
 
@@ -42,6 +48,7 @@ type TxMock = {
     update: ReturnType<typeof vi.fn>
     delete: ReturnType<typeof vi.fn>
   }
+  inventoryItemImage: { findMany: ReturnType<typeof vi.fn> }
   blocker: { updateMany: ReturnType<typeof vi.fn> }
 }
 
@@ -53,6 +60,8 @@ function buildTx(opts: {
   updateResult?: { id: string }
   createError?: Error | { code: string }
   updateError?: Error | { code: string }
+  // Story 28.2: storage keys returned for the soft-delete cleanup query
+  inventoryImageStorageKeys?: Array<{ storageKey: string | null }>
 }): TxMock {
   const siblingsFindMany = vi.fn()
   siblingsFindMany.mockImplementation(async (args) => {
@@ -79,6 +88,9 @@ function buildTx(opts: {
         return opts.updateResult ?? { id: 'i1' }
       }),
       delete: vi.fn(),
+    },
+    inventoryItemImage: {
+      findMany: vi.fn().mockResolvedValue(opts.inventoryImageStorageKeys ?? []),
     },
     blocker: { updateMany: vi.fn() },
   }
@@ -371,6 +383,86 @@ describe('deleteInventoryItem', () => {
     const result = await deleteInventoryItem(validId)
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toBe('Item not found.')
+  })
+
+  describe('Story 28.2: storage cleanup on soft-delete', () => {
+    it('calls adapter.deleteObject for each UPLOAD storageKey on the item', async () => {
+      const deleteObject = vi.fn().mockResolvedValue(undefined)
+      mockGetAdapter.mockReturnValue({
+        deleteObject,
+      } as unknown as ReturnType<typeof getImageStorageAdapter>)
+
+      const tx = buildTx({
+        inventoryImageStorageKeys: [
+          { storageKey: 'inventory/abc/1.jpg' },
+          { storageKey: 'inventory/abc/2.jpg' },
+        ],
+      })
+      mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+      const result = await deleteInventoryItem(validId)
+      expect(result.success).toBe(true)
+      expect(tx.inventoryItemImage.findMany).toHaveBeenCalledWith({
+        where: {
+          inventoryItemId: validId,
+          type: 'UPLOAD',
+          storageKey: { not: null },
+        },
+        select: { storageKey: true },
+      })
+      expect(deleteObject).toHaveBeenCalledTimes(2)
+      expect(deleteObject).toHaveBeenCalledWith('inventory/abc/1.jpg')
+      expect(deleteObject).toHaveBeenCalledWith('inventory/abc/2.jpg')
+    })
+
+    it('preserves the soft-delete row state — image rows remain linked, only storage is revoked', async () => {
+      mockGetAdapter.mockReturnValue({
+        deleteObject: vi.fn().mockResolvedValue(undefined),
+      } as unknown as ReturnType<typeof getImageStorageAdapter>)
+
+      const tx = buildTx({
+        inventoryImageStorageKeys: [{ storageKey: 'inventory/abc/1.jpg' }],
+      })
+      mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+      const result = await deleteInventoryItem(validId)
+      expect(result.success).toBe(true)
+      // Soft delete: item is updated, NEVER deleted at the DB level.
+      expect(tx.inventoryItem.update).toHaveBeenCalledOnce()
+      expect(tx.inventoryItem.delete).not.toHaveBeenCalled()
+    })
+
+    it('still returns success when adapter.deleteObject throws', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      mockGetAdapter.mockReturnValue({
+        deleteObject: vi.fn().mockRejectedValue(new Error('adapter down')),
+      } as unknown as ReturnType<typeof getImageStorageAdapter>)
+
+      const tx = buildTx({
+        inventoryImageStorageKeys: [{ storageKey: 'inventory/abc/1.jpg' }],
+      })
+      mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+      const result = await deleteInventoryItem(validId)
+      expect(result.success).toBe(true)
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Storage cleanup failed:', expect.any(Error))
+      consoleErrorSpy.mockRestore()
+    })
+
+    it('does not call adapter.deleteObject when only LINK images exist', async () => {
+      const deleteObject = vi.fn()
+      mockGetAdapter.mockReturnValue({
+        deleteObject,
+      } as unknown as ReturnType<typeof getImageStorageAdapter>)
+
+      // Empty array = the type='UPLOAD' filter excluded all (LINK-only) rows
+      const tx = buildTx({ inventoryImageStorageKeys: [] })
+      mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+      const result = await deleteInventoryItem(validId)
+      expect(result.success).toBe(true)
+      expect(deleteObject).not.toHaveBeenCalled()
+    })
   })
 })
 
