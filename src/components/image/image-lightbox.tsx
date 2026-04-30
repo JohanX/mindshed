@@ -15,10 +15,15 @@ import type { GalleryImage } from '@/components/image/image-gallery'
 // COMMIT_DISTANCE_THRESHOLD: raw distance that always commits.
 // FLICK_VELOCITY_THRESHOLD / FLICK_DISTANCE_THRESHOLD: a fast flick
 //   commits at lower distance — fixes "swiped fast but not far enough".
+// SWIPE_COMMIT_DURATION_MS mirrors `--anim-duration-medium` (220ms) — the
+//   slide-out animation duration AND the setTimeout before index swap.
+//   Kept as a JS constant so we can short-circuit it under
+//   prefers-reduced-motion (where the CSS token is zeroed out).
 const SWIPE_AXIS_LOCK_DISTANCE = 8
 const SWIPE_COMMIT_DISTANCE_THRESHOLD = 50
 const SWIPE_FLICK_VELOCITY_THRESHOLD = 0.3 // px/ms
 const SWIPE_FLICK_DISTANCE_THRESHOLD = 20
+const SWIPE_COMMIT_DURATION_MS = 220
 
 interface ImageLightboxProps {
   images: GalleryImage[]
@@ -130,21 +135,106 @@ export function ImageLightbox({
     pointerId: number
     timestamp: number
     axis: 'horizontal' | 'vertical' | null
+    /**
+     * Last horizontal delta seen during pointermove. Stored in the ref
+     * so `handlePointerCancel` can decide whether to commit (the OS
+     * may cancel a gesture that already crossed threshold; honouring
+     * the user's intent is better than silently dropping it).
+     */
+    lastDeltaX: number
   }
   const swipeStartRef = useRef<SwipeStart | null>(null)
+  /**
+   * Holds the pending slide-out → index-swap timer so we can clear it
+   * if the lightbox unmounts (avoids stale-closure goNext on a torn-
+   * down component) or if the user cancels mid-commit.
+   */
+  const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [dragOffset, setDragOffset] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [isCommitting, setIsCommitting] = useState(false)
 
+  function clearCommitTimer() {
+    if (commitTimerRef.current !== null) {
+      clearTimeout(commitTimerRef.current)
+      commitTimerRef.current = null
+    }
+  }
+
+  // Clear any pending commit timer on unmount — fixes the stale-closure
+  // race where the user dismisses the lightbox while a swipe is mid-
+  // commit and the timer would otherwise call goNext on a torn-down
+  // component.
+  useEffect(() => {
+    return clearCommitTimer
+  }, [])
+
+  function prefersReducedMotion(): boolean {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  }
+
+  function evaluateCommit(deltaX: number, elapsedMs: number): -1 | 1 | null {
+    if (deltaX === 0) return null
+    const elapsed = Math.max(1, elapsedMs)
+    const velocity = Math.abs(deltaX) / elapsed
+    const meetsDistance = Math.abs(deltaX) >= SWIPE_COMMIT_DISTANCE_THRESHOLD
+    const isFlick =
+      velocity >= SWIPE_FLICK_VELOCITY_THRESHOLD &&
+      Math.abs(deltaX) >= SWIPE_FLICK_DISTANCE_THRESHOLD
+    if (!meetsDistance && !isFlick) return null
+    return deltaX < 0 ? -1 : 1
+  }
+
+  function commitSwipe(direction: -1 | 1) {
+    setIsCommitting(true)
+
+    // prefers-reduced-motion: skip the slide-out animation entirely
+    // and swap the index synchronously. The CSS-side `--anim-duration-*`
+    // tokens are already zeroed under the same media query — JS-side
+    // mirrors that contract here.
+    if (prefersReducedMotion()) {
+      setDragOffset(0)
+      setIsCommitting(false)
+      if (direction < 0) goNext()
+      else goPrev()
+      return
+    }
+
+    const containerWidth =
+      typeof window !== 'undefined' ? window.innerWidth : SWIPE_COMMIT_DISTANCE_THRESHOLD * 8
+    setDragOffset(direction * containerWidth)
+    clearCommitTimer()
+    commitTimerRef.current = setTimeout(() => {
+      commitTimerRef.current = null
+      if (direction < 0) goNext()
+      else goPrev()
+      setDragOffset(0)
+      setIsCommitting(false)
+    }, SWIPE_COMMIT_DURATION_MS)
+  }
+
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
     if (event.pointerType !== 'touch') return
     if (isCommitting) return // ignore taps mid-commit-animation
+    // setPointerCapture: subsequent pointermove / pointerup / pointer-
+    // cancel events are routed back to this element even if the finger
+    // drags off its bounding rect. Without this, a long swipe near the
+    // edge of the dialog can strand the gesture (no further events
+    // arrive on the dialog after the finger leaves).
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId)
+    } catch {
+      // Some platforms / older browsers don't support pointer capture;
+      // the gesture still works, just less robustly near edges.
+    }
     swipeStartRef.current = {
       x: event.clientX,
       y: event.clientY,
       pointerId: event.pointerId,
       timestamp: event.timeStamp,
       axis: null,
+      lastDeltaX: 0,
     }
     setIsDragging(true)
   }
@@ -175,6 +265,7 @@ export function ImageLightbox({
     // Once locked horizontal, follow the finger. Vertical drift no
     // longer matters — the gesture's intent is established.
     if (start.axis === 'horizontal') {
+      start.lastDeltaX = deltaX
       setDragOffset(deltaX)
     }
     // axis === 'vertical' → do nothing; the browser handles it (and
@@ -193,40 +284,35 @@ export function ImageLightbox({
       return
     }
 
-    const deltaX = event.clientX - start.x
-    const elapsed = Math.max(1, event.timeStamp - start.timestamp)
-    const velocity = Math.abs(deltaX) / elapsed
-
-    const meetsDistance = Math.abs(deltaX) >= SWIPE_COMMIT_DISTANCE_THRESHOLD
-    const isFlick =
-      velocity >= SWIPE_FLICK_VELOCITY_THRESHOLD &&
-      Math.abs(deltaX) >= SWIPE_FLICK_DISTANCE_THRESHOLD
-
-    if (!meetsDistance && !isFlick) {
+    const direction = evaluateCommit(event.clientX - start.x, event.timeStamp - start.timestamp)
+    if (direction === null) {
       setDragOffset(0)
       return
     }
-
-    // Threshold met — animate image fully off-screen in the swipe
-    // direction, then commit the index swap. The transition duration
-    // matches the setTimeout below so the slide-out completes before
-    // the swap renders.
-    setIsCommitting(true)
-    const containerWidth =
-      typeof window !== 'undefined' ? window.innerWidth : SWIPE_COMMIT_DISTANCE_THRESHOLD * 8
-    const direction = deltaX < 0 ? -1 : 1
-    setDragOffset(direction * containerWidth)
-    setTimeout(() => {
-      if (direction < 0) goNext()
-      else goPrev()
-      setDragOffset(0)
-      setIsCommitting(false)
-    }, 220)
+    commitSwipe(direction)
   }
 
-  function handlePointerCancel() {
+  function handlePointerCancel(event: React.PointerEvent<HTMLDivElement>) {
+    // Cancel arriving mid-commit-animation: leave the timer to finish.
+    // The user's commit was already accepted; an OS-level cancel
+    // shouldn't undo that.
+    if (isCommitting) return
+
+    const start = swipeStartRef.current
     swipeStartRef.current = null
     setIsDragging(false)
+
+    // If the cancel arrives after a horizontal gesture that already
+    // crossed the commit threshold, honour it as a commit rather than
+    // silently dropping the user's intent. (E.g. browser interrupts
+    // mid-flick.)
+    if (start && start.axis === 'horizontal') {
+      const direction = evaluateCommit(start.lastDeltaX, event.timeStamp - start.timestamp)
+      if (direction !== null) {
+        commitSwipe(direction)
+        return
+      }
+    }
     setDragOffset(0)
   }
 
@@ -241,12 +327,19 @@ export function ImageLightbox({
   // - During `committing`: transition for the slide-out animation.
   // - When `idle` and dragOffset=0: no transform/transition (avoids
   //   competing with the View Transition morph on the open frame).
+  // The transform/transition branch is only emitted while dragging or
+  // committing — keeping the open frame's `inlineImageStyle` to just
+  // `viewTransitionName` (or empty) avoids fighting the View Transition
+  // morph. `useState(0)` for dragOffset means this branch is empty on
+  // first paint by construction.
   const inlineImageStyle: React.CSSProperties = {
     ...(viewTransitionName && isOriginalImage ? { viewTransitionName } : {}),
     ...(dragOffset !== 0 || isCommitting
       ? {
           transform: `translateX(${dragOffset}px)`,
-          transition: isDragging ? 'none' : 'transform 220ms ease-out',
+          transition: isDragging
+            ? 'none'
+            : `transform var(--anim-duration-medium) var(--anim-easing)`,
         }
       : {}),
   }
@@ -286,12 +379,12 @@ export function ImageLightbox({
             // Mobile (`< sm`): full-viewport — the dark content IS the lightbox.
             // Desktop (`sm+`): content shrinks to wrap the image (transparent;
             // overlay around it is the dim backdrop + click-to-close target).
-            // touch-pan-y → `touch-action: pan-y`: claim horizontal
-            // gestures for ourselves so the browser doesn't cancel
-            // pointer events on long/fast swipes. Vertical scrolling
-            // still works (Radix already body-locks scroll under the
-            // dialog, but pan-y is the safe choice over `none`).
-            className="anim-lightbox-content relative flex h-[100dvh] w-screen max-w-full touch-pan-y flex-col items-center justify-center gap-0 rounded-none border-none bg-black/95 p-0 outline-none sm:h-auto sm:max-h-[90vh] sm:w-auto sm:max-w-[90vw] sm:rounded-md sm:bg-transparent"
+            // touch-action: `pan-y pinch-zoom` (arbitrary value) — claim
+            // horizontal pan for ourselves, but leave vertical pan AND
+            // pinch-zoom to the browser. Setting just `pan-y` would
+            // block pinch-zoom on the lightbox image — a usability
+            // regression for users who want to zoom into details.
+            className="anim-lightbox-content relative flex h-[100dvh] w-screen max-w-full touch-[pan-y_pinch-zoom] flex-col items-center justify-center gap-0 rounded-none border-none bg-black/95 p-0 outline-none sm:h-auto sm:max-h-[90vh] sm:w-auto sm:max-w-[90vw] sm:rounded-md sm:bg-transparent"
             // Story 29.6: swipe gesture on touch devices — left = next,
             // right = prev. Coexists with on-screen arrows + keyboard.
             onPointerDown={handlePointerDown}
@@ -347,6 +440,17 @@ export function ImageLightbox({
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       key={current.id}
+                      ref={(node) => {
+                        // Cached-image race: if the browser already had
+                        // this URL in cache, `onLoad` may have fired
+                        // before React attached its listener — leaving
+                        // `imageLoading` stuck at true. Check `complete`
+                        // synchronously on attach and clear if the image
+                        // is already decoded.
+                        if (node && node.complete && node.naturalWidth > 0) {
+                          setImageLoading(false)
+                        }
+                      }}
                       src={current.displayUrl}
                       alt={current.originalFilename ?? ''}
                       className="max-h-full max-w-full object-contain sm:max-h-[90vh] sm:max-w-[90vw]"

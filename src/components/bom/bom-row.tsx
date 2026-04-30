@@ -131,7 +131,13 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
   const isEditingLocked = row.consumptionState !== 'NOT_CONSUMED'
   const displayName = row.inventoryItem?.name ?? row.label ?? '(unnamed)'
   const inventoryItemId = row.inventoryItem?.id ?? null
-  const viewTransitionName = inventoryItemId ? `bom-thumb-${inventoryItemId}` : undefined
+  // Both `variant="desktop"` and `variant="mobile"` of BomRow are always
+  // mounted simultaneously (CSS toggles which is visible). Including
+  // `variant` in the view-transition name keeps the two from colliding —
+  // `view-transition-name` is captured from every element with the
+  // property regardless of CSS visibility, and the spec requires
+  // uniqueness for predictable morphing.
+  const viewTransitionName = inventoryItemId ? `bom-thumb-${inventoryItemId}-${variant}` : undefined
 
   async function openBomLightbox() {
     if (!inventoryItemId) return

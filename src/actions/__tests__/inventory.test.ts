@@ -62,6 +62,11 @@ function buildTx(opts: {
   updateError?: Error | { code: string }
   // Story 28.2: storage keys returned for the soft-delete cleanup query
   inventoryImageStorageKeys?: Array<{ storageKey: string | null }>
+  // Idempotency-guard fixture for `deleteInventoryItem` retroactive fix:
+  // when set, the tx-level `findUnique({ select: { isDeleted } })` call
+  // returns this stub. Default (omitted) → findUnique returns null,
+  // exercising the "row not found" path.
+  existingForDelete?: { isDeleted: boolean }
 }): TxMock {
   const siblingsFindMany = vi.fn()
   siblingsFindMany.mockImplementation(async (args) => {
@@ -76,9 +81,20 @@ function buildTx(opts: {
   return {
     inventoryItem: {
       findMany: siblingsFindMany,
-      findUnique: vi.fn(async () =>
-        opts.currentName !== undefined ? { name: opts.currentName } : null,
-      ),
+      findUnique: vi.fn(async () => {
+        // updateInventoryItem reads { name }; deleteInventoryItem reads
+        // { isDeleted }. The same mock covers both — opt in to either
+        // shape via `currentName` (update path) or `existingForDelete`
+        // (delete idempotency path). When neither is set, return null
+        // so missing-row paths are exercised.
+        if (opts.currentName !== undefined) {
+          return { name: opts.currentName, isDeleted: false }
+        }
+        if (opts.existingForDelete) {
+          return { isDeleted: opts.existingForDelete.isDeleted }
+        }
+        return null
+      }),
       create: vi.fn(async () => {
         if (opts.createError) throw opts.createError
         return opts.createResult ?? { id: 'i1' }
@@ -340,7 +356,7 @@ describe('deleteInventoryItem', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('soft-deletes by setting isDeleted=true and deletedAt=now()', async () => {
-    const tx = buildTx({})
+    const tx = buildTx({ existingForDelete: { isDeleted: false } })
     mockTransaction.mockImplementation(async (fn) => fn(tx as never))
 
     const result = await deleteInventoryItem(validId)
@@ -357,7 +373,7 @@ describe('deleteInventoryItem', () => {
   })
 
   it('never hard-deletes the row', async () => {
-    const tx = buildTx({})
+    const tx = buildTx({ existingForDelete: { isDeleted: false } })
     mockTransaction.mockImplementation(async (fn) => fn(tx as never))
 
     await deleteInventoryItem(validId)
@@ -365,7 +381,7 @@ describe('deleteInventoryItem', () => {
   })
 
   it('never nulls linked blocker FKs', async () => {
-    const tx = buildTx({})
+    const tx = buildTx({ existingForDelete: { isDeleted: false } })
     mockTransaction.mockImplementation(async (fn) => fn(tx as never))
 
     await deleteInventoryItem(validId)
@@ -385,6 +401,41 @@ describe('deleteInventoryItem', () => {
     if (!result.success) expect(result.error).toBe('Item not found.')
   })
 
+  it('returns "Item not found." when row does not exist (idempotency guard)', async () => {
+    // findUnique returns null (row missing) → the action surfaces a
+    // P2025-shaped error so the caller sees the same contract whether
+    // the row was never there or was already hard-deleted.
+    const tx = buildTx({})
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await deleteInventoryItem(validId)
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Item not found.')
+    expect(tx.inventoryItem.update).not.toHaveBeenCalled()
+  })
+
+  it('is idempotent on already-soft-deleted rows (no second update, no storage call)', async () => {
+    const deleteObject = vi.fn()
+    mockGetAdapter.mockReturnValue({
+      deleteObject,
+    } as unknown as ReturnType<typeof getImageStorageAdapter>)
+
+    const tx = buildTx({
+      existingForDelete: { isDeleted: true },
+      inventoryImageStorageKeys: [{ storageKey: 'inventory/abc/1.jpg' }],
+    })
+    mockTransaction.mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await deleteInventoryItem(validId)
+    expect(result.success).toBe(true)
+    // Idempotency: short-circuited inside the tx — no update, no
+    // findMany on images (skipped because row already soft-deleted),
+    // no storage cleanup re-run.
+    expect(tx.inventoryItem.update).not.toHaveBeenCalled()
+    expect(tx.inventoryItemImage.findMany).not.toHaveBeenCalled()
+    expect(deleteObject).not.toHaveBeenCalled()
+  })
+
   describe('Story 28.2: storage cleanup on soft-delete', () => {
     it('calls adapter.deleteObject for each UPLOAD storageKey on the item', async () => {
       const deleteObject = vi.fn().mockResolvedValue(undefined)
@@ -393,6 +444,7 @@ describe('deleteInventoryItem', () => {
       } as unknown as ReturnType<typeof getImageStorageAdapter>)
 
       const tx = buildTx({
+        existingForDelete: { isDeleted: false },
         inventoryImageStorageKeys: [
           { storageKey: 'inventory/abc/1.jpg' },
           { storageKey: 'inventory/abc/2.jpg' },
@@ -421,6 +473,7 @@ describe('deleteInventoryItem', () => {
       } as unknown as ReturnType<typeof getImageStorageAdapter>)
 
       const tx = buildTx({
+        existingForDelete: { isDeleted: false },
         inventoryImageStorageKeys: [{ storageKey: 'inventory/abc/1.jpg' }],
       })
       mockTransaction.mockImplementation(async (fn) => fn(tx as never))
@@ -439,6 +492,7 @@ describe('deleteInventoryItem', () => {
       } as unknown as ReturnType<typeof getImageStorageAdapter>)
 
       const tx = buildTx({
+        existingForDelete: { isDeleted: false },
         inventoryImageStorageKeys: [{ storageKey: 'inventory/abc/1.jpg' }],
       })
       mockTransaction.mockImplementation(async (fn) => fn(tx as never))
@@ -456,7 +510,10 @@ describe('deleteInventoryItem', () => {
       } as unknown as ReturnType<typeof getImageStorageAdapter>)
 
       // Empty array = the type='UPLOAD' filter excluded all (LINK-only) rows
-      const tx = buildTx({ inventoryImageStorageKeys: [] })
+      const tx = buildTx({
+        existingForDelete: { isDeleted: false },
+        inventoryImageStorageKeys: [],
+      })
       mockTransaction.mockImplementation(async (fn) => fn(tx as never))
 
       const result = await deleteInventoryItem(validId)

@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { createInventoryItem, updateInventoryItem } from '@/actions/inventory'
+import { createInventoryItem, updateInventoryItem, deleteInventoryItem } from '@/actions/inventory'
 import {
   createInventoryItemSchema,
   updateInventoryItemSchema,
@@ -109,6 +109,15 @@ export function InventoryItemFormDialog({
   const isInRetryState = createdItemId !== null
   const stagedAtCap = stagedPhotos.length >= IMAGE_LIMITS.inventory
 
+  // Discard-orphan-on-cancel flow (Story 27.1 retroactive fix): if the
+  // user cancels the create dialog after `createInventoryItem` succeeded
+  // but a photo upload failed, the item exists server-side. Closing
+  // silently leaves an orphan with whatever photos succeeded — invisible
+  // to the user. Intercept the close and prompt: discard the orphan, or
+  // stay in the form and retry.
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false)
+  const [isDiscarding, startDiscardTransition] = useTransition()
+
   function revokeStagedFileUrls(photos: StagedPhoto[]) {
     for (const staged of photos) {
       if (staged.kind === 'file') URL.revokeObjectURL(staged.previewUrl)
@@ -137,6 +146,14 @@ export function InventoryItemFormDialog({
       setNotes(item.notes ?? '')
       setSelectedHobbyIds(item.hobbies.map((hobby) => hobby.id))
     }
+    // Closing while a partial-failure orphan exists: don't silently
+    // discard — open the discard-confirm dialog. The actual close is
+    // deferred to either the discard-confirm action or the user
+    // dismissing the inner confirm.
+    if (!nextOpen && !isEditMode && isInRetryState) {
+      setDiscardConfirmOpen(true)
+      return
+    }
     if (onOpenChange) {
       onOpenChange(nextOpen)
     } else {
@@ -145,6 +162,33 @@ export function InventoryItemFormDialog({
     if (!nextOpen && !isEditMode) {
       resetCreateState()
     }
+  }
+
+  function performDiscard() {
+    const orphanId = createdItemId
+    if (!orphanId) {
+      // No orphan to delete — just close.
+      setDiscardConfirmOpen(false)
+      if (onOpenChange) onOpenChange(false)
+      else setInternalOpen(false)
+      resetCreateState()
+      return
+    }
+    startDiscardTransition(async () => {
+      const result = await deleteInventoryItem(orphanId)
+      if (!result.success) {
+        showErrorToast(result.error)
+        // Keep the dialog open so the user can retry the photos or
+        // cancel the discard prompt.
+        setDiscardConfirmOpen(false)
+        return
+      }
+      showSuccessToast('Incomplete item discarded')
+      setDiscardConfirmOpen(false)
+      if (onOpenChange) onOpenChange(false)
+      else setInternalOpen(false)
+      resetCreateState()
+    })
   }
 
   // ----- Edit-mode photo grid loading -----
@@ -552,6 +596,22 @@ export function InventoryItemFormDialog({
         description="This cannot be undone."
         onConfirm={handlePhotoDelete}
         loading={isPhotoDeleting}
+      />
+
+      <ConfirmDialog
+        open={discardConfirmOpen}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setDiscardConfirmOpen(false)
+        }}
+        title="Discard incomplete item?"
+        description={
+          stagedPhotos.length > 0
+            ? `${name || 'The item'} was created but ${stagedPhotos.length} photo${stagedPhotos.length === 1 ? '' : 's'} didn't attach. Discard it?`
+            : `${name || 'The item'} was created. Discard it?`
+        }
+        confirmLabel="Discard"
+        onConfirm={performDiscard}
+        loading={isDiscarding}
       />
     </DialogContent>
   )

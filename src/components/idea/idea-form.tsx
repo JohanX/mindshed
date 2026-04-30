@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { createIdea, updateIdea } from '@/actions/idea'
+import { createIdea, updateIdea, deleteIdea } from '@/actions/idea'
 import { createIdeaSchema, updateIdeaSchema } from '@/lib/schemas/idea'
 import {
   getIdeaImage,
@@ -102,6 +102,13 @@ export function IdeaFormDialog({
   const isInRetryState = createdIdeaId !== null
   const stagedAtCap = stagedPhotos.length >= 1 // FR113: idea image cap is 1
 
+  // Discard-orphan-on-cancel flow (Story 27.2 retroactive fix). Mirrors
+  // the inventory-item-form pattern: if the user cancels after the idea
+  // was created but the photo failed to attach, prompt to discard the
+  // orphan instead of silently leaving it.
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false)
+  const [isDiscarding, startDiscardTransition] = useTransition()
+
   function revokeStagedFileUrls(photos: StagedPhoto[]) {
     for (const staged of photos) {
       if (staged.kind === 'file') URL.revokeObjectURL(staged.previewUrl)
@@ -127,6 +134,12 @@ export function IdeaFormDialog({
       setReferenceLink(idea.referenceLink ?? '')
       setSelectedHobbyId(idea.hobbyId)
     }
+    // Closing while a partial-failure orphan exists: don't silently
+    // discard. Open the discard-confirm dialog instead.
+    if (!nextOpen && !isEditMode && isInRetryState) {
+      setDiscardConfirmOpen(true)
+      return
+    }
     if (onOpenChange) {
       onOpenChange(nextOpen)
     } else {
@@ -135,6 +148,30 @@ export function IdeaFormDialog({
     if (!nextOpen && !isEditMode) {
       resetCreateState()
     }
+  }
+
+  function performDiscard() {
+    const orphanId = createdIdeaId
+    if (!orphanId) {
+      setDiscardConfirmOpen(false)
+      if (onOpenChange) onOpenChange(false)
+      else setInternalOpen(false)
+      resetCreateState()
+      return
+    }
+    startDiscardTransition(async () => {
+      const result = await deleteIdea(orphanId)
+      if (!result.success) {
+        showErrorToast(result.error)
+        setDiscardConfirmOpen(false)
+        return
+      }
+      showSuccessToast('Incomplete idea discarded')
+      setDiscardConfirmOpen(false)
+      if (onOpenChange) onOpenChange(false)
+      else setInternalOpen(false)
+      resetCreateState()
+    })
   }
 
   // ----- Edit-mode photo loading -----
@@ -503,6 +540,22 @@ export function IdeaFormDialog({
         description="This cannot be undone."
         onConfirm={handlePhotoDelete}
         loading={isPhotoDeleting}
+      />
+
+      <ConfirmDialog
+        open={discardConfirmOpen}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setDiscardConfirmOpen(false)
+        }}
+        title="Discard incomplete idea?"
+        description={
+          stagedPhotos.length > 0
+            ? `${title || 'The idea'} was created but its photo didn't attach. Discard it?`
+            : `${title || 'The idea'} was created. Discard it?`
+        }
+        confirmLabel="Discard"
+        onConfirm={performDiscard}
+        loading={isDiscarding}
       />
     </DialogContent>
   )

@@ -42,6 +42,16 @@ export function InventoryItemCard({ item, hobbies }: InventoryItemCardProps) {
   // thumbnail and the lightbox image. Per-instance unique (item.id is
   // unique across the inventory list) so concurrent lightboxes from
   // sibling cards never collide on the name.
+  //
+  // Known perf trade-off: the View Transitions API snapshots EVERY DOM
+  // element carrying `view-transition-name`, regardless of whether it
+  // pairs in the new state. With ~50+ inventory items rendered on the
+  // page, the open transition snapshots 50+ thumbnails when only one is
+  // morphing — measurable jank at scale. The clean fix lifts a single
+  // `openingId` into the parent (`/inventory` page) and only sets the
+  // name on the matching card synchronously before
+  // `runWithViewTransition`. Acceptable at current single-user scale;
+  // revisit if inventory list grows past ~30 cards.
   const viewTransitionName = `inv-hero-${item.id}`
 
   async function openLightbox() {

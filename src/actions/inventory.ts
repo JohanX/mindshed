@@ -168,6 +168,22 @@ export async function deleteInventoryItem(itemId: string): Promise<ActionResult<
 
   try {
     const storageKeys = await prisma.$transaction(async (tx) => {
+      // Idempotency guard (Story 27 retroactive fix): if the row is
+      // already soft-deleted, short-circuit. Without this, a repeat
+      // call (e.g. from the discard-orphan-on-cancel flow that fired
+      // a second time) would silently re-attempt storage cleanup on
+      // already-revoked keys and emit noisy adapter errors.
+      const existing = await tx.inventoryItem.findUnique({
+        where: { id: parsed.data },
+        select: { isDeleted: true },
+      })
+      if (!existing) {
+        // Mirror the P2025 contract — surfaced cleanly to callers.
+        throw Object.assign(new Error('Item not found.'), { code: 'P2025' })
+      }
+      if (existing.isDeleted) {
+        return [] as { storageKey: string | null }[]
+      }
       // FR122 / Story 28.2: collect UPLOAD-image storage keys BEFORE the
       // soft-delete update so they're captured atomically with the state
       // transition. Photo DB rows REMAIN linked to the soft-deleted item
