@@ -77,7 +77,7 @@ export function IdeaCard({ idea, hobby, showHobbyBadge = true }: IdeaCardProps) 
             {idea.thumbnailUrl && (
               <button
                 type="button"
-                className="h-12 w-12 shrink-0 overflow-hidden rounded-md min-h-[44px] min-w-[44px]"
+                className="h-12 w-12 shrink-0 overflow-hidden rounded-md min-h-[44px] min-w-[44px] cursor-pointer ring-ring transition-shadow hover:ring-2 focus-visible:outline-none focus-visible:ring-2"
                 onClick={() => void openLightbox()}
                 aria-label={`View photo of ${idea.title}`}
               >

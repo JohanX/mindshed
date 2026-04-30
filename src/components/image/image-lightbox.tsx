@@ -124,13 +124,13 @@ export function ImageLightbox({
               {showDelete && (
                 <ImageDeleteButton
                   imageId={current.id}
-                  className="h-11 w-11 rounded-full bg-white/10 hover:bg-destructive text-white"
+                  className="h-11 w-11 rounded-full bg-black/50 supports-backdrop-filter:backdrop-blur-sm text-white hover:bg-destructive"
                 />
               )}
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-11 w-11 rounded-full bg-white/10 text-white hover:bg-white/20"
+                className="h-11 w-11 rounded-full bg-black/50 supports-backdrop-filter:backdrop-blur-sm text-white hover:bg-black/70"
                 onClick={onClose}
                 aria-label="Close lightbox"
                 data-testid="lightbox-close"
@@ -173,7 +173,7 @@ export function ImageLightbox({
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute left-3 top-1/2 z-10 h-11 w-11 -translate-y-1/2 rounded-full bg-white/10 text-white hover:bg-white/20"
+                className="absolute left-3 top-1/2 z-10 h-11 w-11 -translate-y-1/2 rounded-full bg-black/50 supports-backdrop-filter:backdrop-blur-sm text-white hover:bg-black/70"
                 onClick={goPrev}
                 aria-label="Previous image"
                 data-testid="lightbox-prev"
@@ -187,7 +187,7 @@ export function ImageLightbox({
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute right-3 top-1/2 z-10 h-11 w-11 -translate-y-1/2 rounded-full bg-white/10 text-white hover:bg-white/20"
+                className="absolute right-3 top-1/2 z-10 h-11 w-11 -translate-y-1/2 rounded-full bg-black/50 supports-backdrop-filter:backdrop-blur-sm text-white hover:bg-black/70"
                 onClick={goNext}
                 aria-label="Next image"
                 data-testid="lightbox-next"

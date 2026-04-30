@@ -130,7 +130,7 @@ export function InventoryItemCard({ item, hobbies }: InventoryItemCardProps) {
               {item.heroThumbnailUrl && (
                 <button
                   type="button"
-                  className="h-12 w-12 shrink-0 overflow-hidden rounded-md min-h-[44px] min-w-[44px]"
+                  className="h-12 w-12 shrink-0 overflow-hidden rounded-md min-h-[44px] min-w-[44px] cursor-pointer ring-ring transition-shadow hover:ring-2 focus-visible:outline-none focus-visible:ring-2"
                   onClick={() => void openLightbox()}
                   aria-label={`View photos of ${item.name}`}
                 >
