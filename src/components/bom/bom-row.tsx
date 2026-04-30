@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useTransition } from 'react'
+import { createPortal, flushSync } from 'react-dom'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { ImageLightbox } from '@/components/image/image-lightbox'
 import { MoreHorizontal, Trash2, CheckSquare, Undo2, Loader2, AlertCircle } from 'lucide-react'
 import {
   updateBomItem,
@@ -17,7 +19,9 @@ import {
   markBomItemConsumed,
   undoBomItemConsumption,
 } from '@/actions/bom'
+import { getInventoryItemImages } from '@/actions/inventory-image'
 import { showErrorToast, showSuccessToast } from '@/lib/toast'
+import { runWithViewTransition } from '@/lib/view-transition'
 import {
   renderAvailable,
   isRowShort,
@@ -25,6 +29,7 @@ import {
   type BomConsumptionState,
   type BomItemData,
 } from '@/lib/bom'
+import type { GalleryImage } from '@/components/image/image-gallery'
 
 function variantClassName(variant: AvailableVariant | undefined): string {
   if (variant === 'ok') return 'text-step-completed'
@@ -115,8 +120,47 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
   const [isConsuming, startConsumeTransition] = useTransition()
   const [isUndoing, startUndoTransition] = useTransition()
 
+  // Story 29.5 / FR124: BOM thumbnail clickability — click opens the
+  // unified ImageLightbox with the inventory item's full photo set
+  // (parity with /inventory). Per-row state mirrors the inventory-card
+  // approach.
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxImages, setLightboxImages] = useState<GalleryImage[]>([])
+  const [lightboxLoading, setLightboxLoading] = useState(false)
+
   const isEditingLocked = row.consumptionState !== 'NOT_CONSUMED'
   const displayName = row.inventoryItem?.name ?? row.label ?? '(unnamed)'
+  const inventoryItemId = row.inventoryItem?.id ?? null
+  const viewTransitionName = inventoryItemId ? `bom-thumb-${inventoryItemId}` : undefined
+
+  async function openBomLightbox() {
+    if (!inventoryItemId) return
+    setLightboxLoading(true)
+    const result = await getInventoryItemImages(inventoryItemId)
+    if (!result.success || result.data.images.length === 0) {
+      setLightboxLoading(false)
+      return
+    }
+    const images = result.data.images.map((img) => ({
+      id: img.id,
+      displayUrl: img.displayUrl,
+      thumbnailUrl: img.thumbnailUrl,
+      originalFilename: img.originalFilename,
+    }))
+    runWithViewTransition(() => {
+      flushSync(() => {
+        setLightboxImages(images)
+        setLightboxOpen(true)
+        setLightboxLoading(false)
+      })
+    })
+  }
+
+  function closeBomLightbox() {
+    runWithViewTransition(() => {
+      flushSync(() => setLightboxOpen(false))
+    })
+  }
   const canMarkConsumed =
     row.consumptionState === 'NOT_CONSUMED' &&
     row.inventoryItem !== null &&
@@ -230,6 +274,37 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
       loading={isDeleting}
     />
   )
+
+  // Story 29.5: lightbox + loading spinner are portalled to body so the
+  // desktop <tr> variant doesn't end up with non-<td> siblings inside a
+  // table. ImageLightbox already portals via Radix; the spinner needs
+  // its own portal because it's a fixed-position div.
+  const lightboxOverlay =
+    typeof document === 'undefined'
+      ? null
+      : createPortal(
+          <>
+            {lightboxOpen && lightboxLoading && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+                aria-busy="true"
+                aria-label="Loading photos"
+              >
+                <Loader2 className="h-8 w-8 animate-spin text-white" />
+              </div>
+            )}
+            {lightboxOpen && !lightboxLoading && lightboxImages.length > 0 && (
+              <ImageLightbox
+                images={lightboxImages}
+                initialIndex={0}
+                onClose={closeBomLightbox}
+                showDelete={false}
+                viewTransitionName={viewTransitionName}
+              />
+            )}
+          </>,
+          document.body,
+        )
 
   // FR114: Mark Consumed and Undo are mutually exclusive primary actions on
   // the row, presented inline (never in the dropdown). The dropdown retains
@@ -357,147 +432,175 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
 
   if (variant === 'desktop') {
     return (
-      <tr className="border-b last:border-b-0">
-        <td className="py-2 pr-3">
-          <div className="flex items-center gap-2">
+      <>
+        {lightboxOverlay}
+        <tr className="border-b last:border-b-0">
+          <td className="py-2 pr-3">
+            <div className="flex items-center gap-2">
+              {row.inventoryItem?.heroThumbnailUrl && (
+                <button
+                  type="button"
+                  className="h-7 w-7 shrink-0 overflow-hidden rounded cursor-pointer ring-ring transition-shadow hover:ring-2 focus-visible:outline-none focus-visible:ring-2"
+                  onClick={() => void openBomLightbox()}
+                  aria-label={`View photos of ${displayName}`}
+                  disabled={lightboxLoading}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={row.inventoryItem.heroThumbnailUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    style={{ viewTransitionName }}
+                  />
+                </button>
+              )}
+              <span
+                className={nameClass}
+                title={nameIsMuted ? 'Item removed from inventory' : undefined}
+              >
+                {displayName}
+              </span>
+            </div>
+          </td>
+          <td className="py-2 pr-3">
+            <Input
+              type="number"
+              inputMode="decimal"
+              step="any"
+              min="0"
+              value={required}
+              onChange={(e) => setRequired(e.target.value)}
+              onBlur={persistRequired}
+              disabled={isEditingLocked}
+              aria-label="Required quantity"
+              className="h-9"
+            />
+          </td>
+          <td className="py-2 pr-3">
+            <Input
+              type="text"
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              onBlur={persistUnit}
+              disabled={isEditingLocked}
+              maxLength={50}
+              aria-label="Unit"
+              className="h-9"
+            />
+          </td>
+          <td className="py-2 pr-3">
+            <AvailableCell row={row} />
+          </td>
+          <td className="py-2 pr-0 text-right">{desktopActions}</td>
+        </tr>
+      </>
+    )
+  }
+
+  return (
+    <>
+      {lightboxOverlay}
+      <div className="rounded-md border border-border bg-background p-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             {row.inventoryItem?.heroThumbnailUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={row.inventoryItem.heroThumbnailUrl}
-                alt=""
-                className="h-7 w-7 shrink-0 rounded object-cover"
-              />
+              <button
+                type="button"
+                className="h-7 w-7 shrink-0 overflow-hidden rounded cursor-pointer ring-ring transition-shadow hover:ring-2 focus-visible:outline-none focus-visible:ring-2"
+                onClick={() => void openBomLightbox()}
+                aria-label={`View photos of ${displayName}`}
+                disabled={lightboxLoading}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={row.inventoryItem.heroThumbnailUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  style={{ viewTransitionName }}
+                />
+              </button>
             )}
             <span
-              className={nameClass}
+              className={`font-medium ${nameClass}`}
               title={nameIsMuted ? 'Item removed from inventory' : undefined}
             >
               {displayName}
             </span>
           </div>
-        </td>
-        <td className="py-2 pr-3">
-          <Input
-            type="number"
-            inputMode="decimal"
-            step="any"
-            min="0"
-            value={required}
-            onChange={(e) => setRequired(e.target.value)}
-            onBlur={persistRequired}
-            disabled={isEditingLocked}
-            aria-label="Required quantity"
-            className="h-9"
-          />
-        </td>
-        <td className="py-2 pr-3">
-          <Input
-            type="text"
-            value={unit}
-            onChange={(e) => setUnit(e.target.value)}
-            onBlur={persistUnit}
-            disabled={isEditingLocked}
-            maxLength={50}
-            aria-label="Unit"
-            className="h-9"
-          />
-        </td>
-        <td className="py-2 pr-3">
-          <AvailableCell row={row} />
-        </td>
-        <td className="py-2 pr-0 text-right">{desktopActions}</td>
-      </tr>
-    )
-  }
-
-  return (
-    <div className="rounded-md border border-border bg-background p-3">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          {row.inventoryItem?.heroThumbnailUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={row.inventoryItem.heroThumbnailUrl}
-              alt=""
-              className="h-7 w-7 shrink-0 rounded object-cover"
+          {mobileHeaderActions}
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <span className="text-xs text-muted-foreground">Required</span>
+            <Input
+              type="number"
+              inputMode="decimal"
+              step="any"
+              min="0"
+              value={required}
+              onChange={(e) => setRequired(e.target.value)}
+              onBlur={persistRequired}
+              disabled={isEditingLocked}
+              aria-label="Required quantity"
             />
-          )}
-          <span
-            className={`font-medium ${nameClass}`}
-            title={nameIsMuted ? 'Item removed from inventory' : undefined}
-          >
-            {displayName}
-          </span>
+          </div>
+          <div className="space-y-1">
+            <span className="text-xs text-muted-foreground">Unit</span>
+            <Input
+              type="text"
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              onBlur={persistUnit}
+              disabled={isEditingLocked}
+              maxLength={50}
+              aria-label="Unit"
+            />
+          </div>
         </div>
-        {mobileHeaderActions}
-      </div>
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <span className="text-xs text-muted-foreground">Required</span>
-          <Input
-            type="number"
-            inputMode="decimal"
-            step="any"
-            min="0"
-            value={required}
-            onChange={(e) => setRequired(e.target.value)}
-            onBlur={persistRequired}
-            disabled={isEditingLocked}
-            aria-label="Required quantity"
-          />
-        </div>
-        <div className="space-y-1">
-          <span className="text-xs text-muted-foreground">Unit</span>
-          <Input
-            type="text"
-            value={unit}
-            onChange={(e) => setUnit(e.target.value)}
-            onBlur={persistUnit}
-            disabled={isEditingLocked}
-            maxLength={50}
-            aria-label="Unit"
-          />
-        </div>
-      </div>
-      <div className="mt-2 flex items-center justify-between gap-2 text-sm">
-        <div>
-          <span className="text-xs text-muted-foreground">Available: </span>
-          <AvailableCell row={row} />
-        </div>
-        {/*
+        <div className="mt-2 flex items-center justify-between gap-2 text-sm">
+          <div>
+            <span className="text-xs text-muted-foreground">Available: </span>
+            <AvailableCell row={row} />
+          </div>
+          {/*
           FR114: Mark Consumed and Undo are mutually exclusive inline buttons
           on mobile too. Deliberate sub-44px touch target — xs button (h-6)
           matches the Consumed badge height so the row stays a single line.
         */}
-        {canMarkConsumed && (
-          <Button
-            type="button"
-            variant="outline"
-            size="xs"
-            onClick={handleMarkConsumed}
-            disabled={isConsuming}
-          >
-            {isConsuming ? (
-              <Loader2 className="size-3 animate-spin" />
-            ) : (
-              <CheckSquare className="size-3" />
-            )}
-            Mark consumed
-          </Button>
-        )}
-        {canUndo && (
-          <Button
-            type="button"
-            variant="outline"
-            size="xs"
-            onClick={handleUndo}
-            disabled={isUndoing}
-          >
-            {isUndoing ? <Loader2 className="size-3 animate-spin" /> : <Undo2 className="size-3" />}
-            Undo
-          </Button>
-        )}
+          {canMarkConsumed && (
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              onClick={handleMarkConsumed}
+              disabled={isConsuming}
+            >
+              {isConsuming ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <CheckSquare className="size-3" />
+              )}
+              Mark consumed
+            </Button>
+          )}
+          {canUndo && (
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              onClick={handleUndo}
+              disabled={isUndoing}
+            >
+              {isUndoing ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <Undo2 className="size-3" />
+              )}
+              Undo
+            </Button>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   )
 }

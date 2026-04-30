@@ -16,39 +16,13 @@ import { Pencil, Trash2, Loader2 } from 'lucide-react'
 import type { InventoryItemData } from '@/lib/schemas/inventory'
 import type { GalleryImage } from '@/components/image/image-gallery'
 import { getContrastTextColor } from '@/lib/hobby-color'
+import { runWithViewTransition } from '@/lib/view-transition'
 
 const TYPE_CONFIG = {
   MATERIAL: { label: 'Material', colorClass: 'bg-step-in-progress text-white' },
   CONSUMABLE: { label: 'Consumable', colorClass: 'bg-step-completed text-white' },
   TOOL: { label: 'Tool', colorClass: 'bg-step-blocked text-white' },
 } as const
-
-// Story 29.1 / FR123: feature-detected View Transitions API wrapper.
-// Chromium runs the callback inside `document.startViewTransition` for
-// the morph; everything else runs the callback directly. The callback
-// MUST contain its own `flushSync` so React commits the DOM change
-// synchronously (the browser snapshots BEFORE/AFTER around the
-// callback; deferred React renders would miss the "after" snapshot).
-//
-// `document.startViewTransition` isn't yet in TypeScript's standard
-// `lib.dom.d.ts` for our target — narrow the cast to keep the
-// type-safety meaningful at the call site.
-type DocumentWithViewTransitions = Document & {
-  startViewTransition?: (callback: () => void) => unknown
-}
-
-function runWithViewTransition(callback: () => void): void {
-  if (typeof document === 'undefined') {
-    callback()
-    return
-  }
-  const startViewTransition = (document as DocumentWithViewTransitions).startViewTransition
-  if (typeof startViewTransition === 'function') {
-    startViewTransition.call(document, callback)
-  } else {
-    callback()
-  }
-}
 
 interface InventoryItemCardProps {
   item: InventoryItemData
