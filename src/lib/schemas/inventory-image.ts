@@ -1,5 +1,6 @@
 import { z } from 'zod/v4'
 import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES } from '@/lib/constants/image-upload'
+import { imageUrlSchema } from '@/lib/schemas/image-url'
 
 export const addInventoryItemImageSchema = z.object({
   inventoryItemId: z.uuid(),
@@ -15,12 +16,7 @@ export type AddInventoryItemImageInput = z.infer<typeof addInventoryItemImageSch
 
 export const addInventoryItemImageLinkSchema = z.object({
   inventoryItemId: z.uuid(),
-  url: z
-    .url()
-    .refine(
-      (val) => val.startsWith('http://') || val.startsWith('https://'),
-      'URL must start with http:// or https://',
-    ),
+  url: imageUrlSchema,
 })
 
 export type AddInventoryItemImageLinkInput = z.infer<typeof addInventoryItemImageLinkSchema>

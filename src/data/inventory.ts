@@ -92,6 +92,17 @@ export async function findInventoryItemsList(
 }
 
 /**
+ * Soft cap on the BOM combobox payload. The combobox loads ALL active
+ * options up front and filters client-side — fast and snappy at single-
+ * user scale (typical inventories: tens to low-hundreds of items). At
+ * very large catalogs this becomes O(N) bytes per BOM-section render
+ * plus N adapter calls for thumbnail URL resolution. The cap keeps the
+ * worst case bounded; if a real catalog approaches the limit, switch
+ * to a typeahead/server-side filter at the call site.
+ */
+const INVENTORY_OPTIONS_LIMIT = 500
+
+/**
  * BOM autocomplete options. When `hobbyId` is provided, scope to items
  * tagged with that hobby OR untagged items (FR102).
  *
@@ -107,6 +118,7 @@ export async function findInventoryItemOptions(hobbyId?: string): Promise<Invent
   const items = await prisma.inventoryItem.findMany({
     where,
     orderBy: { name: 'asc' },
+    take: INVENTORY_OPTIONS_LIMIT,
     select: {
       id: true,
       name: true,

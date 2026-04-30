@@ -34,6 +34,7 @@ import { uploadImage } from '@/lib/upload-image'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
 import { Plus, Loader2, Trash2 } from 'lucide-react'
 import { ImageFormInputs } from '@/components/image/image-form-inputs'
+import { StagedPhotoGrid, type StagedPhoto } from '@/components/image/staged-photo-grid'
 
 /**
  * Story 27.2 (FR121): unified idea form covering both CREATE and EDIT
@@ -57,10 +58,6 @@ import { ImageFormInputs } from '@/components/image/image-form-inputs'
  */
 
 type HobbyOption = { id: string; name: string; color: string }
-
-type StagedPhoto =
-  | { id: string; kind: 'file'; file: File; previewUrl: string }
-  | { id: string; kind: 'url'; url: string }
 
 type IdeaFormDialogProps = {
   idea?: Idea
@@ -379,6 +376,21 @@ export function IdeaFormDialog({
           </div>
         )}
 
+        {/* When the idea form is rendered without a fixed hobby (e.g. on
+            /ideas) AND the user has no hobbies yet, the hobby selector
+            renders nothing — and submission is silently disabled because
+            `effectiveHobbyId === ''`. Surface a clear next step instead
+            of leaving the user wondering why "Save" stays inactive. */}
+        {!isEditMode && !hobbyId && hobbies && hobbies.length === 0 && (
+          <div
+            className="rounded-md border border-dashed border-border bg-muted/30 p-3 text-sm text-muted-foreground"
+            role="note"
+          >
+            You don&apos;t have any hobbies yet. Create a hobby first, then come back to capture
+            ideas under it.
+          </div>
+        )}
+
         <div className="space-y-2">
           <Label htmlFor="idea-title">Title</Label>
           <Input
@@ -440,34 +452,7 @@ export function IdeaFormDialog({
               />
             )}
 
-            {stagedPhotos.length > 0 && (
-              <div
-                className="grid grid-cols-[repeat(auto-fill,80px)] gap-2"
-                data-testid="staged-photo-grid"
-              >
-                {stagedPhotos.map((staged) => (
-                  <div key={staged.id} className="relative h-20 w-20 rounded-md">
-                    <div className="h-full w-full overflow-hidden rounded-md">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={staged.kind === 'file' ? staged.previewUrl : staged.url}
-                        alt="Staged photo preview"
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className="absolute -right-2 -top-2 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white"
-                      aria-label="Remove staged photo"
-                      onClick={() => handleUnstage(staged.id)}
-                      disabled={isPending}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            <StagedPhotoGrid photos={stagedPhotos} onUnstage={handleUnstage} disabled={isPending} />
           </div>
         ) : null}
 

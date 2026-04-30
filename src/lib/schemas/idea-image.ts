@@ -1,5 +1,6 @@
 import { z } from 'zod/v4'
 import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES } from '@/lib/constants/image-upload'
+import { imageUrlSchema } from '@/lib/schemas/image-url'
 
 export const addIdeaImageSchema = z.object({
   ideaId: z.uuid(),
@@ -15,12 +16,7 @@ export type AddIdeaImageInput = z.infer<typeof addIdeaImageSchema>
 
 export const addIdeaImageLinkSchema = z.object({
   ideaId: z.uuid(),
-  url: z
-    .url()
-    .refine(
-      (val) => val.startsWith('http://') || val.startsWith('https://'),
-      'URL must start with http:// or https://',
-    ),
+  url: imageUrlSchema,
 })
 
 export type AddIdeaImageLinkInput = z.infer<typeof addIdeaImageLinkSchema>

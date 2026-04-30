@@ -10,6 +10,7 @@ import { addInventoryItemImageLink } from '@/actions/inventory-image'
 import { addIdeaImageLink } from '@/actions/idea-image'
 import { addInventoryItemImageLinkSchema } from '@/lib/schemas/inventory-image'
 import { addIdeaImageLinkSchema } from '@/lib/schemas/idea-image'
+import { imageUrlSchema } from '@/lib/schemas/image-url'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
 
 /**
@@ -132,33 +133,37 @@ export function ImageFormInputs(props: ImageFormInputsProps) {
 
   function handleLinkSave() {
     setFileError(null)
-    const schema =
-      props.entityKind === 'idea' ? addIdeaImageLinkSchema : addInventoryItemImageLinkSchema
-    // For staged mode we don't have an entityId yet — pass a synthetic UUID
-    // just to satisfy the schema's shape; only the URL refinement matters
-    // here (the real id check happens server-side at attach time).
-    const placeholderId = '00000000-0000-0000-0000-000000000000'
-    const candidatePayload =
-      props.entityKind === 'idea'
-        ? { ideaId: props.mode === 'live' ? props.entityId : placeholderId, url: linkUrl }
-        : {
-            inventoryItemId: props.mode === 'live' ? props.entityId : placeholderId,
-            url: linkUrl,
-          }
-    const parsed = schema.safeParse(candidatePayload)
-    if (!parsed.success) {
-      setLinkError(parsed.error.issues[0]?.message ?? 'Invalid URL')
-      return
-    }
-    setLinkError(null)
 
     if (props.mode === 'staged') {
-      props.onStageUrl(parsed.data.url)
+      // Staged mode: validate just the URL (no entity id yet). The
+      // shared `imageUrlSchema` is the single source of truth — both
+      // action schemas (inventory + idea) compose it, so staged-mode
+      // and live-mode validation can never drift.
+      const parsed = imageUrlSchema.safeParse(linkUrl)
+      if (!parsed.success) {
+        setLinkError(parsed.error.issues[0]?.message ?? 'Invalid URL')
+        return
+      }
+      setLinkError(null)
+      props.onStageUrl(parsed.data)
       setLinkExpanded(false)
       setLinkUrl('')
       return
     }
 
+    // Live mode: validate the full action input (entity id + URL).
+    const liveSchema =
+      props.entityKind === 'idea' ? addIdeaImageLinkSchema : addInventoryItemImageLinkSchema
+    const livePayload =
+      props.entityKind === 'idea'
+        ? { ideaId: props.entityId, url: linkUrl }
+        : { inventoryItemId: props.entityId, url: linkUrl }
+    const parsed = liveSchema.safeParse(livePayload)
+    if (!parsed.success) {
+      setLinkError(parsed.error.issues[0]?.message ?? 'Invalid URL')
+      return
+    }
+    setLinkError(null)
     runLiveLinkSave(parsed.data.url, props)
   }
 

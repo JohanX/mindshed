@@ -10,6 +10,40 @@ const TYPE_EMOJI: Record<InventoryType, string> = {
   TOOL: '🔧',
 }
 
+/**
+ * Combobox thumbnail with graceful-fallback semantics:
+ * - No `heroThumbnailUrl` → render the type emoji.
+ * - URL present but image fails to load (404, CORS, etc.) → swap to the
+ *   emoji fallback via `onError`.
+ * - `loading="lazy"` + explicit width/height to keep layout stable while
+ *   the long combobox list scrolls — no row jitter.
+ */
+function ComboboxThumbnail({ option }: { option: InventoryOption }) {
+  const [broken, setBroken] = useState(false)
+  if (!option.heroThumbnailUrl || broken) {
+    return (
+      <span
+        aria-hidden
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-muted text-base"
+      >
+        {TYPE_EMOJI[option.type]}
+      </span>
+    )
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={option.heroThumbnailUrl}
+      alt=""
+      width={32}
+      height={32}
+      loading="lazy"
+      onError={() => setBroken(true)}
+      className="h-8 w-8 shrink-0 rounded object-cover"
+    />
+  )
+}
+
 interface InventoryComboboxProps {
   options: InventoryOption[]
   onPickExisting: (option: InventoryOption) => void
@@ -139,21 +173,11 @@ export function InventoryCombobox({
                 onPickExisting(option)
               }}
             >
-              {option.heroThumbnailUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={option.heroThumbnailUrl}
-                  alt=""
-                  className="h-8 w-8 shrink-0 rounded object-cover"
-                />
-              ) : (
-                <span
-                  aria-hidden
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-muted text-base"
-                >
-                  {TYPE_EMOJI[option.type]}
-                </span>
-              )}
+              <ComboboxThumbnail option={option} />
+              {/* `loading="lazy"` + explicit dims + onError fallback live
+                  inside `<ComboboxThumbnail>` — extracted so the broken-
+                  image case can swap to the type-emoji fallback without
+                  duplicating the markup. */}
               <span className="flex-1 truncate">{option.name}</span>
               <span className="text-xs text-muted-foreground">
                 {formatQty(option.quantity, option.unit)}
