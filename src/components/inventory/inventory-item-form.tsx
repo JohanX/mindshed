@@ -161,9 +161,9 @@ export function InventoryItemFormDialog({
   }, [item])
 
   useEffect(() => {
-    // Load existing photos when the dialog opens in edit mode. Same
-    // load-on-open pattern as `idea-edit-dialog.tsx` — the cascading
-    // render only fires once per open transition and is intentional.
+    // Load existing photos when the dialog opens in edit mode. The
+    // cascading render only fires once per open transition and is
+    // intentional.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (open) void fetchPhotos()
   }, [open, fetchPhotos])

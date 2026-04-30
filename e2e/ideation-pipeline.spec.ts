@@ -273,4 +273,35 @@ test.describe('Ideation Pipeline', () => {
     await page.waitForLoadState('networkidle')
     await expect(page.getByText('Promote Me Idea').first()).toBeVisible()
   })
+
+  test('can create idea with pasted-link photo (Story 27.2 / FR121 parity)', async ({ page }) => {
+    // Story 27.2: idea form unified with inventory-item-form, uses the
+    // same shared image-form-inputs.tsx. Create flow now supports
+    // Paste/Link (FR121 parity gap closure for ideas).
+    const ideaTitle = `${testPrefix} Linked Idea`
+    await page.goto(hobbyIdeasUrl)
+    await page.waitForLoadState('networkidle')
+
+    await page.getByRole('button', { name: 'New Idea' }).first().click()
+    await page.getByPlaceholder("What's the idea?").fill(ideaTitle)
+
+    // Stage a URL via the Paste/Link expandable in the create dialog.
+    await page.getByTestId('image-form-inputs-link-prompt').click()
+    await page.getByPlaceholder('Paste image or URL').fill('https://picsum.photos/200/200')
+    // The expand's Save stages the URL into the queue.
+    await page.getByRole('button', { name: 'Save', exact: true }).first().click()
+
+    // Staged-photo grid renders below — idea cap is 1 so controls hide.
+    await expect(page.getByTestId('staged-photo-grid')).toBeVisible()
+    await expect(page.getByTestId('staged-photo-grid').locator('img')).toHaveCount(1)
+
+    // Submit the form (outer Save).
+    await page.getByRole('button', { name: 'Save', exact: true }).last().click()
+    await page.waitForTimeout(1500)
+
+    // Verify the idea appears.
+    await page.goto(hobbyIdeasUrl)
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText(ideaTitle)).toBeVisible()
+  })
 })

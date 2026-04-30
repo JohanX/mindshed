@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { IdeaEditDialog } from '@/components/idea/idea-edit-dialog'
+import { IdeaFormDialog } from '@/components/idea/idea-form'
 import { promoteIdea, deleteIdea } from '@/actions/idea'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
 import { MoreHorizontal, Pencil, Trash2, ArrowUpRight } from 'lucide-react'
@@ -84,7 +84,7 @@ export function IdeaActionsMenu({ idea }: IdeaActionsMenuProps) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {editOpen && <IdeaEditDialog idea={idea} open={editOpen} onOpenChange={setEditOpen} />}
+      {editOpen && <IdeaFormDialog idea={idea} open={editOpen} onOpenChange={setEditOpen} />}
 
       <ConfirmDialog
         open={deleteOpen}
