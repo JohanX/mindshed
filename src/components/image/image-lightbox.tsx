@@ -8,11 +8,17 @@ import { ImageDeleteButton } from '@/components/image/image-delete-button'
 import type { GalleryImage } from '@/components/image/image-gallery'
 
 // Story 29.6 / FR124: swipe gesture thresholds.
-// HORIZONTAL_THRESHOLD: minimum X displacement to count as a swipe.
-// VERTICAL_THRESHOLD: maximum Y displacement allowed — beyond this we
-// treat the gesture as a vertical scroll/drag attempt and ignore.
-const SWIPE_HORIZONTAL_THRESHOLD = 50
-const SWIPE_VERTICAL_THRESHOLD = 30
+// AXIS_LOCK_DISTANCE: minimum any-direction motion before we commit to
+//   either a horizontal (swipe) or vertical (ignored) gesture. Once
+//   locked horizontal, subsequent vertical drift is ignored — fixes
+//   slow swipes failing because the user's finger naturally arcs.
+// COMMIT_DISTANCE_THRESHOLD: raw distance that always commits.
+// FLICK_VELOCITY_THRESHOLD / FLICK_DISTANCE_THRESHOLD: a fast flick
+//   commits at lower distance — fixes "swiped fast but not far enough".
+const SWIPE_AXIS_LOCK_DISTANCE = 8
+const SWIPE_COMMIT_DISTANCE_THRESHOLD = 50
+const SWIPE_FLICK_VELOCITY_THRESHOLD = 0.3 // px/ms
+const SWIPE_FLICK_DISTANCE_THRESHOLD = 20
 
 interface ImageLightboxProps {
   images: GalleryImage[]
@@ -94,17 +100,38 @@ export function ImageLightbox({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [goNext, goPrev])
 
-  // Story 29.6 (revised after smoke testing): the original threshold-
-  // detect → setCurrentIndex implementation felt abrupt. The user
-  // expected the platform-native sliding gesture — current image
-  // follows the finger during drag, then animates fully off-screen on
-  // commit. State machine:
+  // Story 29.6 (revised): axis-locked sliding gesture with flick
+  // detection.
+  //
   //   idle       — no drag; image transform reset
-  //   dragging   — finger on screen; image translates with deltaX
-  //   committing — finger lifted past threshold; image animates to
-  //                ±containerWidth before the index swap
+  //   dragging   — finger on screen; once we've moved past the axis-
+  //                lock distance the gesture is committed to either
+  //                'horizontal' (image follows finger) or 'vertical'
+  //                (ignored — let the browser do its thing)
+  //   committing — finger lifted past threshold or flicked; image
+  //                animates fully off-screen before the index swap
+  //
+  // Why axis-lock at gesture start (not at endpoint): on mobile the
+  // user's finger naturally arcs during a long swipe, so endpoint
+  // deltaY can legitimately exceed any reasonable cap. Locking the
+  // axis from the first ~8px of motion captures the *intent* — once
+  // we know it's a horizontal swipe, vertical drift is irrelevant.
+  //
+  // Why velocity-based flick detection: distance-only thresholds
+  // miss fast flicks that travel <50px. Tracking timestamp at pointer-
+  // down lets us compute velocity at pointer-up; a flick (>0.3 px/ms,
+  // distance >=20px) commits even when raw distance is below the
+  // 50px static threshold.
+  //
   // Pointer gate to 'touch' only so mouse-drag doesn't trigger nav.
-  const swipeStartRef = useRef<{ x: number; y: number; pointerId: number } | null>(null)
+  type SwipeStart = {
+    x: number
+    y: number
+    pointerId: number
+    timestamp: number
+    axis: 'horizontal' | 'vertical' | null
+  }
+  const swipeStartRef = useRef<SwipeStart | null>(null)
   const [dragOffset, setDragOffset] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [isCommitting, setIsCommitting] = useState(false)
@@ -116,6 +143,8 @@ export function ImageLightbox({
       x: event.clientX,
       y: event.clientY,
       pointerId: event.pointerId,
+      timestamp: event.timeStamp,
+      axis: null,
     }
     setIsDragging(true)
   }
@@ -123,13 +152,33 @@ export function ImageLightbox({
   function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
     const start = swipeStartRef.current
     if (!start || start.pointerId !== event.pointerId) return
-    if (!isDragging) return
+    // No `isDragging` state gate here — the ref's presence is the
+    // single source of truth for "are we mid-gesture". Gating on the
+    // state value would create a one-frame lag that breaks
+    // synchronous pointerdown→pointermove→pointerup sequences.
+
     const deltaX = event.clientX - start.x
     const deltaY = event.clientY - start.y
-    // If the gesture is more vertical than horizontal, treat it as a
-    // scroll attempt and don't drag the image — let the page scroll.
-    if (Math.abs(deltaY) > Math.abs(deltaX)) return
-    setDragOffset(deltaX)
+
+    // Determine the gesture's dominant axis once we've moved past the
+    // lock distance. Mutates the ref in place — the axis decision is
+    // sticky for the rest of this gesture.
+    if (start.axis === null) {
+      if (
+        Math.abs(deltaX) < SWIPE_AXIS_LOCK_DISTANCE &&
+        Math.abs(deltaY) < SWIPE_AXIS_LOCK_DISTANCE
+      )
+        return
+      start.axis = Math.abs(deltaX) > Math.abs(deltaY) ? 'horizontal' : 'vertical'
+    }
+
+    // Once locked horizontal, follow the finger. Vertical drift no
+    // longer matters — the gesture's intent is established.
+    if (start.axis === 'horizontal') {
+      setDragOffset(deltaX)
+    }
+    // axis === 'vertical' → do nothing; the browser handles it (and
+    // touch-action: pan-y on the surface lets it pan naturally).
   }
 
   function handlePointerUp(event: React.PointerEvent<HTMLDivElement>) {
@@ -138,28 +187,33 @@ export function ImageLightbox({
     swipeStartRef.current = null
     setIsDragging(false)
 
-    const deltaX = event.clientX - start.x
-    const deltaY = event.clientY - start.y
-
-    // Vertical scroll attempt — snap back without navigation.
-    if (Math.abs(deltaY) > SWIPE_VERTICAL_THRESHOLD) {
+    // Not a horizontal gesture — snap back without navigation.
+    if (start.axis !== 'horizontal') {
       setDragOffset(0)
       return
     }
 
-    // Insufficient horizontal travel — snap back, no nav.
-    if (Math.abs(deltaX) < SWIPE_HORIZONTAL_THRESHOLD) {
+    const deltaX = event.clientX - start.x
+    const elapsed = Math.max(1, event.timeStamp - start.timestamp)
+    const velocity = Math.abs(deltaX) / elapsed
+
+    const meetsDistance = Math.abs(deltaX) >= SWIPE_COMMIT_DISTANCE_THRESHOLD
+    const isFlick =
+      velocity >= SWIPE_FLICK_VELOCITY_THRESHOLD &&
+      Math.abs(deltaX) >= SWIPE_FLICK_DISTANCE_THRESHOLD
+
+    if (!meetsDistance && !isFlick) {
       setDragOffset(0)
       return
     }
 
     // Threshold met — animate image fully off-screen in the swipe
     // direction, then commit the index swap. The transition duration
-    // here matches the timeout below so the animation completes before
+    // matches the setTimeout below so the slide-out completes before
     // the swap renders.
     setIsCommitting(true)
     const containerWidth =
-      typeof window !== 'undefined' ? window.innerWidth : SWIPE_HORIZONTAL_THRESHOLD * 8
+      typeof window !== 'undefined' ? window.innerWidth : SWIPE_COMMIT_DISTANCE_THRESHOLD * 8
     const direction = deltaX < 0 ? -1 : 1
     setDragOffset(direction * containerWidth)
     setTimeout(() => {
@@ -232,7 +286,12 @@ export function ImageLightbox({
             // Mobile (`< sm`): full-viewport — the dark content IS the lightbox.
             // Desktop (`sm+`): content shrinks to wrap the image (transparent;
             // overlay around it is the dim backdrop + click-to-close target).
-            className="anim-lightbox-content relative flex h-[100dvh] w-screen max-w-full flex-col items-center justify-center gap-0 rounded-none border-none bg-black/95 p-0 outline-none sm:h-auto sm:max-h-[90vh] sm:w-auto sm:max-w-[90vw] sm:rounded-md sm:bg-transparent"
+            // touch-pan-y → `touch-action: pan-y`: claim horizontal
+            // gestures for ourselves so the browser doesn't cancel
+            // pointer events on long/fast swipes. Vertical scrolling
+            // still works (Radix already body-locks scroll under the
+            // dialog, but pan-y is the safe choice over `none`).
+            className="anim-lightbox-content relative flex h-[100dvh] w-screen max-w-full touch-pan-y flex-col items-center justify-center gap-0 rounded-none border-none bg-black/95 p-0 outline-none sm:h-auto sm:max-h-[90vh] sm:w-auto sm:max-w-[90vw] sm:rounded-md sm:bg-transparent"
             // Story 29.6: swipe gesture on touch devices — left = next,
             // right = prev. Coexists with on-screen arrows + keyboard.
             onPointerDown={handlePointerDown}
