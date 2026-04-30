@@ -250,14 +250,21 @@
 }
 
 @keyframes anim-acknowledge {
-  /* Subtle pulse — consumed by Story 29.3 on state-change surfaces.
-   * Not used in 29.1 itself; defined here so the system is complete. */
-  0%,
+  /* Story 29.3 (revised after smoke testing): the original pure-opacity
+   * flicker was too subtle to perceive. Combine a brief scale grow + an
+   * opacity dip — the scale catches the eye, the opacity reinforces the
+   * "something happened" signal. */
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  40% {
+    opacity: 0.5;
+    transform: scale(1.12);
+  }
   100% {
     opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
+    transform: scale(1);
   }
 }
 
@@ -329,8 +336,10 @@
 }
 
 /* FR123 — Acknowledge primitive (Story 29.3). Replays animation on
- * mount; surfaces use a `key` change OR re-render to trigger the
- * keyframe each time the underlying state transitions. */
+ * mount; surfaces use a `key` change to trigger the keyframe each time
+ * the underlying state transitions. Bumped from --fast (150ms) to
+ * --medium (220ms) after smoke testing — the animation needs enough
+ * duration for the scale + opacity dip to register. */
 .anim-acknowledge-on-mount {
-  animation: anim-acknowledge var(--anim-duration-fast) var(--anim-easing);
+  animation: anim-acknowledge var(--anim-duration-medium) var(--anim-easing);
 }

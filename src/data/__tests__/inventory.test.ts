@@ -128,14 +128,25 @@ describe('findInventoryItemsList', () => {
 describe('findInventoryItemOptions', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('returns active items ordered by name when no hobby filter', async () => {
+  it('returns active items ordered by name when no hobby filter, with hero image select', async () => {
     mockFindMany.mockResolvedValue([])
     await findInventoryItemOptions()
-    expect(mockFindMany).toHaveBeenCalledWith({
-      where: { isDeleted: false },
-      orderBy: { name: 'asc' },
-      select: { id: true, name: true, type: true, quantity: true, unit: true },
+    const call = mockFindMany.mock.calls[0][0] as {
+      where: Record<string, unknown>
+      orderBy: { name: string }
+      select: Record<string, unknown>
+    }
+    expect(call.where).toEqual({ isDeleted: false })
+    expect(call.orderBy).toEqual({ name: 'asc' })
+    expect(call.select).toMatchObject({
+      id: true,
+      name: true,
+      type: true,
+      quantity: true,
+      unit: true,
     })
+    // hero image inclusion (Story 29.7 / Issue 1 fix)
+    expect(call.select.images).toBeDefined()
   })
 
   it('scopes to hobby + untagged when hobby filter provided (FR102)', async () => {
@@ -143,5 +154,50 @@ describe('findInventoryItemOptions', () => {
     await findInventoryItemOptions('h1')
     const where = mockFindMany.mock.calls[0][0].where as { OR: unknown[] }
     expect(where.OR).toHaveLength(2)
+  })
+
+  it('resolves heroThumbnailUrl from UPLOAD images', async () => {
+    mockFindMany.mockResolvedValue([
+      {
+        id: 'i1',
+        name: 'Kaolin',
+        type: 'MATERIAL',
+        quantity: 100,
+        unit: 'g',
+        images: [{ id: 'img1', type: 'UPLOAD', storageKey: 'abc', url: null }],
+      },
+    ] as never)
+    const result = await findInventoryItemOptions()
+    expect(result[0].heroThumbnailUrl).toContain('abc')
+  })
+
+  it('resolves heroThumbnailUrl from LINK images using the url directly', async () => {
+    mockFindMany.mockResolvedValue([
+      {
+        id: 'i1',
+        name: 'Linked',
+        type: 'MATERIAL',
+        quantity: null,
+        unit: null,
+        images: [{ id: 'img1', type: 'LINK', storageKey: null, url: 'https://example.com/p.jpg' }],
+      },
+    ] as never)
+    const result = await findInventoryItemOptions()
+    expect(result[0].heroThumbnailUrl).toBe('https://example.com/p.jpg')
+  })
+
+  it('returns null heroThumbnailUrl when item has no images', async () => {
+    mockFindMany.mockResolvedValue([
+      {
+        id: 'i1',
+        name: 'NoPhoto',
+        type: 'TOOL',
+        quantity: null,
+        unit: null,
+        images: [],
+      },
+    ] as never)
+    const result = await findInventoryItemOptions()
+    expect(result[0].heroThumbnailUrl).toBeNull()
   })
 })

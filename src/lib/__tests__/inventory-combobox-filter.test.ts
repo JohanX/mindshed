@@ -2,7 +2,14 @@ import { describe, it, expect } from 'vitest'
 import { filterInventoryOptions, type InventoryOption } from '../bom'
 
 function opt(name: string, type: InventoryOption['type'] = 'MATERIAL'): InventoryOption {
-  return { id: name.toLowerCase().replace(/\s+/g, '-'), name, type, quantity: 0, unit: null }
+  return {
+    id: name.toLowerCase().replace(/\s+/g, '-'),
+    name,
+    type,
+    quantity: 0,
+    unit: null,
+    heroThumbnailUrl: null,
+  }
 }
 
 describe('filterInventoryOptions', () => {

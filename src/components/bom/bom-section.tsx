@@ -118,7 +118,7 @@ export function BomSection({
               type: opt.type,
               quantity: opt.quantity,
               isDeleted: false,
-              heroThumbnailUrl: null,
+              heroThumbnailUrl: opt.heroThumbnailUrl,
             },
           },
         ]

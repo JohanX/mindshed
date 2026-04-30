@@ -3,7 +3,7 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
 import { Dialog as DialogPrimitive, VisuallyHidden } from 'radix-ui'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight, X, ImageIcon } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, ImageIcon, Loader2 } from 'lucide-react'
 import { ImageDeleteButton } from '@/components/image/image-delete-button'
 import type { GalleryImage } from '@/components/image/image-gallery'
 
@@ -56,17 +56,26 @@ export function ImageLightbox({
 }: ImageLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [broken, setBroken] = useState(false)
+  // Story 29.6 (revised): explicit loading state during image swap.
+  // Browsers keep the previous <img> visible while the new src loads,
+  // which the user perceived as "navigation blocks until prefetched".
+  // Reset to true on every navigation; the <img>'s onLoad clears it.
+  // Cached images fire onLoad synchronously enough that the spinner
+  // flashes only briefly (or not at all).
+  const [imageLoading, setImageLoading] = useState(true)
 
   const total = images.length
   const current = images[currentIndex]
 
   const goNext = useCallback(() => {
     setBroken(false)
+    setImageLoading(true)
     setCurrentIndex((prev) => (prev + 1) % total)
   }, [total])
 
   const goPrev = useCallback(() => {
     setBroken(false)
+    setImageLoading(true)
     setCurrentIndex((prev) => (prev - 1 + total) % total)
   }, [total])
 
@@ -85,44 +94,86 @@ export function ImageLightbox({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [goNext, goPrev])
 
-  // Story 29.6 / FR124: pointer-event-driven swipe handler. Tracks the
-  // touch's start coordinates per-pointer-id; on pointerup, if the
-  // gesture exceeds the horizontal threshold AND stays under the
-  // vertical threshold, navigate. Gated to `pointerType === 'touch'`
-  // so mouse-drag on the image doesn't accidentally trigger navigation
-  // (mouse users have the on-screen arrow buttons + keyboard).
+  // Story 29.6 (revised after smoke testing): the original threshold-
+  // detect → setCurrentIndex implementation felt abrupt. The user
+  // expected the platform-native sliding gesture — current image
+  // follows the finger during drag, then animates fully off-screen on
+  // commit. State machine:
+  //   idle       — no drag; image transform reset
+  //   dragging   — finger on screen; image translates with deltaX
+  //   committing — finger lifted past threshold; image animates to
+  //                ±containerWidth before the index swap
+  // Pointer gate to 'touch' only so mouse-drag doesn't trigger nav.
   const swipeStartRef = useRef<{ x: number; y: number; pointerId: number } | null>(null)
+  const [dragOffset, setDragOffset] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [isCommitting, setIsCommitting] = useState(false)
 
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
     if (event.pointerType !== 'touch') return
+    if (isCommitting) return // ignore taps mid-commit-animation
     swipeStartRef.current = {
       x: event.clientX,
       y: event.clientY,
       pointerId: event.pointerId,
     }
+    setIsDragging(true)
+  }
+
+  function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const start = swipeStartRef.current
+    if (!start || start.pointerId !== event.pointerId) return
+    if (!isDragging) return
+    const deltaX = event.clientX - start.x
+    const deltaY = event.clientY - start.y
+    // If the gesture is more vertical than horizontal, treat it as a
+    // scroll attempt and don't drag the image — let the page scroll.
+    if (Math.abs(deltaY) > Math.abs(deltaX)) return
+    setDragOffset(deltaX)
   }
 
   function handlePointerUp(event: React.PointerEvent<HTMLDivElement>) {
     const start = swipeStartRef.current
     if (!start || start.pointerId !== event.pointerId) return
     swipeStartRef.current = null
+    setIsDragging(false)
 
     const deltaX = event.clientX - start.x
     const deltaY = event.clientY - start.y
-    if (Math.abs(deltaY) > SWIPE_VERTICAL_THRESHOLD) return // vertical scroll attempt
-    if (Math.abs(deltaX) < SWIPE_HORIZONTAL_THRESHOLD) return // not a real swipe
 
-    // Swipe LEFT (deltaX negative) → next image.
-    // Swipe RIGHT (deltaX positive) → previous image.
-    if (deltaX < 0) {
-      goNext()
-    } else {
-      goPrev()
+    // Vertical scroll attempt — snap back without navigation.
+    if (Math.abs(deltaY) > SWIPE_VERTICAL_THRESHOLD) {
+      setDragOffset(0)
+      return
     }
+
+    // Insufficient horizontal travel — snap back, no nav.
+    if (Math.abs(deltaX) < SWIPE_HORIZONTAL_THRESHOLD) {
+      setDragOffset(0)
+      return
+    }
+
+    // Threshold met — animate image fully off-screen in the swipe
+    // direction, then commit the index swap. The transition duration
+    // here matches the timeout below so the animation completes before
+    // the swap renders.
+    setIsCommitting(true)
+    const containerWidth =
+      typeof window !== 'undefined' ? window.innerWidth : SWIPE_HORIZONTAL_THRESHOLD * 8
+    const direction = deltaX < 0 ? -1 : 1
+    setDragOffset(direction * containerWidth)
+    setTimeout(() => {
+      if (direction < 0) goNext()
+      else goPrev()
+      setDragOffset(0)
+      setIsCommitting(false)
+    }, 220)
   }
 
   function handlePointerCancel() {
     swipeStartRef.current = null
+    setIsDragging(false)
+    setDragOffset(0)
   }
 
   if (!current) return null
@@ -131,15 +182,31 @@ export function ImageLightbox({
   // view-transition name (the open transition is the moment that earns
   // the morph; arrow navigation is a different motion, future story).
   const isOriginalImage = currentIndex === initialIndex
-  const inlineImageStyle =
-    viewTransitionName && isOriginalImage ? { viewTransitionName } : undefined
+  // Story 29.6 (revised): apply the live drag offset as a transform.
+  // - During `dragging`: no transition so the image tracks the finger.
+  // - During `committing`: transition for the slide-out animation.
+  // - When `idle` and dragOffset=0: no transform/transition (avoids
+  //   competing with the View Transition morph on the open frame).
+  const inlineImageStyle: React.CSSProperties = {
+    ...(viewTransitionName && isOriginalImage ? { viewTransitionName } : {}),
+    ...(dragOffset !== 0 || isCommitting
+      ? {
+          transform: `translateX(${dragOffset}px)`,
+          transition: isDragging ? 'none' : 'transform 220ms ease-out',
+        }
+      : {}),
+  }
 
-  // Story 29.6 / FR124: next-image prefetch. Render a hidden eager-
-  // loading <img> for `images[currentIndex + 1]` so the first forward
-  // swipe lands on a cached image instead of a blank/loading state.
-  // Backward prefetch is intentionally out of scope — the previous
-  // image is usually already in browser cache after first viewing.
-  const nextImage = currentIndex + 1 < total ? images[currentIndex + 1] : null
+  // Story 29.6 (revised): the hidden-img prefetch was REMOVED after
+  // smoke testing — browsers de-prioritise zero-size hidden images and
+  // the prefetch wasn't reliably warming the cache. Worse, navigating
+  // showed no loading feedback during the actual fetch (browser kept
+  // the previous image visible until the new one arrived, which the
+  // user perceived as "the lightbox blocks navigation"). The fix is
+  // explicit loading state via `imageLoading` + a Loader2 overlay; the
+  // browser's natural fetch on src-change carries the navigation.
+  // If/when prefetch becomes worth revisiting, use `Image()` from JS
+  // with `fetchPriority: 'high'` rather than a hidden DOM <img>.
 
   return (
     <DialogPrimitive.Root
@@ -169,6 +236,7 @@ export function ImageLightbox({
             // Story 29.6: swipe gesture on touch devices — left = next,
             // right = prev. Coexists with on-screen arrows + keyboard.
             onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerCancel}
           >
@@ -209,22 +277,38 @@ export function ImageLightbox({
             {/* Main image. Mobile fills the viewport with padding; desktop
                 hugs the image (the image is the size driver). */}
             <div className="flex h-full w-full flex-col items-center justify-center p-12 sm:h-auto sm:w-auto sm:p-0">
-              <div className="flex flex-1 items-center justify-center min-h-0 w-full sm:flex-none">
+              <div className="relative flex flex-1 items-center justify-center min-h-0 w-full sm:flex-none">
                 {broken ? (
                   <div className="flex flex-col items-center gap-2 text-white/60">
                     <ImageIcon className="h-16 w-16" />
                     <p className="text-sm">Image could not be loaded</p>
                   </div>
                 ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={current.displayUrl}
-                    alt={current.originalFilename ?? ''}
-                    className="max-h-full max-w-full object-contain sm:max-h-[90vh] sm:max-w-[90vw]"
-                    style={inlineImageStyle}
-                    onError={() => setBroken(true)}
-                    data-testid="lightbox-image"
-                  />
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      key={current.id}
+                      src={current.displayUrl}
+                      alt={current.originalFilename ?? ''}
+                      className="max-h-full max-w-full object-contain sm:max-h-[90vh] sm:max-w-[90vw]"
+                      style={inlineImageStyle}
+                      onLoad={() => setImageLoading(false)}
+                      onError={() => {
+                        setBroken(true)
+                        setImageLoading(false)
+                      }}
+                      data-testid="lightbox-image"
+                    />
+                    {imageLoading && (
+                      <div
+                        className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none"
+                        aria-hidden="true"
+                        data-testid="lightbox-image-loading"
+                      >
+                        <Loader2 className="h-10 w-10 animate-spin text-white/80" />
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -247,23 +331,6 @@ export function ImageLightbox({
                 </div>
               )}
             </div>
-
-            {/* Story 29.6: hidden eager-loading prefetch for the next
-                image so the first forward swipe doesn't hit a blank
-                state. Positioned absolutely + tiny + invisible so it
-                doesn't affect layout, capture clicks, or appear to
-                screen readers. */}
-            {nextImage && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={nextImage.displayUrl}
-                alt=""
-                aria-hidden="true"
-                loading="eager"
-                className="pointer-events-none absolute h-px w-px opacity-0"
-                data-testid="lightbox-prefetch-next"
-              />
-            )}
 
             {/* Previous arrow */}
             {total > 1 && (

@@ -82,6 +82,7 @@ export function BomNewInventoryForm({
           type,
           quantity: startingNum,
           unit: resolvedUnit,
+          heroThumbnailUrl: null,
         },
         requiredQuantity: requiredNum,
         unit: resolvedUnit,

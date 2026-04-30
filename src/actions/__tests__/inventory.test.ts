@@ -477,13 +477,16 @@ describe('getInventoryItemOptions', () => {
       select: Record<string, unknown>
     }
     expect(callArg.where).toEqual({ isDeleted: false })
-    expect(callArg.select).toEqual({
+    expect(callArg.select).toMatchObject({
       id: true,
       name: true,
       type: true,
       quantity: true,
       unit: true,
     })
+    // Story 29.7 / Issue 1 fix: hero image is now part of the select so the
+    // BOM combobox + optimistic-add row can render thumbnails.
+    expect(callArg.select.images).toBeDefined()
   })
 
   it('scopes to hobby-tagged + untagged items when hobbyId provided', async () => {

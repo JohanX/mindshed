@@ -94,15 +94,54 @@ export async function findInventoryItemsList(
 /**
  * BOM autocomplete options. When `hobbyId` is provided, scope to items
  * tagged with that hobby OR untagged items (FR102).
+ *
+ * Also resolves the hero thumbnail URL (first image, ordered by createdAt
+ * asc) so the combobox + the optimistic post-add row both have a thumbnail
+ * available without an extra round-trip.
  */
 export async function findInventoryItemOptions(hobbyId?: string): Promise<InventoryItemOption[]> {
   const where: Record<string, unknown> = { isDeleted: false }
   if (hobbyId) {
     where.OR = [{ hobbies: { some: { id: hobbyId } } }, { hobbies: { none: {} } }]
   }
-  return prisma.inventoryItem.findMany({
+  const items = await prisma.inventoryItem.findMany({
     where,
     orderBy: { name: 'asc' },
-    select: { id: true, name: true, type: true, quantity: true, unit: true },
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      quantity: true,
+      unit: true,
+      images: {
+        orderBy: { createdAt: 'asc' },
+        take: 1,
+        select: { id: true, type: true, storageKey: true, url: true },
+      },
+    },
+  })
+
+  const adapter = getImageStorageAdapter()
+  return items.map((item) => {
+    const heroImage = item.images[0] ?? null
+    let heroThumbnailUrl: string | null = null
+    if (heroImage) {
+      if (heroImage.type === 'UPLOAD' && heroImage.storageKey && adapter) {
+        heroThumbnailUrl = adapter.getThumbnailUrl(
+          heroImage.storageKey,
+          THUMBNAIL_WIDTH.INVENTORY_CARD,
+        )
+      } else if (heroImage.url) {
+        heroThumbnailUrl = heroImage.url
+      }
+    }
+    return {
+      id: item.id,
+      name: item.name,
+      type: item.type,
+      quantity: item.quantity,
+      unit: item.unit,
+      heroThumbnailUrl,
+    }
   })
 }

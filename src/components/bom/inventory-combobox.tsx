@@ -139,7 +139,21 @@ export function InventoryCombobox({
                 onPickExisting(option)
               }}
             >
-              <span aria-hidden>{TYPE_EMOJI[option.type]}</span>
+              {option.heroThumbnailUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={option.heroThumbnailUrl}
+                  alt=""
+                  className="h-8 w-8 shrink-0 rounded object-cover"
+                />
+              ) : (
+                <span
+                  aria-hidden
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-muted text-base"
+                >
+                  {TYPE_EMOJI[option.type]}
+                </span>
+              )}
               <span className="flex-1 truncate">{option.name}</span>
               <span className="text-xs text-muted-foreground">
                 {formatQty(option.quantity, option.unit)}

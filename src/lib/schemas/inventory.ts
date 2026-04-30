@@ -47,6 +47,7 @@ export type InventoryItemOption = {
   type: 'MATERIAL' | 'CONSUMABLE' | 'TOOL'
   quantity: number | null
   unit: string | null
+  heroThumbnailUrl: string | null
 }
 
 export type InventoryItemData = {

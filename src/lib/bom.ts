@@ -6,6 +6,7 @@ export type InventoryOption = {
   type: InventoryType
   quantity: number | null
   unit: string | null
+  heroThumbnailUrl: string | null
 }
 
 export type FilteredCombobox = {
