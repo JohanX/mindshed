@@ -17,10 +17,12 @@ vi.mock('@/lib/image-storage/adapter', () => ({
   })),
 }))
 
+// The cookies mock's `get` is exposed as a module-level mock so each
+// test can override its return value without re-calling vi.mock (which
+// is hoisted and would only run once at module load).
+const mockCookieGet = vi.fn().mockReturnValue({ value: 'authenticated' })
 vi.mock('next/headers', () => ({
-  cookies: vi.fn().mockResolvedValue({
-    get: vi.fn().mockReturnValue({ value: 'authenticated' }),
-  }),
+  cookies: vi.fn(async () => ({ get: mockCookieGet })),
 }))
 
 import { POST } from '../presign/route'
@@ -39,6 +41,21 @@ describe('POST /api/upload/presign', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     process.env.IMAGE_PROVIDER = 's3'
+    // Reset cookie + adapter mocks to authenticated / configured state.
+    // `clearAllMocks` zeros the call history; we must restore default
+    // implementations explicitly because the same mock instances persist
+    // across test files via Vitest's module cache.
+    mockCookieGet.mockReturnValue({ value: 'authenticated' })
+    vi.mocked(isAuthEnabled).mockReturnValue(false)
+    vi.mocked(getImageStorageAdapter).mockReturnValue({
+      getPublicUrl: vi.fn(),
+      deleteObject: vi.fn(),
+      generatePresignedUrl: vi.fn().mockResolvedValue({
+        url: 'https://storage.example.com/presigned-url',
+        key: 'steps/550e8400-e29b-41d4-a716-446655440000/test-uuid.jpg',
+      }),
+      upload: vi.fn(),
+    } as unknown as ReturnType<typeof getImageStorageAdapter>)
   })
 
   it('returns presigned URL and key for valid request', async () => {
@@ -156,11 +173,7 @@ describe('POST /api/upload/presign', () => {
 
   it('rejects unauthenticated requests when auth is enabled', async () => {
     vi.mocked(isAuthEnabled).mockReturnValue(true)
-    vi.mock('next/headers', () => ({
-      cookies: vi.fn().mockResolvedValue({
-        get: vi.fn().mockReturnValue(undefined),
-      }),
-    }))
+    mockCookieGet.mockReturnValue(undefined)
 
     const req = makeRequest({
       stepId: '550e8400-e29b-41d4-a716-446655440000',

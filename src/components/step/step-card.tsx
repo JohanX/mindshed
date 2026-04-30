@@ -10,7 +10,6 @@ import { InlineNoteInput } from '@/components/note/inline-note-input'
 import { NotesList } from '@/components/note/notes-list'
 import { ImageGallery, type GalleryImage } from '@/components/image/image-gallery'
 import { ImageUploadButton } from '@/components/image/image-upload-button'
-import { CameraCaptureButton } from '@/components/image/camera-capture-button'
 import { ImageLinkInput } from '@/components/image/image-link-input'
 import { IMAGE_LIMITS } from '@/lib/constants/image-limits'
 import { InlineBlockerInput } from '@/components/blocker/inline-blocker-input'
@@ -220,7 +219,6 @@ export function StepCard({ step, variant, isProjectCompleted }: StepCardProps) {
                   ) : (
                     <div className="flex flex-wrap gap-2 mt-2">
                       <ImageUploadButton stepId={step.id} />
-                      <CameraCaptureButton stepId={step.id} />
                       <ImageLinkInput stepId={step.id} />
                     </div>
                   ))}
