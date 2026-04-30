@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -60,10 +60,28 @@ interface BomRowProps {
 
 function AvailableCell({ row }: { row: BomItemData }) {
   const { label, variant, secondaryLabel, secondaryVariant } = renderAvailable(row)
+
+  // Story 29.3 / FR123: pulse on consumption-state transitions
+  // (NOT_CONSUMED → CONSUMED via Mark Consumed; CONSUMED → NOT_CONSUMED
+  // via Undo). Same key-remount pattern as StepStateBadge.
+  const previousStateRef = useRef(row.consumptionState)
+  const [acknowledgeKey, setAcknowledgeKey] = useState(0)
+
+  useEffect(() => {
+    // Acknowledge primitive: same key-bump pattern as StepStateBadge.
+    if (previousStateRef.current !== row.consumptionState) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAcknowledgeKey((prev) => prev + 1)
+      previousStateRef.current = row.consumptionState
+    }
+  }, [row.consumptionState])
+
+  const acknowledgeClass = acknowledgeKey > 0 ? 'anim-acknowledge-on-mount' : ''
+
   if (variant === 'consumed') {
     const showSecondary = secondaryLabel !== undefined && secondaryVariant !== 'missing'
     return (
-      <span className="inline-flex items-center gap-1.5">
+      <span key={acknowledgeKey} className={`inline-flex items-center gap-1.5 ${acknowledgeClass}`}>
         {showSecondary && (
           <span className={variantClassName(secondaryVariant)}>{secondaryLabel}</span>
         )}
@@ -73,7 +91,14 @@ function AvailableCell({ row }: { row: BomItemData }) {
       </span>
     )
   }
-  return <span className={variantClassName(variant)}>{label}</span>
+  return (
+    <span
+      key={acknowledgeKey}
+      className={`${variantClassName(variant)} ${acknowledgeClass}`.trim()}
+    >
+      {label}
+    </span>
+  )
 }
 
 export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocker }: BomRowProps) {
