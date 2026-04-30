@@ -1,11 +1,18 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import { Dialog as DialogPrimitive, VisuallyHidden } from 'radix-ui'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, X, ImageIcon } from 'lucide-react'
 import { ImageDeleteButton } from '@/components/image/image-delete-button'
 import type { GalleryImage } from '@/components/image/image-gallery'
+
+// Story 29.6 / FR124: swipe gesture thresholds.
+// HORIZONTAL_THRESHOLD: minimum X displacement to count as a swipe.
+// VERTICAL_THRESHOLD: maximum Y displacement allowed — beyond this we
+// treat the gesture as a vertical scroll/drag attempt and ignore.
+const SWIPE_HORIZONTAL_THRESHOLD = 50
+const SWIPE_VERTICAL_THRESHOLD = 30
 
 interface ImageLightboxProps {
   images: GalleryImage[]
@@ -78,6 +85,46 @@ export function ImageLightbox({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [goNext, goPrev])
 
+  // Story 29.6 / FR124: pointer-event-driven swipe handler. Tracks the
+  // touch's start coordinates per-pointer-id; on pointerup, if the
+  // gesture exceeds the horizontal threshold AND stays under the
+  // vertical threshold, navigate. Gated to `pointerType === 'touch'`
+  // so mouse-drag on the image doesn't accidentally trigger navigation
+  // (mouse users have the on-screen arrow buttons + keyboard).
+  const swipeStartRef = useRef<{ x: number; y: number; pointerId: number } | null>(null)
+
+  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    if (event.pointerType !== 'touch') return
+    swipeStartRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      pointerId: event.pointerId,
+    }
+  }
+
+  function handlePointerUp(event: React.PointerEvent<HTMLDivElement>) {
+    const start = swipeStartRef.current
+    if (!start || start.pointerId !== event.pointerId) return
+    swipeStartRef.current = null
+
+    const deltaX = event.clientX - start.x
+    const deltaY = event.clientY - start.y
+    if (Math.abs(deltaY) > SWIPE_VERTICAL_THRESHOLD) return // vertical scroll attempt
+    if (Math.abs(deltaX) < SWIPE_HORIZONTAL_THRESHOLD) return // not a real swipe
+
+    // Swipe LEFT (deltaX negative) → next image.
+    // Swipe RIGHT (deltaX positive) → previous image.
+    if (deltaX < 0) {
+      goNext()
+    } else {
+      goPrev()
+    }
+  }
+
+  function handlePointerCancel() {
+    swipeStartRef.current = null
+  }
+
   if (!current) return null
 
   // Only morph the originally-clicked image; navigations don't carry the
@@ -86,6 +133,13 @@ export function ImageLightbox({
   const isOriginalImage = currentIndex === initialIndex
   const inlineImageStyle =
     viewTransitionName && isOriginalImage ? { viewTransitionName } : undefined
+
+  // Story 29.6 / FR124: next-image prefetch. Render a hidden eager-
+  // loading <img> for `images[currentIndex + 1]` so the first forward
+  // swipe lands on a cached image instead of a blank/loading state.
+  // Backward prefetch is intentionally out of scope — the previous
+  // image is usually already in browser cache after first viewing.
+  const nextImage = currentIndex + 1 < total ? images[currentIndex + 1] : null
 
   return (
     <DialogPrimitive.Root
@@ -112,6 +166,11 @@ export function ImageLightbox({
             // Desktop (`sm+`): content shrinks to wrap the image (transparent;
             // overlay around it is the dim backdrop + click-to-close target).
             className="anim-lightbox-content relative flex h-[100dvh] w-screen max-w-full flex-col items-center justify-center gap-0 rounded-none border-none bg-black/95 p-0 outline-none sm:h-auto sm:max-h-[90vh] sm:w-auto sm:max-w-[90vw] sm:rounded-md sm:bg-transparent"
+            // Story 29.6: swipe gesture on touch devices — left = next,
+            // right = prev. Coexists with on-screen arrows + keyboard.
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
           >
             <VisuallyHidden.Root>
               <DialogPrimitive.Title>
@@ -188,6 +247,23 @@ export function ImageLightbox({
                 </div>
               )}
             </div>
+
+            {/* Story 29.6: hidden eager-loading prefetch for the next
+                image so the first forward swipe doesn't hit a blank
+                state. Positioned absolutely + tiny + invisible so it
+                doesn't affect layout, capture clicks, or appear to
+                screen readers. */}
+            {nextImage && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={nextImage.displayUrl}
+                alt=""
+                aria-hidden="true"
+                loading="eager"
+                className="pointer-events-none absolute h-px w-px opacity-0"
+                data-testid="lightbox-prefetch-next"
+              />
+            )}
 
             {/* Previous arrow */}
             {total > 1 && (

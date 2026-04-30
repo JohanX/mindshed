@@ -105,6 +105,83 @@ test.describe('Inventory Photos (Story 21.2)', () => {
     await expect(page.getByTestId('image-lightbox')).not.toBeVisible({ timeout: 5000 })
   })
 
+  test('lightbox swipe navigates between photos on touch (Story 29.6 / FR124)', async ({
+    page,
+    browser,
+  }) => {
+    // Story 29.6: horizontal swipe gesture navigates the lightbox on
+    // touch devices. Seeds an independent item with 2 LINK photos to
+    // avoid collisions with the surrounding serial-mode state on
+    // testPrefix Clay. Uses Playwright's hasTouch context so the
+    // pointerType === 'touch' gate in the lightbox accepts the gesture.
+    const swipeItem = await seedInventoryItem({
+      name: `${testPrefix}-swipe-${Date.now()}`,
+      type: 'MATERIAL',
+      quantity: 1,
+      unit: 'kg',
+    })
+    await seedInventoryItemImage({
+      inventoryItemId: swipeItem.id,
+      type: 'LINK',
+      url: 'https://picsum.photos/seed/a/300/300',
+    })
+    await seedInventoryItemImage({
+      inventoryItemId: swipeItem.id,
+      type: 'LINK',
+      url: 'https://picsum.photos/seed/b/300/300',
+    })
+
+    const touchContext = await browser.newContext({
+      viewport: { width: 375, height: 812 },
+      hasTouch: true,
+      isMobile: true,
+    })
+    const touchPage = await touchContext.newPage()
+    await touchPage.goto('/inventory')
+    await touchPage.waitForLoadState('networkidle')
+
+    await touchPage.getByRole('button', { name: `View photos of ${swipeItem.name}` }).click()
+    await expect(touchPage.getByTestId('image-lightbox')).toBeVisible({ timeout: 5000 })
+    await expect(touchPage.getByTestId('lightbox-counter')).toContainText('1 of 2')
+
+    // Swipe left (deltaX < -50px) to navigate to the next image.
+    const lightbox = touchPage.getByTestId('image-lightbox')
+    const box = await lightbox.boundingBox()
+    if (!box) throw new Error('lightbox bounding box unavailable')
+    const startX = box.x + box.width * 0.8
+    const endX = box.x + box.width * 0.2
+    const midY = box.y + box.height / 2
+    await touchPage.touchscreen.tap(startX, midY) // ensure focus
+    await touchPage.evaluate(
+      ({ sx, sy, ex, ey }) => {
+        function fire(type: string, x: number, y: number) {
+          const el = document.elementFromPoint(x, y) as HTMLElement | null
+          if (!el) return
+          const ev = new PointerEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            pointerId: 1,
+            pointerType: 'touch',
+            clientX: x,
+            clientY: y,
+            isPrimary: true,
+          })
+          el.dispatchEvent(ev)
+        }
+        fire('pointerdown', sx, sy)
+        fire('pointermove', ex, ey)
+        fire('pointerup', ex, ey)
+      },
+      { sx: startX, sy: midY, ex: endX, ey: midY },
+    )
+
+    await expect(touchPage.getByTestId('lightbox-counter')).toContainText('2 of 2', {
+      timeout: 5000,
+    })
+
+    await touchContext.close()
+  })
+
   test('delete a photo from the edit dialog', async ({ page }) => {
     await page.goto('/inventory')
     await page.waitForLoadState('networkidle')
