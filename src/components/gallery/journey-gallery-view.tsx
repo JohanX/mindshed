@@ -2,7 +2,8 @@
 
 import { useState, useCallback } from 'react'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
-import { GalleryLightbox, type GalleryLightboxImage } from '@/components/gallery/gallery-lightbox'
+import { ImageLightbox } from '@/components/image/image-lightbox'
+import type { GalleryImage } from '@/components/image/image-gallery'
 import { cn } from '@/lib/utils'
 
 interface JourneyStep {
@@ -23,13 +24,21 @@ interface JourneyGalleryViewProps {
 export function JourneyGalleryView({ project, steps }: JourneyGalleryViewProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
-  // Flatten all images across steps with step context for the lightbox
-  const allImages: GalleryLightboxImage[] = steps.flatMap((step) =>
-    step.images.map((img) => ({
+  // Flatten all images across steps with step context for the lightbox.
+  // Story 29.4 / FR124: caption metadata travels with each image; the
+  // unified ImageLightbox renders the caption block when current.caption
+  // is set. Index is used as the synthetic id (stable for the lifetime
+  // of the lightbox session).
+  const allImages: GalleryImage[] = steps.flatMap((step, stepIdx) =>
+    step.images.map((img, imgIdx) => ({
+      id: `journey-${stepIdx}-${imgIdx}`,
       displayUrl: img.displayUrl,
+      thumbnailUrl: img.thumbnailUrl,
       originalFilename: img.originalFilename,
-      stepName: step.name,
-      description: step.notes.map((note) => note.text).join(' ') || null,
+      caption: {
+        title: step.name,
+        description: step.notes.map((note) => note.text).join(' ') || null,
+      },
     })),
   )
 
@@ -113,7 +122,12 @@ export function JourneyGalleryView({ project, steps }: JourneyGalleryViewProps) 
       )}
 
       {lightboxIndex !== null && (
-        <GalleryLightbox images={allImages} initialIndex={lightboxIndex} onClose={closeLightbox} />
+        <ImageLightbox
+          images={allImages}
+          initialIndex={lightboxIndex}
+          onClose={closeLightbox}
+          showDelete={false}
+        />
       )}
     </article>
   )

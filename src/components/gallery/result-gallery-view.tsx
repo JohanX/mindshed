@@ -3,7 +3,8 @@
 import { useState, useCallback } from 'react'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
 import { ImageSlideshow } from '@/components/gallery/image-slideshow'
-import { GalleryLightbox, type GalleryLightboxImage } from '@/components/gallery/gallery-lightbox'
+import { ImageLightbox } from '@/components/image/image-lightbox'
+import type { GalleryImage } from '@/components/image/image-gallery'
 
 interface ResultGalleryViewProps {
   project: {
@@ -17,11 +18,14 @@ interface ResultGalleryViewProps {
 export function ResultGalleryView({ project, images }: ResultGalleryViewProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
-  const lightboxImages: GalleryLightboxImage[] = images.map((img) => ({
+  // Story 29.4 / FR124: gallery surfaces now use the unified
+  // ImageLightbox with caption metadata per image. Index is used as the
+  // synthetic id (stable for the lifetime of the lightbox session).
+  const lightboxImages: GalleryImage[] = images.map((img, index) => ({
+    id: `result-${index}`,
     displayUrl: img.displayUrl,
     originalFilename: img.originalFilename,
-    stepName: project.name,
-    description: project.description,
+    caption: { title: project.name, description: project.description },
   }))
 
   const openLightbox = useCallback((index: number) => {
@@ -48,10 +52,11 @@ export function ResultGalleryView({ project, images }: ResultGalleryViewProps) {
         <>
           <ImageSlideshow images={images} onImageClick={openLightbox} />
           {lightboxIndex !== null && (
-            <GalleryLightbox
+            <ImageLightbox
               images={lightboxImages}
               initialIndex={lightboxIndex}
               onClose={closeLightbox}
+              showDelete={false}
             />
           )}
         </>

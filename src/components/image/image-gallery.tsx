@@ -13,6 +13,16 @@ export interface GalleryImage {
   displayUrl: string
   thumbnailUrl?: string
   originalFilename: string | null
+  /**
+   * Story 29.4 / FR124: optional caption block rendered below the image
+   * inside `ImageLightbox`. Used by gallery surfaces (result + journey
+   * views) to show step-name + description; non-gallery callers
+   * (inventory, idea, BOM) leave this undefined and no caption renders.
+   */
+  caption?: {
+    title?: string
+    description?: string | null
+  }
 }
 
 interface ImageGalleryProps {

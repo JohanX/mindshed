@@ -149,22 +149,43 @@ export function ImageLightbox({
 
             {/* Main image. Mobile fills the viewport with padding; desktop
                 hugs the image (the image is the size driver). */}
-            <div className="flex h-full w-full items-center justify-center p-12 sm:h-auto sm:w-auto sm:p-0">
-              {broken ? (
-                <div className="flex flex-col items-center gap-2 text-white/60">
-                  <ImageIcon className="h-16 w-16" />
-                  <p className="text-sm">Image could not be loaded</p>
+            <div className="flex h-full w-full flex-col items-center justify-center p-12 sm:h-auto sm:w-auto sm:p-0">
+              <div className="flex flex-1 items-center justify-center min-h-0 w-full sm:flex-none">
+                {broken ? (
+                  <div className="flex flex-col items-center gap-2 text-white/60">
+                    <ImageIcon className="h-16 w-16" />
+                    <p className="text-sm">Image could not be loaded</p>
+                  </div>
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={current.displayUrl}
+                    alt={current.originalFilename ?? ''}
+                    className="max-h-full max-w-full object-contain sm:max-h-[90vh] sm:max-w-[90vw]"
+                    style={inlineImageStyle}
+                    onError={() => setBroken(true)}
+                    data-testid="lightbox-image"
+                  />
+                )}
+              </div>
+
+              {/* Story 29.4 / FR124: caption block (gallery callers
+                  pass current.caption; non-gallery callers don't, and
+                  no caption renders). */}
+              {current.caption && (
+                <div
+                  className="w-full max-w-2xl text-center pt-3 pb-2 shrink-0"
+                  data-testid="lightbox-caption"
+                >
+                  {current.caption.title && (
+                    <p className="text-white text-sm font-medium">{current.caption.title}</p>
+                  )}
+                  {current.caption.description && (
+                    <p className="text-white/60 text-xs mt-1 line-clamp-2">
+                      {current.caption.description}
+                    </p>
+                  )}
                 </div>
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={current.displayUrl}
-                  alt={current.originalFilename ?? ''}
-                  className="max-h-full max-w-full object-contain sm:max-h-[90vh] sm:max-w-[90vw]"
-                  style={inlineImageStyle}
-                  onError={() => setBroken(true)}
-                  data-testid="lightbox-image"
-                />
               )}
             </div>
 
