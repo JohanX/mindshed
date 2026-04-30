@@ -14,6 +14,7 @@ import {
 } from '@/lib/schemas/step'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
+import { cleanupStorageKeys } from '@/lib/storage-cleanup'
 
 async function updateProjectActivity(projectId: string) {
   const project = await prisma.project.update({
@@ -108,15 +109,31 @@ export async function deleteStep(id: string): Promise<ActionResult<null>> {
   }
 
   try {
-    const step = await prisma.$transaction(async (tx) => {
+    const { step, storageKeys } = await prisma.$transaction(async (tx) => {
       const existing = await tx.step.findUniqueOrThrow({
         where: { id: parsed.data },
         select: { projectId: true, project: { select: { isCompleted: true } } },
       })
       if (existing.project.isCompleted) throw new Error('PROJECT_COMPLETED')
       await tx.reminder.deleteMany({ where: { targetId: parsed.data } })
-      return tx.step.delete({ where: { id: parsed.data } })
+      // FR122 / Story 28.1: collect storage keys BEFORE the cascade so
+      // they're atomically captured with the parent delete.
+      const storageKeys = await tx.stepImage.findMany({
+        where: {
+          stepId: parsed.data,
+          type: 'UPLOAD',
+          storageKey: { not: null },
+        },
+        select: { storageKey: true },
+      })
+      const step = await tx.step.delete({ where: { id: parsed.data } })
+      return { step, storageKeys }
     })
+
+    // Best-effort post-commit storage cleanup (does NOT run if the tx
+    // aborted via PROJECT_COMPLETED above — destructuring would have
+    // already thrown).
+    await cleanupStorageKeys(storageKeys)
 
     await updateProjectActivity(step.projectId)
     return { success: true, data: null }

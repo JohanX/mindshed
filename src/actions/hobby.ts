@@ -13,6 +13,7 @@ import {
 } from '@/lib/schemas/hobby'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
+import { cleanupStorageKeys } from '@/lib/storage-cleanup'
 import { getIdleThresholdDays } from '@/lib/settings'
 import { findHobbiesWithCounts } from '@/data/hobby'
 
@@ -96,7 +97,7 @@ export async function deleteHobby(id: string): Promise<ActionResult<null>> {
   }
 
   try {
-    await prisma.$transaction(async (tx) => {
+    const storageKeys = await prisma.$transaction(async (tx) => {
       const projects = await tx.project.findMany({
         where: { hobbyId: parsed.data },
         select: { id: true },
@@ -112,8 +113,36 @@ export async function deleteHobby(id: string): Promise<ActionResult<null>> {
       if (targetIds.length) {
         await tx.reminder.deleteMany({ where: { targetId: { in: targetIds } } })
       }
+      // FR122 / Story 28.1: collect storage keys for every cascade-
+      // affected image BEFORE the delete. Two paths converge under hobby:
+      //   step_image (via projects → steps under this hobby)
+      //   idea_image (via the hobby's ideas)
+      const stepImageKeys =
+        steps.length > 0
+          ? await tx.stepImage.findMany({
+              where: {
+                stepId: { in: steps.map((step) => step.id) },
+                type: 'UPLOAD',
+                storageKey: { not: null },
+              },
+              select: { storageKey: true },
+            })
+          : []
+      const ideaImageKeys = await tx.ideaImage.findMany({
+        where: {
+          idea: { hobbyId: parsed.data },
+          type: 'UPLOAD',
+          storageKey: { not: null },
+        },
+        select: { storageKey: true },
+      })
       await tx.hobby.delete({ where: { id: parsed.data } })
+      return [...stepImageKeys, ...ideaImageKeys]
     })
+
+    // Best-effort post-commit storage cleanup. Failures NEVER fail the
+    // action — see FR122 best-effort guarantee.
+    await cleanupStorageKeys(storageKeys)
 
     revalidatePath('/hobbies')
     revalidatePath('/settings')

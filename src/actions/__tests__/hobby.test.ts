@@ -22,14 +22,20 @@ vi.mock('@/lib/settings', () => ({
   getIdleThresholdDays: vi.fn().mockResolvedValue(30),
 }))
 
+vi.mock('@/lib/image-storage/adapter', () => ({
+  getImageStorageAdapter: vi.fn(),
+}))
+
 import { createHobby, getHobbies, updateHobby, deleteHobby, reorderHobbies } from '../hobby'
 import { prisma } from '@/lib/db'
+import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 
 const mockHobbyFindMany = vi.mocked(prisma.hobby.findMany)
 const mockHobbyUpdate = vi.mocked(prisma.hobby.update)
 const mockHobbyDelete = vi.mocked(prisma.hobby.delete)
 const mockProjectGroupBy = vi.mocked(prisma.project.groupBy)
 const mockTransaction = vi.mocked(prisma.$transaction)
+const mockGetAdapter = vi.mocked(getImageStorageAdapter)
 
 const VALID_UUID = '550e8400-e29b-41d4-a716-446655440000'
 const VALID_COLOR = 'hsl(25, 45%, 40%)' // Walnut
@@ -265,6 +271,8 @@ describe('deleteHobby', () => {
         step: { findMany: mockStepFindMany },
         reminder: { deleteMany: mockReminderDeleteMany },
         hobby: { delete: mockHobbyDeleteTx },
+        stepImage: { findMany: vi.fn().mockResolvedValue([]) },
+        ideaImage: { findMany: vi.fn().mockResolvedValue([]) },
       }
       return fn(tx as never)
     })
@@ -290,6 +298,8 @@ describe('deleteHobby', () => {
         step: { findMany: vi.fn() },
         reminder: { deleteMany: mockReminderDeleteMany },
         hobby: { delete: mockHobbyDeleteTx },
+        stepImage: { findMany: vi.fn().mockResolvedValue([]) },
+        ideaImage: { findMany: vi.fn().mockResolvedValue([]) },
       }
       return fn(tx as never)
     })
@@ -297,6 +307,102 @@ describe('deleteHobby', () => {
     const result = await deleteHobby(VALID_UUID)
     expect(result.success).toBe(true)
     expect(mockReminderDeleteMany).not.toHaveBeenCalled()
+  })
+
+  describe('Story 28.1: storage cleanup on cascade', () => {
+    it('calls adapter.deleteObject for step_image AND idea_image keys under the hobby', async () => {
+      const deleteObject = vi.fn().mockResolvedValue(undefined)
+      mockGetAdapter.mockReturnValue({
+        deleteObject,
+      } as unknown as ReturnType<typeof getImageStorageAdapter>)
+
+      const stepImageFindMany = vi.fn().mockResolvedValue([{ storageKey: 'steps/s1/a.jpg' }])
+      const ideaImageFindMany = vi
+        .fn()
+        .mockResolvedValue([{ storageKey: 'ideas/i1/x.jpg' }, { storageKey: 'ideas/i2/y.jpg' }])
+
+      mockTransaction.mockImplementation(async (fn) => {
+        const tx = {
+          project: { findMany: vi.fn().mockResolvedValue([{ id: 'p1' }]) },
+          step: { findMany: vi.fn().mockResolvedValue([{ id: 's1' }]) },
+          reminder: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+          hobby: { delete: vi.fn().mockResolvedValue({ id: VALID_UUID }) },
+          stepImage: { findMany: stepImageFindMany },
+          ideaImage: { findMany: ideaImageFindMany },
+        }
+        return fn(tx as never)
+      })
+
+      const result = await deleteHobby(VALID_UUID)
+      expect(result.success).toBe(true)
+      expect(stepImageFindMany).toHaveBeenCalledWith({
+        where: {
+          stepId: { in: ['s1'] },
+          type: 'UPLOAD',
+          storageKey: { not: null },
+        },
+        select: { storageKey: true },
+      })
+      expect(ideaImageFindMany).toHaveBeenCalledWith({
+        where: {
+          idea: { hobbyId: VALID_UUID },
+          type: 'UPLOAD',
+          storageKey: { not: null },
+        },
+        select: { storageKey: true },
+      })
+      // 1 step image + 2 idea images = 3 total deletions
+      expect(deleteObject).toHaveBeenCalledTimes(3)
+    })
+
+    it('still returns success when adapter.deleteObject throws', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      mockGetAdapter.mockReturnValue({
+        deleteObject: vi.fn().mockRejectedValue(new Error('adapter down')),
+      } as unknown as ReturnType<typeof getImageStorageAdapter>)
+
+      mockTransaction.mockImplementation(async (fn) => {
+        const tx = {
+          project: { findMany: vi.fn().mockResolvedValue([]) },
+          step: { findMany: vi.fn() },
+          reminder: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+          hobby: { delete: vi.fn().mockResolvedValue({ id: VALID_UUID }) },
+          stepImage: { findMany: vi.fn().mockResolvedValue([]) },
+          ideaImage: {
+            findMany: vi.fn().mockResolvedValue([{ storageKey: 'ideas/i1/x.jpg' }]),
+          },
+        }
+        return fn(tx as never)
+      })
+
+      const result = await deleteHobby(VALID_UUID)
+      expect(result.success).toBe(true)
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Storage cleanup failed:', expect.any(Error))
+      consoleErrorSpy.mockRestore()
+    })
+
+    it('does not call adapter.deleteObject when only LINK images exist', async () => {
+      const deleteObject = vi.fn()
+      mockGetAdapter.mockReturnValue({
+        deleteObject,
+      } as unknown as ReturnType<typeof getImageStorageAdapter>)
+
+      mockTransaction.mockImplementation(async (fn) => {
+        const tx = {
+          project: { findMany: vi.fn().mockResolvedValue([{ id: 'p1' }]) },
+          step: { findMany: vi.fn().mockResolvedValue([{ id: 's1' }]) },
+          reminder: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+          hobby: { delete: vi.fn().mockResolvedValue({ id: VALID_UUID }) },
+          stepImage: { findMany: vi.fn().mockResolvedValue([]) },
+          ideaImage: { findMany: vi.fn().mockResolvedValue([]) },
+        }
+        return fn(tx as never)
+      })
+
+      const result = await deleteHobby(VALID_UUID)
+      expect(result.success).toBe(true)
+      expect(deleteObject).not.toHaveBeenCalled()
+    })
   })
 
   it('rejects invalid UUID', async () => {

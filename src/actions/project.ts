@@ -10,6 +10,7 @@ import {
 import { z } from 'zod/v4'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
+import { cleanupStorageKeys } from '@/lib/storage-cleanup'
 import { getIdleThresholdDays } from '@/lib/settings'
 import { nextCloneName } from '@/lib/project-clone'
 import {
@@ -222,15 +223,34 @@ export async function deleteProject(id: string): Promise<ActionResult<{ hobbyId:
   }
 
   try {
-    const project = await prisma.$transaction(async (tx) => {
+    const { project, storageKeys } = await prisma.$transaction(async (tx) => {
       const steps = await tx.step.findMany({
         where: { projectId: parsed.data },
         select: { id: true },
       })
       const targetIds = [parsed.data, ...steps.map((step) => step.id)]
       await tx.reminder.deleteMany({ where: { targetId: { in: targetIds } } })
-      return tx.project.delete({ where: { id: parsed.data } })
+      // FR122 / Story 28.1: collect step_image storage keys for every
+      // step in this project BEFORE the cascade so they're captured
+      // atomically with the parent delete.
+      const storageKeys =
+        steps.length > 0
+          ? await tx.stepImage.findMany({
+              where: {
+                stepId: { in: steps.map((step) => step.id) },
+                type: 'UPLOAD',
+                storageKey: { not: null },
+              },
+              select: { storageKey: true },
+            })
+          : []
+      const project = await tx.project.delete({ where: { id: parsed.data } })
+      return { project, storageKeys }
     })
+
+    // Best-effort post-commit storage cleanup. Failures NEVER fail the
+    // action — see FR122 best-effort guarantee.
+    await cleanupStorageKeys(storageKeys)
 
     revalidatePath(`/hobbies/${project.hobbyId}`)
     revalidatePath('/projects')

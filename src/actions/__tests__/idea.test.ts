@@ -19,13 +19,19 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { createIdea, getIdeasByHobby, getAllIdeas, promoteIdea } from '../idea'
+vi.mock('@/lib/image-storage/adapter', () => ({
+  getImageStorageAdapter: vi.fn(),
+}))
+
+import { createIdea, deleteIdea, getIdeasByHobby, getAllIdeas, promoteIdea } from '../idea'
 import { prisma } from '@/lib/db'
+import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 
 const mockHobbyFindUnique = vi.mocked(prisma.hobby.findUnique)
 const mockIdeaCreate = vi.mocked(prisma.idea.create)
 const mockIdeaFindMany = vi.mocked(prisma.idea.findMany)
 const mockTransaction = vi.mocked(prisma.$transaction)
+const mockGetAdapter = vi.mocked(getImageStorageAdapter)
 
 const validUuid = '550e8400-e29b-41d4-a716-446655440000'
 
@@ -323,5 +329,117 @@ describe('promoteIdea', () => {
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toBe('Hobby not found.')
     expect(tx.project.create).not.toHaveBeenCalled()
+  })
+})
+
+describe('deleteIdea', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('rejects invalid UUID', async () => {
+    const result = await deleteIdea('bad')
+    expect(result.success).toBe(false)
+  })
+
+  it('returns error when idea not found (P2025)', async () => {
+    mockTransaction.mockRejectedValue({ code: 'P2025' })
+    const result = await deleteIdea(validUuid)
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Idea not found.')
+  })
+
+  describe('Story 28.1: storage cleanup on cascade', () => {
+    it('calls adapter.deleteObject for each idea_image storageKey on the idea', async () => {
+      const deleteObject = vi.fn().mockResolvedValue(undefined)
+      mockGetAdapter.mockReturnValue({
+        deleteObject,
+      } as unknown as ReturnType<typeof getImageStorageAdapter>)
+
+      const ideaImageFindMany = vi.fn().mockResolvedValue([{ storageKey: 'ideas/abc/photo.jpg' }])
+      mockTransaction.mockImplementation(async (fn) => {
+        const tx = {
+          ideaImage: { findMany: ideaImageFindMany },
+          idea: {
+            delete: vi.fn().mockResolvedValue({ id: validUuid, hobbyId: 'h1' }),
+          },
+        }
+        return fn(tx as never)
+      })
+
+      const result = await deleteIdea(validUuid)
+      expect(result.success).toBe(true)
+      expect(ideaImageFindMany).toHaveBeenCalledWith({
+        where: { ideaId: validUuid, type: 'UPLOAD', storageKey: { not: null } },
+        select: { storageKey: true },
+      })
+      expect(deleteObject).toHaveBeenCalledTimes(1)
+      expect(deleteObject).toHaveBeenCalledWith('ideas/abc/photo.jpg')
+    })
+
+    it('still returns success when adapter.deleteObject throws', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      mockGetAdapter.mockReturnValue({
+        deleteObject: vi.fn().mockRejectedValue(new Error('adapter down')),
+      } as unknown as ReturnType<typeof getImageStorageAdapter>)
+
+      mockTransaction.mockImplementation(async (fn) => {
+        const tx = {
+          ideaImage: {
+            findMany: vi.fn().mockResolvedValue([{ storageKey: 'ideas/abc/photo.jpg' }]),
+          },
+          idea: {
+            delete: vi.fn().mockResolvedValue({ id: validUuid, hobbyId: 'h1' }),
+          },
+        }
+        return fn(tx as never)
+      })
+
+      const result = await deleteIdea(validUuid)
+      expect(result.success).toBe(true)
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Storage cleanup failed:', expect.any(Error))
+      consoleErrorSpy.mockRestore()
+    })
+
+    it('does not call adapter.deleteObject when only LINK images exist', async () => {
+      const deleteObject = vi.fn()
+      mockGetAdapter.mockReturnValue({
+        deleteObject,
+      } as unknown as ReturnType<typeof getImageStorageAdapter>)
+
+      mockTransaction.mockImplementation(async (fn) => {
+        const tx = {
+          ideaImage: { findMany: vi.fn().mockResolvedValue([]) },
+          idea: {
+            delete: vi.fn().mockResolvedValue({ id: validUuid, hobbyId: 'h1' }),
+          },
+        }
+        return fn(tx as never)
+      })
+
+      const result = await deleteIdea(validUuid)
+      expect(result.success).toBe(true)
+      expect(deleteObject).not.toHaveBeenCalled()
+    })
+
+    it('skips storage cleanup with a single console.warn when adapter is unavailable', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      mockGetAdapter.mockReturnValue(null)
+
+      mockTransaction.mockImplementation(async (fn) => {
+        const tx = {
+          ideaImage: {
+            findMany: vi.fn().mockResolvedValue([{ storageKey: 'ideas/abc/photo.jpg' }]),
+          },
+          idea: {
+            delete: vi.fn().mockResolvedValue({ id: validUuid, hobbyId: 'h1' }),
+          },
+        }
+        return fn(tx as never)
+      })
+
+      const result = await deleteIdea(validUuid)
+      expect(result.success).toBe(true)
+      expect(consoleWarnSpy).toHaveBeenCalledWith('Storage cleanup skipped — adapter unavailable')
+      consoleWarnSpy.mockRestore()
+    })
   })
 })

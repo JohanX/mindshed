@@ -20,11 +20,17 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
+vi.mock('@/lib/image-storage/adapter', () => ({
+  getImageStorageAdapter: vi.fn(),
+}))
+
 import { createStep, updateStep, deleteStep, updateStepState, reorderSteps } from '../step'
 import { prisma } from '@/lib/db'
+import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 
 const mockTransaction = vi.mocked(prisma.$transaction)
 const mockProjectUpdate = vi.mocked(prisma.project.update)
+const mockGetAdapter = vi.mocked(getImageStorageAdapter)
 
 describe('createStep', () => {
   beforeEach(() => {
@@ -132,6 +138,7 @@ describe('deleteStep', () => {
           delete: vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' }),
         },
         reminder: { deleteMany: mockReminderDeleteMany },
+        stepImage: { findMany: vi.fn().mockResolvedValue([]) },
       }
       return fn(tx as never)
     })
@@ -150,6 +157,127 @@ describe('deleteStep', () => {
     const result = await deleteStep('550e8400-e29b-41d4-a716-446655440000')
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toBe('Step not found.')
+  })
+
+  describe('Story 28.1: storage cleanup on cascade', () => {
+    it('calls adapter.deleteObject for each UPLOAD storageKey from step_image', async () => {
+      const deleteObject = vi.fn().mockResolvedValue(undefined)
+      mockGetAdapter.mockReturnValue({
+        deleteObject,
+      } as unknown as ReturnType<typeof getImageStorageAdapter>)
+
+      const stepImageFindMany = vi
+        .fn()
+        .mockResolvedValue([{ storageKey: 'steps/abc/1.jpg' }, { storageKey: 'steps/abc/2.jpg' }])
+      mockTransaction.mockImplementation(async (fn) => {
+        const tx = {
+          step: {
+            findUniqueOrThrow: vi
+              .fn()
+              .mockResolvedValue({ projectId: 'p1', project: { isCompleted: false } }),
+            delete: vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' }),
+          },
+          reminder: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+          stepImage: { findMany: stepImageFindMany },
+        }
+        return fn(tx as never)
+      })
+
+      const result = await deleteStep('550e8400-e29b-41d4-a716-446655440000')
+      expect(result.success).toBe(true)
+      expect(stepImageFindMany).toHaveBeenCalledWith({
+        where: {
+          stepId: '550e8400-e29b-41d4-a716-446655440000',
+          type: 'UPLOAD',
+          storageKey: { not: null },
+        },
+        select: { storageKey: true },
+      })
+      expect(deleteObject).toHaveBeenCalledTimes(2)
+      expect(deleteObject).toHaveBeenCalledWith('steps/abc/1.jpg')
+      expect(deleteObject).toHaveBeenCalledWith('steps/abc/2.jpg')
+    })
+
+    it('still returns success when adapter.deleteObject throws', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const deleteObject = vi.fn().mockRejectedValue(new Error('S3 down'))
+      mockGetAdapter.mockReturnValue({
+        deleteObject,
+      } as unknown as ReturnType<typeof getImageStorageAdapter>)
+
+      mockTransaction.mockImplementation(async (fn) => {
+        const tx = {
+          step: {
+            findUniqueOrThrow: vi
+              .fn()
+              .mockResolvedValue({ projectId: 'p1', project: { isCompleted: false } }),
+            delete: vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' }),
+          },
+          reminder: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+          stepImage: {
+            findMany: vi.fn().mockResolvedValue([{ storageKey: 'steps/abc/1.jpg' }]),
+          },
+        }
+        return fn(tx as never)
+      })
+
+      const result = await deleteStep('550e8400-e29b-41d4-a716-446655440000')
+      expect(result.success).toBe(true)
+      expect(deleteObject).toHaveBeenCalled()
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Storage cleanup failed:', expect.any(Error))
+      consoleErrorSpy.mockRestore()
+    })
+
+    it('does not call adapter.deleteObject when only LINK images exist (findMany returns empty)', async () => {
+      const deleteObject = vi.fn()
+      mockGetAdapter.mockReturnValue({
+        deleteObject,
+      } as unknown as ReturnType<typeof getImageStorageAdapter>)
+
+      mockTransaction.mockImplementation(async (fn) => {
+        const tx = {
+          step: {
+            findUniqueOrThrow: vi
+              .fn()
+              .mockResolvedValue({ projectId: 'p1', project: { isCompleted: false } }),
+            delete: vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' }),
+          },
+          reminder: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+          stepImage: { findMany: vi.fn().mockResolvedValue([]) },
+        }
+        return fn(tx as never)
+      })
+
+      const result = await deleteStep('550e8400-e29b-41d4-a716-446655440000')
+      expect(result.success).toBe(true)
+      expect(deleteObject).not.toHaveBeenCalled()
+    })
+
+    it('skips storage cleanup with a single console.warn when adapter is unavailable', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      mockGetAdapter.mockReturnValue(null)
+
+      mockTransaction.mockImplementation(async (fn) => {
+        const tx = {
+          step: {
+            findUniqueOrThrow: vi
+              .fn()
+              .mockResolvedValue({ projectId: 'p1', project: { isCompleted: false } }),
+            delete: vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' }),
+          },
+          reminder: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+          stepImage: {
+            findMany: vi.fn().mockResolvedValue([{ storageKey: 'steps/abc/1.jpg' }]),
+          },
+        }
+        return fn(tx as never)
+      })
+
+      const result = await deleteStep('550e8400-e29b-41d4-a716-446655440000')
+      expect(result.success).toBe(true)
+      expect(consoleWarnSpy).toHaveBeenCalledWith('Storage cleanup skipped — adapter unavailable')
+      consoleWarnSpy.mockRestore()
+    })
   })
 })
 

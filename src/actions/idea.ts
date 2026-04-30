@@ -10,6 +10,7 @@ import {
 } from '@/lib/schemas/idea'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
+import { cleanupStorageKeys } from '@/lib/storage-cleanup'
 import {
   findIdeasByHobby as findIdeasByHobbyData,
   findAllIdeas as findAllIdeasData,
@@ -169,9 +170,24 @@ export async function deleteIdea(ideaId: string): Promise<ActionResult<null>> {
   }
 
   try {
-    const idea = await prisma.idea.delete({
-      where: { id: parsed.data },
+    const { idea, storageKeys } = await prisma.$transaction(async (tx) => {
+      // FR122 / Story 28.1: collect UPLOAD-type storage keys BEFORE the
+      // cascade so they're captured atomically with the parent delete.
+      const storageKeys = await tx.ideaImage.findMany({
+        where: {
+          ideaId: parsed.data,
+          type: 'UPLOAD',
+          storageKey: { not: null },
+        },
+        select: { storageKey: true },
+      })
+      const idea = await tx.idea.delete({ where: { id: parsed.data } })
+      return { idea, storageKeys }
     })
+
+    // Best-effort post-commit storage cleanup. Failures NEVER fail the
+    // action — the DB cascade is the source of truth.
+    await cleanupStorageKeys(storageKeys)
 
     revalidatePath(`/hobbies/${idea.hobbyId}/ideas`)
     revalidatePath('/ideas')
