@@ -85,6 +85,26 @@ test.describe('Inventory Photos (Story 21.2)', () => {
     await expect(page.getByTestId('image-lightbox')).not.toBeVisible()
   })
 
+  test('lightbox closes on desktop backdrop click (Story 29.1 / FR123)', async ({ page }) => {
+    // Story 29.1: on `sm+` viewports the lightbox content shrinks to wrap
+    // the image (`w-auto max-w-[90vw] h-auto max-h-[90vh]`), so the
+    // surrounding dimmed area is the Radix overlay backdrop. Clicking
+    // there triggers Radix's natural outside-click handler and dismisses
+    // the lightbox without using the X button or Escape key.
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await page.goto('/inventory')
+    await page.waitForLoadState('networkidle')
+
+    await page.getByRole('button', { name: `View photos of ${testPrefix} Clay` }).click()
+    await expect(page.getByTestId('image-lightbox')).toBeVisible({ timeout: 5000 })
+
+    // Click the dimmed backdrop area at the top-left corner of the
+    // viewport — well outside the image's centred 90vw × 90vh content.
+    await page.mouse.click(20, 20)
+
+    await expect(page.getByTestId('image-lightbox')).not.toBeVisible({ timeout: 5000 })
+  })
+
   test('delete a photo from the edit dialog', async ({ page }) => {
     await page.goto('/inventory')
     await page.waitForLoadState('networkidle')

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { flushSync } from 'react-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -22,6 +23,33 @@ const TYPE_CONFIG = {
   TOOL: { label: 'Tool', colorClass: 'bg-step-blocked text-white' },
 } as const
 
+// Story 29.1 / FR123: feature-detected View Transitions API wrapper.
+// Chromium runs the callback inside `document.startViewTransition` for
+// the morph; everything else runs the callback directly. The callback
+// MUST contain its own `flushSync` so React commits the DOM change
+// synchronously (the browser snapshots BEFORE/AFTER around the
+// callback; deferred React renders would miss the "after" snapshot).
+//
+// `document.startViewTransition` isn't yet in TypeScript's standard
+// `lib.dom.d.ts` for our target — narrow the cast to keep the
+// type-safety meaningful at the call site.
+type DocumentWithViewTransitions = Document & {
+  startViewTransition?: (callback: () => void) => unknown
+}
+
+function runWithViewTransition(callback: () => void): void {
+  if (typeof document === 'undefined') {
+    callback()
+    return
+  }
+  const startViewTransition = (document as DocumentWithViewTransitions).startViewTransition
+  if (typeof startViewTransition === 'function') {
+    startViewTransition.call(document, callback)
+  } else {
+    callback()
+  }
+}
+
 interface InventoryItemCardProps {
   item: InventoryItemData
   hobbies: { id: string; name: string; color: string }[]
@@ -36,28 +64,48 @@ export function InventoryItemCard({ item, hobbies }: InventoryItemCardProps) {
   const [lightboxImages, setLightboxImages] = useState<GalleryImage[]>([])
   const [lightboxLoading, setLightboxLoading] = useState(false)
 
+  // Story 29.1: shared `view-transition-name` between this card's hero
+  // thumbnail and the lightbox image. Per-instance unique (item.id is
+  // unique across the inventory list) so concurrent lightboxes from
+  // sibling cards never collide on the name.
+  const viewTransitionName = `inv-hero-${item.id}`
+
   async function openLightbox() {
-    setLightboxOpen(true)
     setLightboxLoading(true)
     const result = await getInventoryItemImages(item.id)
-    if (result.success) {
-      if (result.data.images.length === 0) {
-        setLightboxOpen(false)
-        setLightboxLoading(false)
-        return
-      }
-      setLightboxImages(
-        result.data.images.map((img) => ({
-          id: img.id,
-          displayUrl: img.displayUrl,
-          thumbnailUrl: img.thumbnailUrl,
-          originalFilename: img.originalFilename,
-        })),
-      )
-    } else {
-      setLightboxOpen(false)
+    if (!result.success || result.data.images.length === 0) {
+      setLightboxLoading(false)
+      return
     }
-    setLightboxLoading(false)
+    const images = result.data.images.map((img) => ({
+      id: img.id,
+      displayUrl: img.displayUrl,
+      thumbnailUrl: img.thumbnailUrl,
+      originalFilename: img.originalFilename,
+    }))
+
+    // Wrap the visible-state-change in a view transition for the
+    // thumbnail → lightbox morph (Chromium). flushSync forces React to
+    // commit the DOM update synchronously inside the transition's
+    // callback so the browser's "after" snapshot includes the rendered
+    // lightbox (and the matching `view-transition-name` on its image).
+    // On browsers without view-transition support, the fallback path
+    // just runs the state updates directly — the CSS keyframes
+    // (anim-reveal) drive the open animation instead.
+    const performOpen = () => {
+      flushSync(() => {
+        setLightboxImages(images)
+        setLightboxOpen(true)
+        setLightboxLoading(false)
+      })
+    }
+    runWithViewTransition(performOpen)
+  }
+
+  function closeLightbox() {
+    runWithViewTransition(() => {
+      flushSync(() => setLightboxOpen(false))
+    })
   }
 
   function handleDelete() {
@@ -91,6 +139,7 @@ export function InventoryItemCard({ item, hobbies }: InventoryItemCardProps) {
                     src={item.heroThumbnailUrl}
                     alt={item.name}
                     className="h-full w-full object-cover"
+                    style={{ viewTransitionName }}
                   />
                 </button>
               )}
@@ -181,8 +230,9 @@ export function InventoryItemCard({ item, hobbies }: InventoryItemCardProps) {
         <ImageLightbox
           images={lightboxImages}
           initialIndex={0}
-          onClose={() => setLightboxOpen(false)}
+          onClose={closeLightbox}
           showDelete={false}
+          viewTransitionName={viewTransitionName}
         />
       )}
     </>

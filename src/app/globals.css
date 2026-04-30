@@ -141,6 +141,12 @@
   --font-sans:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+
+  /* FR123 — Animation system tokens (Story 29.1 foundation; consumed by 29.2 + 29.3) */
+  --anim-duration-fast: 150ms;
+  --anim-duration-medium: 220ms;
+  --anim-duration-slow: 320ms;
+  --anim-easing: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 /* Dark Workshop Theme
@@ -208,4 +214,98 @@
 }
 .dark .watermark-icon {
   opacity: 0.18;
+}
+
+/* FR123 — Motion primitives keyframes (Story 29.1 foundation).
+ *
+ * The token system in :root provides duration + easing; these keyframes
+ * provide the three motion shapes the system uses everywhere:
+ *   - anim-reveal: element appearing (used by lightbox/dialog open)
+ *   - anim-settle: element disappearing (used by lightbox/dialog close)
+ *   - anim-acknowledge: in-place state change (consumed by Story 29.3)
+ *
+ * The prefers-reduced-motion override below neutralises transforms and
+ * relies on the duration tokens (zeroed in :root under the same media
+ * query) to make the animation effectively instant. */
+@keyframes anim-reveal {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes anim-settle {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes anim-acknowledge {
+  /* Subtle pulse — consumed by Story 29.3 on state-change surfaces.
+   * Not used in 29.1 itself; defined here so the system is complete. */
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --anim-duration-fast: 0ms;
+    --anim-duration-medium: 0ms;
+    --anim-duration-slow: 0ms;
+  }
+
+  @keyframes anim-reveal {
+    from,
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes anim-settle {
+    from,
+    to {
+      opacity: 0;
+      transform: none;
+    }
+  }
+
+  @keyframes anim-acknowledge {
+    from,
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+/* FR123 — Lightbox-specific animation utility classes (Story 29.1).
+ *
+ * Story 29.2 will sweep the rest of the dialog primitives; until then,
+ * scope these classes to the lightbox by name so the change doesn't bleed
+ * into other Dialog/AlertDialog instances. */
+.anim-lightbox-content[data-state='open'] {
+  animation: anim-reveal var(--anim-duration-slow) var(--anim-easing);
+}
+.anim-lightbox-content[data-state='closed'] {
+  animation: anim-settle var(--anim-duration-slow) var(--anim-easing);
+}
+.anim-lightbox-overlay[data-state='open'] {
+  animation: anim-reveal var(--anim-duration-slow) var(--anim-easing);
+}
+.anim-lightbox-overlay[data-state='closed'] {
+  animation: anim-settle var(--anim-duration-slow) var(--anim-easing);
 }
