@@ -7,23 +7,12 @@ import { ChevronLeft, ChevronRight, X, ImageIcon, Loader2 } from 'lucide-react'
 import { ImageDeleteButton } from '@/components/image/image-delete-button'
 import type { GalleryImage } from '@/components/image/image-gallery'
 
-// Story 29.6 / FR124: swipe gesture thresholds.
-// AXIS_LOCK_DISTANCE: minimum any-direction motion before we commit to
-//   either a horizontal (swipe) or vertical (ignored) gesture. Once
-//   locked horizontal, subsequent vertical drift is ignored — fixes
-//   slow swipes failing because the user's finger naturally arcs.
-// COMMIT_DISTANCE_THRESHOLD: raw distance that always commits.
-// FLICK_VELOCITY_THRESHOLD / FLICK_DISTANCE_THRESHOLD: a fast flick
-//   commits at lower distance — fixes "swiped fast but not far enough".
-// SWIPE_COMMIT_DURATION_MS mirrors `--anim-duration-medium` (220ms) — the
-//   slide-out animation duration AND the setTimeout before index swap.
-//   Kept as a JS constant so we can short-circuit it under
-//   prefers-reduced-motion (where the CSS token is zeroed out).
-const SWIPE_AXIS_LOCK_DISTANCE = 8
-const SWIPE_COMMIT_DISTANCE_THRESHOLD = 50
-const SWIPE_FLICK_VELOCITY_THRESHOLD = 0.3 // px/ms
-const SWIPE_FLICK_DISTANCE_THRESHOLD = 20
-const SWIPE_COMMIT_DURATION_MS = 220
+import {
+  determineSwipeAxis,
+  evaluateSwipeCommit,
+  SWIPE_COMMIT_DISTANCE_THRESHOLD,
+  SWIPE_COMMIT_DURATION_MS,
+} from '@/components/image/swipe-helpers'
 
 interface ImageLightboxProps {
   images: GalleryImage[]
@@ -174,18 +163,6 @@ export function ImageLightbox({
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches
   }
 
-  function evaluateCommit(deltaX: number, elapsedMs: number): -1 | 1 | null {
-    if (deltaX === 0) return null
-    const elapsed = Math.max(1, elapsedMs)
-    const velocity = Math.abs(deltaX) / elapsed
-    const meetsDistance = Math.abs(deltaX) >= SWIPE_COMMIT_DISTANCE_THRESHOLD
-    const isFlick =
-      velocity >= SWIPE_FLICK_VELOCITY_THRESHOLD &&
-      Math.abs(deltaX) >= SWIPE_FLICK_DISTANCE_THRESHOLD
-    if (!meetsDistance && !isFlick) return null
-    return deltaX < 0 ? -1 : 1
-  }
-
   function commitSwipe(direction: -1 | 1) {
     setIsCommitting(true)
 
@@ -254,12 +231,9 @@ export function ImageLightbox({
     // lock distance. Mutates the ref in place — the axis decision is
     // sticky for the rest of this gesture.
     if (start.axis === null) {
-      if (
-        Math.abs(deltaX) < SWIPE_AXIS_LOCK_DISTANCE &&
-        Math.abs(deltaY) < SWIPE_AXIS_LOCK_DISTANCE
-      )
-        return
-      start.axis = Math.abs(deltaX) > Math.abs(deltaY) ? 'horizontal' : 'vertical'
+      const axis = determineSwipeAxis(deltaX, deltaY)
+      if (axis === null) return
+      start.axis = axis
     }
 
     // Once locked horizontal, follow the finger. Vertical drift no
@@ -284,7 +258,10 @@ export function ImageLightbox({
       return
     }
 
-    const direction = evaluateCommit(event.clientX - start.x, event.timeStamp - start.timestamp)
+    const direction = evaluateSwipeCommit(
+      event.clientX - start.x,
+      event.timeStamp - start.timestamp,
+    )
     if (direction === null) {
       setDragOffset(0)
       return
@@ -307,7 +284,7 @@ export function ImageLightbox({
     // silently dropping the user's intent. (E.g. browser interrupts
     // mid-flick.)
     if (start && start.axis === 'horizontal') {
-      const direction = evaluateCommit(start.lastDeltaX, event.timeStamp - start.timestamp)
+      const direction = evaluateSwipeCommit(start.lastDeltaX, event.timeStamp - start.timestamp)
       if (direction !== null) {
         commitSwipe(direction)
         return
