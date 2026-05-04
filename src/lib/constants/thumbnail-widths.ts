@@ -17,4 +17,9 @@ export const THUMBNAIL_WIDTH = {
   PHOTO_GRID: 160,
   INVENTORY_CARD: 96,
   BOM_ROW: 56,
+  /**
+   * Open Graph / Twitter Card image — recommended minimum width per
+   * Slack / WhatsApp / Telegram unfurl heuristics. Story 30.4 / FR128.
+   */
+  SOCIAL_CARD: 1200,
 } as const

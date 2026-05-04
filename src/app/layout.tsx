@@ -4,7 +4,33 @@ import { Toaster } from '@/components/ui/sonner'
 import { ViewportInsetTracker } from '@/components/layout/viewport-inset-tracker'
 import './globals.css'
 
+// Story 30.4 / FR128: `metadataBase` lets relative `og:image` / canonical
+// fields (and any future programmatic OG routes) compose into absolute URLs
+// at build time. Source-of-truth chain:
+//   NEXT_PUBLIC_SITE_URL  →  https://${VERCEL_URL}  →  http://localhost:3000
+// VERCEL_URL is auto-set on Vercel deploys (each preview gets a unique URL).
+// NEXT_PUBLIC_SITE_URL is the override for a custom production domain.
+//
+// Defensive: invalid input (empty string, missing scheme, garbage) would
+// throw from `new URL(...)` at module-load and crash the WHOLE root layout
+// — meaning every route in the app would 500 at boot. We try the configured
+// chain, and on failure log + fall back to localhost so the app stays up.
+function resolveMetadataBase(): URL {
+  const candidate =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+  try {
+    return new URL(candidate)
+  } catch {
+    console.warn(
+      `[metadata] Invalid base URL ${JSON.stringify(candidate)} — falling back to http://localhost:3000`,
+    )
+    return new URL('http://localhost:3000')
+  }
+}
+
 export const metadata: Metadata = {
+  metadataBase: resolveMetadataBase(),
   title: 'MindShed',
   description: 'A hobby project tracker for crafters and makers',
 }

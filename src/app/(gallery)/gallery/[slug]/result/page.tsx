@@ -1,12 +1,20 @@
 export const dynamic = 'force-dynamic'
 
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { findResultGalleryBySlug } from '@/data/gallery'
 import { ResultGalleryView } from '@/components/gallery/result-gallery-view'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
+import { buildResultMetadata } from '@/lib/gallery-metadata'
 
 interface ResultGalleryPageProps {
   params: Promise<{ slug: string }>
+}
+
+// Story 30.4 / FR128 — Open Graph + Twitter Card metadata for shared links.
+export async function generateMetadata({ params }: ResultGalleryPageProps): Promise<Metadata> {
+  const { slug } = await params
+  return buildResultMetadata(slug)
 }
 
 function getPublicImageUrl(storageKey: string): string {

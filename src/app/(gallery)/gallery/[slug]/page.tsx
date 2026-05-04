@@ -1,13 +1,21 @@
 export const dynamic = 'force-dynamic'
 
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { findJourneyGalleryBySlug } from '@/data/gallery'
 import { JourneyGalleryView } from '@/components/gallery/journey-gallery-view'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
+import { buildJourneyMetadata } from '@/lib/gallery-metadata'
 
 interface JourneyGalleryPageProps {
   params: Promise<{ slug: string }>
+}
+
+// Story 30.4 / FR128 — Open Graph + Twitter Card metadata for shared links.
+export async function generateMetadata({ params }: JourneyGalleryPageProps): Promise<Metadata> {
+  const { slug } = await params
+  return buildJourneyMetadata(slug)
 }
 
 function getPublicImageUrl(storageKey: string): string {

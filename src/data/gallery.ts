@@ -2,9 +2,14 @@
  * Data access layer for the public gallery views.
  *
  * Gallery routes are public (`src/proxy.ts` bypasses auth for `/gallery`).
- * They use `force-dynamic` so reads run on every request — no caching.
+ * They use `force-dynamic` so reads run on every request — no caching
+ * across requests. Within a single request, however, both the page
+ * renderer AND `generateMetadata` (Story 30.4 / FR128) need the same
+ * data; the per-request `cache(...)` wrapper from React dedupes those
+ * two call sites into one Prisma query.
  */
 
+import { cache } from 'react'
 import { prisma } from '@/lib/db'
 
 /** Project shape rendered on the gallery index page (`/gallery`). */
@@ -28,7 +33,7 @@ export async function findPublicGalleryProjects() {
 }
 
 /** Journey gallery shape: project + steps with images + notes. */
-export async function findJourneyGalleryBySlug(slug: string) {
+export const findJourneyGalleryBySlug = cache(async (slug: string) => {
   return prisma.project.findUnique({
     where: { gallerySlug: slug },
     select: {
@@ -53,10 +58,10 @@ export async function findJourneyGalleryBySlug(slug: string) {
       },
     },
   })
-}
+})
 
 /** Result gallery shape: project + completed steps with images. */
-export async function findResultGalleryBySlug(slug: string) {
+export const findResultGalleryBySlug = cache(async (slug: string) => {
   return prisma.project.findUnique({
     where: { gallerySlug: slug },
     select: {
@@ -78,7 +83,7 @@ export async function findResultGalleryBySlug(slug: string) {
       },
     },
   })
-}
+})
 
 /**
  * Other slugs (excluding `existingId`) — used by the slug-uniqueness pass
