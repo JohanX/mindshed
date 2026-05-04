@@ -48,7 +48,16 @@ export const findJourneyGalleryBySlug = cache(async (slug: string) => {
           name: true,
           images: {
             orderBy: { createdAt: 'desc' },
-            select: { storageKey: true, url: true, type: true, originalFilename: true },
+            // `createdAt` is exposed for Story 30.4's gallery-metadata helper
+            // so the OG primary image can be the most recent across ALL steps
+            // (matches the dashboard project-card "latest photo" pattern).
+            select: {
+              storageKey: true,
+              url: true,
+              type: true,
+              originalFilename: true,
+              createdAt: true,
+            },
           },
           notes: {
             orderBy: { createdAt: 'desc' },

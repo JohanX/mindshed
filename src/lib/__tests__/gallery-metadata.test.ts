@@ -28,21 +28,23 @@ const fakeAdapter = {
   upload: vi.fn(),
 }
 
-function makeUploadImage(key: string) {
+function makeUploadImage(key: string, createdAt?: Date) {
   return {
     storageKey: key,
     url: null,
     type: 'UPLOAD' as const,
     originalFilename: `${key}.jpg`,
+    createdAt,
   }
 }
 
-function makeLinkImage(url: string) {
+function makeLinkImage(url: string, createdAt?: Date) {
   return {
     storageKey: null,
     url,
     type: 'LINK' as const,
     originalFilename: null,
+    createdAt,
   }
 }
 
@@ -69,14 +71,20 @@ describe('buildJourneyMetadata (Story 30.4 / FR128)', () => {
   })
 
   it('builds title, description, og:image (with width/height), twitter:image for an enabled journey', async () => {
+    // walnut-1 in step 1 (older), walnut-2 in step 2 (newer).
+    // Story 30.4 fix: primary og:image is the MOST RECENT across all steps
+    // (matches dashboard project-card "latest photo" pattern), not the
+    // first-step's-first-image.
+    const olderDate = new Date('2026-01-01T10:00:00Z')
+    const newerDate = new Date('2026-02-01T10:00:00Z')
     mockFindJourney.mockResolvedValue({
       name: 'Walnut Side Table',
       description: 'A solid walnut piece for the living room.',
       journeyGalleryEnabled: true,
       hobby: { name: 'Woodworking', color: 'red', icon: null },
       steps: [
-        { name: 'Cut', images: [makeUploadImage('photos/walnut-1')], notes: [] },
-        { name: 'Sand', images: [makeUploadImage('photos/walnut-2')], notes: [] },
+        { name: 'Cut', images: [makeUploadImage('photos/walnut-1', olderDate)], notes: [] },
+        { name: 'Sand', images: [makeUploadImage('photos/walnut-2', newerDate)], notes: [] },
       ],
     } as never)
 
@@ -85,24 +93,51 @@ describe('buildJourneyMetadata (Story 30.4 / FR128)', () => {
     expect(meta.title).toBe('Walnut Side Table — Journey')
     expect(meta.description).toBe('A solid walnut piece for the living room.')
     expect(meta.openGraph?.type).toBe('website')
-    // og:image entries include width/height so Slack/LinkedIn/Discord can
-    // lay out the unfurl card before fetching the image.
+    // Newest image first (walnut-2), then walnut-1. og:image entries include
+    // width/height so Slack/LinkedIn/Discord can lay out the card before
+    // fetching the image.
     expect(meta.openGraph?.images).toEqual([
       {
-        url: `https://cdn.example.com/w_${THUMBNAIL_WIDTH.SOCIAL_CARD}/photos/walnut-1`,
+        url: `https://cdn.example.com/w_${THUMBNAIL_WIDTH.SOCIAL_CARD}/photos/walnut-2`,
         width: THUMBNAIL_WIDTH.SOCIAL_CARD,
         height: 630,
       },
       {
-        url: `https://cdn.example.com/w_${THUMBNAIL_WIDTH.SOCIAL_CARD}/photos/walnut-2`,
+        url: `https://cdn.example.com/w_${THUMBNAIL_WIDTH.SOCIAL_CARD}/photos/walnut-1`,
         width: THUMBNAIL_WIDTH.SOCIAL_CARD,
         height: 630,
       },
     ])
     expect(meta.twitter).toMatchObject({
       card: 'summary_large_image',
-      images: [`https://cdn.example.com/w_${THUMBNAIL_WIDTH.SOCIAL_CARD}/photos/walnut-1`],
+      images: [`https://cdn.example.com/w_${THUMBNAIL_WIDTH.SOCIAL_CARD}/photos/walnut-2`],
     })
+  })
+
+  it('primary og:image is the latest across all steps (matches dashboard latest-photo)', async () => {
+    // Step 3 has the newest image, even though it appears last in sortOrder.
+    const t1 = new Date('2026-01-01T00:00:00Z')
+    const t2 = new Date('2026-01-02T00:00:00Z')
+    const t3 = new Date('2026-01-03T00:00:00Z')
+    mockFindJourney.mockResolvedValue({
+      name: 'P',
+      description: null,
+      journeyGalleryEnabled: true,
+      hobby: { name: 'H', color: 'red', icon: null },
+      steps: [
+        { name: 'Step 1', images: [makeUploadImage('photos/old', t1)], notes: [] },
+        { name: 'Step 2', images: [makeUploadImage('photos/middle', t2)], notes: [] },
+        { name: 'Step 3', images: [makeUploadImage('photos/latest', t3)], notes: [] },
+      ],
+    } as never)
+
+    const meta = await buildJourneyMetadata('x')
+    const urls = (meta.openGraph?.images as { url: string }[]).map((entry) => entry.url)
+    // Most recent first — Step 3's image, NOT Step 1's.
+    expect(urls[0]).toContain('photos/latest')
+    expect(urls).toHaveLength(3)
+    expect(urls[1]).toContain('photos/middle')
+    expect(urls[2]).toContain('photos/old')
   })
 
   it('falls back to a step-count description when project.description is null', async () => {
@@ -123,22 +158,25 @@ describe('buildJourneyMetadata (Story 30.4 / FR128)', () => {
   })
 
   it('emits at most 4 og:image tags (primary + 3 extras), deduped', async () => {
-    const dup = makeUploadImage('photos/dup')
+    // Stamp images from oldest to newest. With createdAt-DESC sort, the
+    // primary should be the newest (`e`).
+    const t = (n: number) => new Date(`2026-01-0${n}T00:00:00Z`)
+    const dup = makeUploadImage('photos/dup', t(3))
     mockFindJourney.mockResolvedValue({
       name: 'P',
       description: null,
       journeyGalleryEnabled: true,
       hobby: { name: 'H', color: 'red', icon: null },
       steps: [
-        { name: '1', images: [makeUploadImage('photos/a'), dup], notes: [] },
+        { name: '1', images: [makeUploadImage('photos/a', t(1)), dup], notes: [] },
         {
           name: '2',
-          images: [makeUploadImage('photos/b'), dup, makeUploadImage('photos/c')],
+          images: [makeUploadImage('photos/b', t(2)), dup, makeUploadImage('photos/c', t(4))],
           notes: [],
         },
         {
           name: '3',
-          images: [makeUploadImage('photos/d'), makeUploadImage('photos/e')],
+          images: [makeUploadImage('photos/d', t(5)), makeUploadImage('photos/e', t(6))],
           notes: [],
         },
       ],
@@ -149,8 +187,11 @@ describe('buildJourneyMetadata (Story 30.4 / FR128)', () => {
     expect(urls).toHaveLength(4)
     // Each URL appears at most once
     expect(new Set(urls).size).toBe(urls.length)
-    // First image (primary) is the strongest candidate — first in step order
-    expect(urls[0]).toContain('photos/a')
+    // Primary is the most recent (`e` at t6), then in descending recency
+    expect(urls[0]).toContain('photos/e')
+    expect(urls[1]).toContain('photos/d')
+    expect(urls[2]).toContain('photos/c')
+    expect(urls[3]).toContain('photos/dup')
   })
 
   it('uses external URL directly for LINK-type images (no storage adapter call)', async () => {

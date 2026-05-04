@@ -29,6 +29,7 @@ type GalleryImage = {
   url: string | null
   type: 'UPLOAD' | 'LINK'
   originalFilename: string | null
+  createdAt?: Date
 }
 
 function resolveSocialImageUrl(img: GalleryImage): string | null {
@@ -49,25 +50,40 @@ function resolveSocialImageUrl(img: GalleryImage): string | null {
 }
 
 /**
- * Walk steps in the order they appear (already sorted by the data accessor)
- * and collect up to `1 + MAX_EXTRA_OG_IMAGES` distinct image URLs.
- * The first URL is the primary `og:image` (and `twitter:image`); the rest
- * are emitted as enrichment for clients that honour multi-image OG.
+ * Collect up to `1 + MAX_EXTRA_OG_IMAGES` distinct image URLs in the order
+ * the caller supplies. The first URL is the primary `og:image` (and
+ * `twitter:image`); the rest are enrichment for clients that honour
+ * multi-image OG. (Reality: Slack/WhatsApp/Telegram/Twitter/LinkedIn all
+ * honour only the first; extras serve Mastodon and niche unfurlers.)
  */
-function collectGalleryImageUrls(steps: { images: GalleryImage[] }[]): string[] {
+function collectImageUrls(images: GalleryImage[]): string[] {
   const urls: string[] = []
   const seen = new Set<string>()
   const limit = 1 + MAX_EXTRA_OG_IMAGES
-  for (const step of steps) {
-    for (const img of step.images) {
-      const url = resolveSocialImageUrl(img)
-      if (!url || seen.has(url)) continue
-      seen.add(url)
-      urls.push(url)
-      if (urls.length >= limit) return urls
-    }
+  for (const img of images) {
+    const url = resolveSocialImageUrl(img)
+    if (!url || seen.has(url)) continue
+    seen.add(url)
+    urls.push(url)
+    if (urls.length >= limit) return urls
   }
   return urls
+}
+
+/**
+ * Story 30.4 — flatten all step images into one list sorted by `createdAt`
+ * DESC, so the primary `og:image` is the most recently added image across
+ * the project. Mirrors the dashboard project-card "latest photo" pattern
+ * (`fetchLatestPhotosByProject` in `src/lib/project-photos.ts`). Falls back
+ * to insertion order when `createdAt` is not provided (test fixtures).
+ */
+function flattenStepsByLatest(steps: { images: GalleryImage[] }[]): GalleryImage[] {
+  const all = steps.flatMap((step) => step.images)
+  return [...all].sort((a, b) => {
+    const aTime = a.createdAt ? a.createdAt.getTime() : 0
+    const bTime = b.createdAt ? b.createdAt.getTime() : 0
+    return bTime - aTime
+  })
 }
 
 /**
@@ -90,7 +106,9 @@ export async function buildJourneyMetadata(slug: string): Promise<Metadata> {
   if (!project || !project.journeyGalleryEnabled) return {}
 
   const stepsWithImages = project.steps.filter((step) => step.images.length > 0)
-  const imageUrls = collectGalleryImageUrls(stepsWithImages)
+  // Primary og:image = most recent across all steps (matches dashboard
+  // "latest photo" — major social unfurlers honour only the first image).
+  const imageUrls = collectImageUrls(flattenStepsByLatest(stepsWithImages))
 
   const title = `${project.name} — Journey`
   const description =
@@ -130,7 +148,9 @@ export async function buildResultMetadata(slug: string): Promise<Metadata> {
   // the page renders no images. Emitting og:image from arbitrary OTHER
   // completed steps would diverge the unfurl preview from the landing
   // page (the unfurl shows photos the recipient can't find on click).
-  const imageUrls = collectGalleryImageUrls(resultStep ? [{ images: resultStep.images }] : [])
+  // Within the chosen step, images are already sorted by createdAt DESC by
+  // the data accessor — most recent first.
+  const imageUrls = collectImageUrls(resultStep?.images ?? [])
 
   const title = `${project.name} — Result`
   const description = project.description ?? `Final result from ${project.name}.`
