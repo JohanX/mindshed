@@ -12,7 +12,15 @@ export default function GalleryLayout({ children }: { children: React.ReactNode 
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 py-8">{children}</main>
 
       <footer className="border-t border-border px-6 py-4 text-center text-xs text-muted-foreground">
-        Made with MindShed
+        Made with{' '}
+        <a
+          href="https://github.com/JohanX/mindshed"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-foreground hover:underline"
+        >
+          MindShed
+        </a>
       </footer>
     </div>
   )
