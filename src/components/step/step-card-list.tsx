@@ -26,6 +26,14 @@ interface StepCardListProps {
   currentStepId: string | null
   isProjectCompleted: boolean
   projectId: string
+  /**
+   * Story 30.3 / FR127. Called when a step transition brings every step to
+   * COMPLETED while the project is still unlocked. The parent
+   * (`StepCardListWithCompletion`) opens the "Mark project complete?"
+   * dialog. The callback is owned by the non-keyed wrapper so the dialog
+   * state survives across StepCardList remounts triggered by `stepKey`.
+   */
+  onAllStepsCompleted?: () => void
 }
 
 export function StepCardList({
@@ -33,6 +41,7 @@ export function StepCardList({
   currentStepId,
   isProjectCompleted,
   projectId,
+  onAllStepsCompleted,
 }: StepCardListProps) {
   const [steps, setSteps] = useState(initialSteps)
   const lastConfirmedOrderRef = useRef(initialSteps)
@@ -79,6 +88,7 @@ export function StepCardList({
               step={step}
               variant={step.id === currentStepId ? 'current' : 'other'}
               isProjectCompleted={isProjectCompleted}
+              onAllStepsCompleted={onAllStepsCompleted}
             />
           ))}
         </div>

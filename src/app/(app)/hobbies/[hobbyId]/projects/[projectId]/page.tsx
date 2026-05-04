@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { ProjectActions } from '@/components/project/project-actions'
 import { ProjectStatusBadge } from '@/components/project/project-status-badge'
 import { type StepCardData, type StepCardImage } from '@/components/step/step-card'
-import { StepCardList } from '@/components/step/step-card-list'
+import { StepCardListWithCompletion } from '@/components/step/step-card-list-with-completion'
 import { StepFocusScroll } from '@/components/step/step-focus-scroll'
 import { AddStepForm } from '@/components/step/add-step-form'
 import { EmptyStateCard } from '@/components/empty-state-card'
@@ -52,8 +52,13 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
 
   if (!project || project.hobbyId !== hobbyId) notFound()
 
+  // Story 30.3 / FR127: lock state is the user-driven `project.isCompleted`
+  // flag — NOT the derived step status. The badge below still uses
+  // `derivedStatus` (visual progress indicator, unchanged). A project where
+  // all steps are COMPLETED but the user picked "Not yet" / never opened
+  // the dialog will show a "Completed" badge while remaining editable.
   const derivedStatus = deriveProjectStatus(project.steps)
-  const isCompleted = derivedStatus === 'COMPLETED'
+  const isCompleted = project.isCompleted
 
   const remindersResult = await getRemindersForTarget('PROJECT', projectId)
   const projectReminder = remindersResult.success ? (remindersResult.data[0] ?? null) : null
@@ -182,6 +187,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
               name: project.name,
               description: project.description,
               hobbyId: project.hobbyId,
+              isCompleted: project.isCompleted,
             }}
           />
         </div>
@@ -191,8 +197,8 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
 
       {stepCards.length > 0 ? (
         <>
-          <StepCardList
-            key={stepKey}
+          <StepCardListWithCompletion
+            stepKey={stepKey}
             initialSteps={stepCards}
             currentStepId={currentStepId}
             isProjectCompleted={isCompleted}

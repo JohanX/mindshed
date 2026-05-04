@@ -58,9 +58,21 @@ interface StepCardProps {
   step: StepCardData
   variant: 'current' | 'other'
   isProjectCompleted: boolean
+  /**
+   * Story 30.3 / FR127. Fired when a successful state transition leaves the
+   * project with all steps in COMPLETED state, AND the project itself is not
+   * already locked. The parent (`StepCardList`) opens the "Mark project
+   * complete?" confirmation dialog in response.
+   */
+  onAllStepsCompleted?: () => void
 }
 
-export function StepCard({ step, variant, isProjectCompleted }: StepCardProps) {
+export function StepCard({
+  step,
+  variant,
+  isProjectCompleted,
+  onAllStepsCompleted,
+}: StepCardProps) {
   const [expanded, setExpanded] = useState(variant === 'current')
   const [isPending, startTransition] = useTransition()
   const [editing, setEditing] = useState(false)
@@ -98,6 +110,17 @@ export function StepCard({ step, variant, isProjectCompleted }: StepCardProps) {
       const result = await updateStepState({ id: step.id, state: newState })
       if (result.success) {
         showSuccessToast(`Step marked as ${newState.replace('_', ' ').toLowerCase()}`)
+        // Story 30.3 / FR127: if this transition just brought every step to
+        // COMPLETED while the project is still unlocked, ask the parent to
+        // open the "Mark project complete?" confirmation dialog.
+        if (
+          newState === 'COMPLETED' &&
+          result.data.allStepsCompleted &&
+          !isProjectCompleted &&
+          onAllStepsCompleted
+        ) {
+          onAllStepsCompleted()
+        }
       } else {
         showErrorToast(result.error)
       }

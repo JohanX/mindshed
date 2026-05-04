@@ -9,9 +9,15 @@ interface SortableStepCardProps {
   step: StepCardData
   variant: 'current' | 'other'
   isProjectCompleted: boolean
+  onAllStepsCompleted?: () => void
 }
 
-export function SortableStepCard({ step, variant, isProjectCompleted }: SortableStepCardProps) {
+export function SortableStepCard({
+  step,
+  variant,
+  isProjectCompleted,
+  onAllStepsCompleted,
+}: SortableStepCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: step.id,
   })
@@ -35,7 +41,12 @@ export function SortableStepCard({ step, variant, isProjectCompleted }: Sortable
         </button>
       )}
       <div className="flex-1 min-w-0">
-        <StepCard step={step} variant={variant} isProjectCompleted={isProjectCompleted} />
+        <StepCard
+          step={step}
+          variant={variant}
+          isProjectCompleted={isProjectCompleted}
+          onAllStepsCompleted={onAllStepsCompleted}
+        />
       </div>
     </div>
   )

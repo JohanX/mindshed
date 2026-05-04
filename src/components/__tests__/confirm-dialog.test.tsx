@@ -51,4 +51,35 @@ describe('ConfirmDialog', () => {
     expect(screen.getByText('Working…')).toBeInTheDocument()
     expect(screen.queryByText('Deleting...')).not.toBeInTheDocument()
   })
+
+  // Story 30.3 / FR127 — non-destructive variant + custom cancel label
+  it('renders custom cancelLabel (Story 30.3)', () => {
+    render(<ConfirmDialog {...defaultProps} cancelLabel="Not yet" />)
+    expect(screen.getByText('Not yet')).toBeInTheDocument()
+    expect(screen.queryByText('Cancel')).not.toBeInTheDocument()
+  })
+
+  it('default cancelLabel is "Cancel" when not provided', () => {
+    render(<ConfirmDialog {...defaultProps} />)
+    expect(screen.getByText('Cancel')).toBeInTheDocument()
+  })
+
+  it('default variant is destructive (confirm button has destructive bg class)', () => {
+    render(<ConfirmDialog {...defaultProps} />)
+    const confirmButton = screen.getByText('Delete').closest('button')
+    expect(confirmButton?.className).toContain('bg-destructive')
+  })
+
+  it('variant="default" omits the destructive bg class on confirm button (Story 30.3)', () => {
+    render(
+      <ConfirmDialog
+        {...defaultProps}
+        confirmLabel="Mark complete"
+        cancelLabel="Not yet"
+        variant="default"
+      />,
+    )
+    const confirmButton = screen.getByText('Mark complete').closest('button')
+    expect(confirmButton?.className).not.toContain('bg-destructive')
+  })
 })

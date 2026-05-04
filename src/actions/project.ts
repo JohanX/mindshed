@@ -290,6 +290,62 @@ export async function archiveProject(id: string): Promise<ActionResult<null>> {
   }
 }
 
+// Story 30.3 / FR127: project.isCompleted is now a user-driven flag — set
+// explicitly via the confirmation dialog after the last step completes
+// (`step-card-list.tsx`) or via the project meatball menu (`project-actions.tsx`).
+// The auto-toggle previously in `updateStepState` (step.ts) was removed.
+export async function completeProject(id: string): Promise<ActionResult<null>> {
+  const parsed = z.uuid().safeParse(id)
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid project ID' }
+  }
+
+  try {
+    const project = await prisma.project.update({
+      where: { id: parsed.data },
+      data: { isCompleted: true, lastActivityAt: new Date() },
+    })
+
+    revalidatePath(`/hobbies/${project.hobbyId}/projects/${project.id}`)
+    revalidatePath(`/hobbies/${project.hobbyId}`)
+    revalidatePath('/projects')
+    revalidatePath('/')
+    return { success: true, data: null }
+  } catch (error: unknown) {
+    console.error('completeProject failed:', error)
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return { success: false, error: 'Project not found.' }
+    }
+    return { success: false, error: 'Failed to complete project.' }
+  }
+}
+
+export async function uncompleteProject(id: string): Promise<ActionResult<null>> {
+  const parsed = z.uuid().safeParse(id)
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid project ID' }
+  }
+
+  try {
+    const project = await prisma.project.update({
+      where: { id: parsed.data },
+      data: { isCompleted: false, lastActivityAt: new Date() },
+    })
+
+    revalidatePath(`/hobbies/${project.hobbyId}/projects/${project.id}`)
+    revalidatePath(`/hobbies/${project.hobbyId}`)
+    revalidatePath('/projects')
+    revalidatePath('/')
+    return { success: true, data: null }
+  } catch (error: unknown) {
+    console.error('uncompleteProject failed:', error)
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return { success: false, error: 'Project not found.' }
+    }
+    return { success: false, error: 'Failed to unlock project.' }
+  }
+}
+
 export async function getIdleProjects(): Promise<ActionResult<IdleProjectData[]>> {
   try {
     const threshold = new Date()

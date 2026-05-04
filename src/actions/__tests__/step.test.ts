@@ -394,7 +394,13 @@ describe('updateStepState', () => {
     })
   })
 
-  it('syncs project.isCompleted when all steps become COMPLETED', async () => {
+  // Story 30.3 / FR127: project.isCompleted is no longer auto-toggled by
+  // updateStepState. Completion is an explicit user action via the dialog
+  // or the project meatball menu. Verify that the action does NOT call
+  // project.update for the isCompleted flag, even when this transition
+  // brings every step to COMPLETED — and that the result exposes
+  // `allStepsCompleted: true` so the client can open the dialog.
+  it('does NOT auto-toggle project.isCompleted when all steps become COMPLETED (Story 30.3)', async () => {
     const { mockProjectUpdateTx } = makeStepStateTx({ state: 'IN_PROGRESS', previousState: null }, [
       { state: 'COMPLETED' },
       { state: 'COMPLETED' },
@@ -405,10 +411,27 @@ describe('updateStepState', () => {
       state: 'COMPLETED',
     })
     expect(result.success).toBe(true)
-    expect(mockProjectUpdateTx).toHaveBeenCalledWith({
-      where: { id: 'p1' },
-      data: { isCompleted: true },
+    if (result.success) {
+      expect(result.data.allStepsCompleted).toBe(true)
+    }
+    expect(mockProjectUpdateTx).not.toHaveBeenCalled()
+  })
+
+  it('returns allStepsCompleted=false when at least one step is still incomplete', async () => {
+    const { mockProjectUpdateTx } = makeStepStateTx({ state: 'IN_PROGRESS', previousState: null }, [
+      { state: 'COMPLETED' },
+      { state: 'IN_PROGRESS' },
+    ])
+
+    const result = await updateStepState({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      state: 'COMPLETED',
     })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.allStepsCompleted).toBe(false)
+    }
+    expect(mockProjectUpdateTx).not.toHaveBeenCalled()
   })
 
   it('returns error when step not found', async () => {

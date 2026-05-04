@@ -14,9 +14,25 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { updateProject, deleteProject, archiveProject, cloneProject } from '@/actions/project'
+import {
+  updateProject,
+  deleteProject,
+  archiveProject,
+  cloneProject,
+  completeProject,
+  uncompleteProject,
+} from '@/actions/project'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
-import { MoreHorizontal, Pencil, Trash2, Archive, Copy, Loader2 } from 'lucide-react'
+import {
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Archive,
+  Copy,
+  Loader2,
+  CheckCircle2,
+  Unlock,
+} from 'lucide-react'
 
 interface ProjectActionsProps {
   project: {
@@ -24,6 +40,7 @@ interface ProjectActionsProps {
     name: string
     description: string | null
     hobbyId: string
+    isCompleted: boolean
   }
 }
 
@@ -99,6 +116,30 @@ export function ProjectActions({ project }: ProjectActionsProps) {
     })
   }
 
+  // Story 30.3 / FR127 — explicit user-driven completion (replaces the
+  // auto-toggle previously in step.ts). Lock state is `project.isCompleted`.
+  function handleComplete() {
+    startTransition(async () => {
+      const result = await completeProject(project.id)
+      if (result.success) {
+        showSuccessToast('Project completed')
+      } else {
+        showErrorToast(result.error)
+      }
+    })
+  }
+
+  function handleUncomplete() {
+    startTransition(async () => {
+      const result = await uncompleteProject(project.id)
+      if (result.success) {
+        showSuccessToast('Project unlocked')
+      } else {
+        showErrorToast(result.error)
+      }
+    })
+  }
+
   return (
     <>
       <DropdownMenu>
@@ -139,6 +180,31 @@ export function ProjectActions({ project }: ProjectActionsProps) {
             <Copy className="h-4 w-4 mr-2" />
             Clone
           </DropdownMenuItem>
+          {project.isCompleted ? (
+            <DropdownMenuItem
+              className="min-h-[44px]"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleUncomplete()
+              }}
+              disabled={isPending || isDeleting}
+            >
+              <Unlock className="h-4 w-4 mr-2" />
+              Unlock project
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem
+              className="min-h-[44px]"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleComplete()
+              }}
+              disabled={isPending || isDeleting}
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Complete project
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             className="min-h-[44px] text-destructive focus:text-destructive"
             onClick={(e) => {

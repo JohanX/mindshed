@@ -27,9 +27,16 @@ interface ConfirmDialogProps {
   title: string
   description: string
   confirmLabel?: string
+  cancelLabel?: string
   loadingLabel?: string
   onConfirm: () => void
   loading?: boolean
+  /**
+   * `'destructive'` (default) styles the confirm button red — appropriate
+   * for delete/remove flows. `'default'` styles it as the brand primary —
+   * use for non-destructive confirmations like marking a project complete.
+   */
+  variant?: 'destructive' | 'default'
 }
 
 export function ConfirmDialog({
@@ -38,10 +45,17 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel = 'Delete',
+  cancelLabel = 'Cancel',
   loadingLabel,
   onConfirm,
   loading = false,
+  variant = 'destructive',
 }: ConfirmDialogProps) {
+  const confirmClass =
+    variant === 'destructive'
+      ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90 min-h-[44px]'
+      : 'min-h-[44px]'
+
   return (
     <AlertDialog
       open={open}
@@ -56,7 +70,7 @@ export function ConfirmDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={loading} className="min-h-[44px]">
-            Cancel
+            {cancelLabel}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
@@ -64,7 +78,7 @@ export function ConfirmDialog({
               onConfirm()
             }}
             disabled={loading}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 min-h-[44px]"
+            className={confirmClass}
           >
             {loading ? (
               <>

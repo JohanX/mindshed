@@ -149,14 +149,16 @@ export async function deleteStep(id: string): Promise<ActionResult<null>> {
   }
 }
 
-export async function updateStepState(input: UpdateStepStateInput): Promise<ActionResult<null>> {
+export async function updateStepState(
+  input: UpdateStepStateInput,
+): Promise<ActionResult<{ allStepsCompleted: boolean }>> {
   const parsed = updateStepStateSchema.safeParse(input)
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
   }
 
   try {
-    const step = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const existing = await tx.step.findUniqueOrThrow({
         where: { id: parsed.data.id },
         select: {
@@ -172,7 +174,8 @@ export async function updateStepState(input: UpdateStepStateInput): Promise<Acti
 
       // No-op: same state selected — just return existing step unchanged
       if (newState === existing.state) {
-        return tx.step.findUniqueOrThrow({ where: { id: parsed.data.id } })
+        const step = await tx.step.findUniqueOrThrow({ where: { id: parsed.data.id } })
+        return { step, allStepsCompleted: false }
       }
 
       let updatedStep
@@ -198,25 +201,24 @@ export async function updateStepState(input: UpdateStepStateInput): Promise<Acti
         })
       }
 
-      // Sync project.isCompleted for query optimization
+      // Story 30.3 / FR127: project.isCompleted is no longer auto-toggled
+      // when all steps complete — completion is an explicit user action via
+      // the confirmation dialog (step-card-list.tsx) or the project meatball
+      // menu (project-actions.tsx). We still compute `allStepsCompleted`
+      // here so the client can decide whether to open the confirmation
+      // dialog after the transition that brought the project to that state.
       const allSteps = await tx.step.findMany({
         where: { projectId: existing.projectId },
         select: { state: true },
       })
-      const allCompleted =
+      const allStepsCompleted =
         allSteps.length > 0 && allSteps.every((step) => step.state === 'COMPLETED')
-      if (allCompleted !== existing.project.isCompleted) {
-        await tx.project.update({
-          where: { id: existing.projectId },
-          data: { isCompleted: allCompleted },
-        })
-      }
 
-      return updatedStep
+      return { step: updatedStep, allStepsCompleted }
     })
 
-    await updateProjectActivity(step.projectId)
-    return { success: true, data: null }
+    await updateProjectActivity(result.step.projectId)
+    return { success: true, data: { allStepsCompleted: result.allStepsCompleted } }
   } catch (error: unknown) {
     console.error('updateStepState failed:', error)
     if (error instanceof Error && error.message === 'PROJECT_COMPLETED') {

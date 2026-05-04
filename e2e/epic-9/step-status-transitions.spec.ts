@@ -114,7 +114,15 @@ test.describe('Bidirectional Step Status Transitions', () => {
     await expect(badge).toContainText('Not Started')
   })
 
-  test('change step to COMPLETED auto-completes single-step project', async ({ page }) => {
+  test('change last step to COMPLETED opens dialog; "Mark complete" locks the project', async ({
+    page,
+  }) => {
+    // Story 30.3 / FR127: completion is no longer auto-derived. The
+    // confirmation dialog appears when the last step transitions to
+    // COMPLETED while the project is unlocked. Picking "Mark complete"
+    // sets project.isCompleted=true, which disables further step edits
+    // (the existing PROJECT_COMPLETED guards continue to enforce the rule
+    // — only the input flag is now user-driven).
     await page.goto(projectUrl)
     await page.waitForLoadState('networkidle')
 
@@ -123,11 +131,17 @@ test.describe('Bidirectional Step Status Transitions', () => {
     await page.waitForTimeout(500)
 
     await page.getByRole('option', { name: /Completed/ }).click()
+
+    // Confirmation dialog appears
+    await expect(page.getByRole('alertdialog', { name: 'Mark project complete?' })).toBeVisible({
+      timeout: 5000,
+    })
+    await page.getByRole('button', { name: 'Mark complete' }).click()
     await page.waitForTimeout(1000)
 
     await page.goto(projectUrl)
     await page.waitForLoadState('networkidle')
-    // The dropdown should be disabled since project is now auto-completed
+    // The dropdown should be disabled now that the project is locked
     const badge = page.getByLabel('Step status').first()
     await expect(badge).toBeDisabled()
   })
