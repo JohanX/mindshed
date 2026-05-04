@@ -70,13 +70,18 @@ test.describe('Step Time Logging (Story 30.5 / FR129)', () => {
     await expect(firstCounter).toBeVisible()
     await expect(firstCounter).toHaveText('—')
 
-    // Click "+" twice → 1h
+    // Click "+" twice → 1h. The optimistic local state updates immediately
+    // and the server save is debounced by SAVE_DEBOUNCE_MS (500ms).
     await page.getByRole('button', { name: 'Increase hours by 0.5' }).first().click()
     await page.getByRole('button', { name: 'Increase hours by 0.5' }).first().click()
-    await page.waitForTimeout(500)
 
-    // Step now shows 1h
+    // Step shows 1h immediately (optimistic local state, no round-trip).
     await expect(firstCounter).toHaveText('1h')
+
+    // Wait past the debounce window + server round-trip before reload, so
+    // the persisted value matches the optimistic state. 1500ms = 500ms
+    // debounce + 1000ms slack for action latency on slow CI.
+    await page.waitForTimeout(1500)
 
     // Reload — value persisted; project total visible in header.
     await page.reload()

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Minus, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { setStepHours } from '@/actions/step'
@@ -15,13 +15,18 @@ interface StepHoursCounterProps {
 }
 
 const INCREMENT = 0.5
+const SAVE_DEBOUNCE_MS = 500
 
 /**
  * Story 30.5 / FR129 — per-step hours counter. Mounted only when the parent
  * hobby has `hoursTrackingEnabled === true` (gated higher in the tree). The
- * +/- buttons step by 0.5; "−" disabled at 0 / null; "+" has no upper cap;
- * the small × clears the value back to null. Optimistic local state with
- * server-action persistence; on error we revert and toast.
+ * +/- buttons step by 0.5; "−" disabled at 0/null; "+" has no upper cap;
+ * the small × clears the value back to null.
+ *
+ * Saves are debounced: a single `setStepHours` call fires `SAVE_DEBOUNCE_MS`
+ * after the last +/- click. Buttons stay responsive throughout — no
+ * per-click disable, no per-click round-trip. On save failure we revert to
+ * the last server-confirmed value and surface a toast.
  */
 export function StepHoursCounter({
   stepId,
@@ -29,39 +34,55 @@ export function StepHoursCounter({
   disabled = false,
 }: StepHoursCounterProps) {
   const [value, setValue] = useState<number | null>(initialHours)
-  const [isPending, startTransition] = useTransition()
+  // Last value the server confirmed; revert target when a save fails.
+  const lastSavedRef = useRef<number | null>(initialHours)
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  function persist(nextValue: number | null) {
-    const previous = value
-    setValue(nextValue)
-    startTransition(async () => {
-      const result = await setStepHours({ id: stepId, hours: nextValue })
-      if (!result.success) {
+  // Cleanup on unmount — clear any pending debounce timer. The unsaved
+  // change (if any) is dropped, which is acceptable: a 500ms navigation
+  // window for an isolated counter tweak is a thin edge case.
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    }
+  }, [])
+
+  function scheduleSave(target: number | null) {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    saveTimeoutRef.current = setTimeout(async () => {
+      saveTimeoutRef.current = null
+      const result = await setStepHours({ id: stepId, hours: target })
+      if (result.success) {
+        lastSavedRef.current = target
+      } else {
         showErrorToast(result.error)
-        setValue(previous)
+        setValue(lastSavedRef.current)
       }
-    })
+    }, SAVE_DEBOUNCE_MS)
   }
 
   function handleDecrement() {
     if (value === null || value === 0) return
     const next = Math.max(0, value - INCREMENT)
-    persist(next)
+    setValue(next)
+    scheduleSave(next)
   }
 
   function handleIncrement() {
     const next = (value ?? 0) + INCREMENT
-    persist(next)
+    setValue(next)
+    scheduleSave(next)
   }
 
   function handleClear() {
-    persist(null)
+    setValue(null)
+    scheduleSave(null)
   }
 
   const displayLabel = formatHours(value) ?? '—'
-  const decrementDisabled = disabled || isPending || value === null || value === 0
-  const incrementDisabled = disabled || isPending
-  const clearDisabled = disabled || isPending || value === null
+  const decrementDisabled = disabled || value === null || value === 0
+  const incrementDisabled = disabled
+  const clearDisabled = disabled || value === null
 
   return (
     <div className="flex items-center gap-2" aria-label="Hours logged for this step">
