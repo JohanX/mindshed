@@ -20,7 +20,7 @@ export default function AppleIcon() {
         width="140"
         height="140"
         fill="none"
-        stroke="#e5911a"
+        stroke="#3a342d"
         strokeWidth="2.4"
         strokeLinecap="round"
         strokeLinejoin="round"

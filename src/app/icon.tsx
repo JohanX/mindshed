@@ -20,7 +20,7 @@ export default function Icon() {
         width="32"
         height="32"
         fill="none"
-        stroke="#e5911a"
+        stroke="#3a342d"
         strokeWidth="3"
         strokeLinecap="round"
         strokeLinejoin="round"
