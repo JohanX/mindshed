@@ -11,6 +11,8 @@ interface ResultGalleryViewProps {
     name: string
     description: string | null
     hobby: { name: string; color: string; icon: string | null }
+    /** Story 30.5 / FR129 — pre-formatted total like `12.5h`, or null to hide. */
+    totalHoursLabel: string | null
   }
   images: { displayUrl: string; originalFilename: string | null }[]
 }
@@ -43,8 +45,13 @@ export function ResultGalleryView({ project, images }: ResultGalleryViewProps) {
         {project.description && (
           <p className="text-lg text-muted-foreground">{project.description}</p>
         )}
-        <div className="flex justify-center">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <HobbyIdentity hobby={project.hobby} variant="badge" />
+          {project.totalHoursLabel && (
+            <span className="text-sm text-muted-foreground" data-testid="gallery-total-hours">
+              {project.totalHoursLabel} logged
+            </span>
+          )}
         </div>
       </header>
 

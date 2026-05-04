@@ -24,6 +24,7 @@ import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { updateStepState, updateStep, deleteStep } from '@/actions/step'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Input } from '@/components/ui/input'
+import { StepHoursCounter } from '@/components/step/step-hours-counter'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import type { StepState } from '@/lib/step-states'
@@ -52,12 +53,22 @@ export interface StepCardData {
   notes: StepNoteData[]
   images: StepCardImage[]
   blockers: StepBlockerData[]
+  /** Story 30.5 / FR129 — null when the user has never logged time for this
+   * step. Stored as Decimal(5,1) in the DB; converted to number at the data
+   * layer. The counter UI is gated by `hobbyTracksHours` (parent prop). */
+  hoursLogged: number | null
 }
 
 interface StepCardProps {
   step: StepCardData
   variant: 'current' | 'other'
   isProjectCompleted: boolean
+  /**
+   * Story 30.5 / FR129 — when true, render the per-step hours counter in
+   * the expanded body. Drilled from the project page via the
+   * StepCardListWithCompletion → StepCardList → SortableStepCard chain.
+   */
+  hobbyTracksHours: boolean
   /**
    * Story 30.3 / FR127. Fired when a successful state transition leaves the
    * project with all steps in COMPLETED state, AND the project itself is not
@@ -71,6 +82,7 @@ export function StepCard({
   step,
   variant,
   isProjectCompleted,
+  hobbyTracksHours,
   onAllStepsCompleted,
 }: StepCardProps) {
   const [expanded, setExpanded] = useState(variant === 'current')
@@ -224,6 +236,20 @@ export function StepCard({
         >
           <div className={expanded ? '' : 'overflow-hidden'}>
             <CardContent className="pt-0">
+              {/* Story 30.5 / FR129 — per-step hours counter, gated by the
+                  parent hobby's `hoursTrackingEnabled` flag. */}
+              {hobbyTracksHours && (
+                <section className="mb-3">
+                  <h4 className="text-sm font-semibold text-muted-foreground mb-2">Hours logged</h4>
+                  <StepHoursCounter
+                    stepId={step.id}
+                    initialHours={step.hoursLogged}
+                    disabled={isProjectCompleted}
+                  />
+                </section>
+              )}
+              {hobbyTracksHours && <Separator className="my-3" />}
+
               {/* Photos section */}
               <section>
                 <h4 className="text-sm font-semibold text-muted-foreground mb-2">Photos</h4>

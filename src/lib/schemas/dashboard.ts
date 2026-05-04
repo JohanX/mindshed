@@ -44,6 +44,8 @@ export interface RecentProject {
   totalSteps: number
   completedSteps: number
   derivedStatus: import('@/lib/project-status').DerivedProjectStatus
+  /** Story 30.5 / FR129 — null when the parent hobby has tracking disabled. */
+  totalHoursLogged: number | null
 }
 
 export interface ActiveBlocker {
@@ -82,4 +84,6 @@ export interface IdleProject {
     id: string
     name: string
   } | null
+  /** Story 30.5 / FR129 — null when the parent hobby has tracking disabled. */
+  totalHoursLogged: number | null
 }

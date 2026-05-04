@@ -71,6 +71,7 @@ export async function findHobbiesWithCounts(idleThreshold: Date): Promise<HobbyW
     color: hobby.color,
     icon: hobby.icon,
     sortOrder: hobby.sortOrder,
+    hoursTrackingEnabled: hobby.hoursTrackingEnabled,
     createdAt: hobby.createdAt,
     updatedAt: hobby.updatedAt,
     projectCount: hobby._count.projects,

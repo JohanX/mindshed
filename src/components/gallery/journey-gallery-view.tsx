@@ -17,6 +17,8 @@ interface JourneyGalleryViewProps {
     name: string
     description: string | null
     hobby: { name: string; color: string; icon: string | null }
+    /** Story 30.5 / FR129 — pre-formatted total like `12.5h`, or null to hide. */
+    totalHoursLabel: string | null
   }
   steps: JourneyStep[]
 }
@@ -72,7 +74,14 @@ export function JourneyGalleryView({ project, steps }: JourneyGalleryViewProps) 
         {project.description && (
           <p className="text-lg text-muted-foreground">{project.description}</p>
         )}
-        <HobbyIdentity hobby={project.hobby} variant="badge" />
+        <div className="flex items-center gap-2 flex-wrap">
+          <HobbyIdentity hobby={project.hobby} variant="badge" />
+          {project.totalHoursLabel && (
+            <span className="text-sm text-muted-foreground" data-testid="gallery-total-hours">
+              {project.totalHoursLabel} logged
+            </span>
+          )}
+        </div>
       </header>
 
       {steps.map((step, stepIdx) => (

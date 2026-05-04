@@ -7,6 +7,8 @@ import { JourneyGalleryView } from '@/components/gallery/journey-gallery-view'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
 import { buildJourneyMetadata } from '@/lib/gallery-metadata'
+import { computeProjectTotalHours } from '@/lib/project-hours'
+import { formatHours } from '@/lib/hours-format'
 
 interface JourneyGalleryPageProps {
   params: Promise<{ slug: string }>
@@ -45,9 +47,20 @@ export default async function JourneyGalleryPage({ params }: JourneyGalleryPageP
 
   if (!project || !project.journeyGalleryEnabled) notFound()
 
-  // Filter to only steps with images
+  // Story 30.5 / FR129 — total hours summed across ALL steps (not filtered
+  // by `excludeFromGallery`) so the journey total matches the result-
+  // gallery total and the project-detail total. Tracking-disabled hobbies
+  // get null; formatHours hides 0/null on the UI side.
+  const totalHoursLogged = computeProjectTotalHours(
+    project.steps,
+    project.hobby.hoursTrackingEnabled,
+  )
+
+  // Filter to visible steps (excludeFromGallery=false AND has images) for
+  // rendering. The data accessor returns all steps so the FR129 total can
+  // sum the whole project; the page narrows for display.
   const stepsWithImages = project.steps
-    .filter((step) => step.images.length > 0)
+    .filter((step) => !step.excludeFromGallery && step.images.length > 0)
     .map((step) => ({
       name: step.name,
       notes: step.notes,
@@ -69,6 +82,7 @@ export default async function JourneyGalleryPage({ params }: JourneyGalleryPageP
         name: project.name,
         description: project.description,
         hobby: project.hobby,
+        totalHoursLabel: formatHours(totalHoursLogged),
       }}
       steps={stepsWithImages}
     />

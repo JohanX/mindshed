@@ -9,6 +9,8 @@ import { AddStepForm } from '@/components/step/add-step-form'
 import { EmptyStateCard } from '@/components/empty-state-card'
 import type { StepState } from '@/lib/step-states'
 import { deriveProjectStatus } from '@/lib/project-status'
+import { computeProjectTotalHours } from '@/lib/project-hours'
+import { formatHours } from '@/lib/hours-format'
 import { getRemindersForTarget } from '@/actions/reminder'
 import { ReminderBadge } from '@/components/reminder/reminder-badge'
 import { ReminderDatePicker } from '@/components/reminder/reminder-date-picker'
@@ -60,6 +62,13 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
   const derivedStatus = deriveProjectStatus(project.steps)
   const isCompleted = project.isCompleted
 
+  // Story 30.5 / FR129 — project total hours, null when hobby tracking is off.
+  const totalHoursLogged = computeProjectTotalHours(
+    project.steps,
+    project.hobby.hoursTrackingEnabled,
+  )
+  const formattedHours = formatHours(totalHoursLogged)
+
   const remindersResult = await getRemindersForTarget('PROJECT', projectId)
   const projectReminder = remindersResult.success ? (remindersResult.data[0] ?? null) : null
 
@@ -104,6 +113,14 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
       id: blocker.id,
       description: blocker.description,
     })),
+    hoursLogged: (() => {
+      // Defensive: Number(prismaDecimal) returns NaN for any non-numeric
+      // input; we round-trip via Number.isFinite to surface only valid
+      // values to the React tree (avoids `NaNh` rendering in StepCard).
+      if (step.hoursLogged === null) return null
+      const n = Number(step.hoursLogged)
+      return Number.isFinite(n) ? n : null
+    })(),
   }))
 
   // Gallery data
@@ -173,6 +190,11 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
       >
         <div className="flex items-center gap-2">
           <ProjectStatusBadge status={derivedStatus} />
+          {formattedHours && (
+            <span className="text-sm text-muted-foreground" data-testid="project-total-hours">
+              {formattedHours}
+            </span>
+          )}
           {projectReminder && <ReminderBadge reminder={projectReminder} />}
           {!isCompleted && (
             <ReminderDatePicker
@@ -202,6 +224,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
             initialSteps={stepCards}
             currentStepId={currentStepId}
             isProjectCompleted={isCompleted}
+            hobbyTracksHours={project.hobby.hoursTrackingEnabled}
             projectId={project.id}
           />
           {/*

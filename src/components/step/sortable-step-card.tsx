@@ -9,6 +9,7 @@ interface SortableStepCardProps {
   step: StepCardData
   variant: 'current' | 'other'
   isProjectCompleted: boolean
+  hobbyTracksHours: boolean
   onAllStepsCompleted?: () => void
 }
 
@@ -16,6 +17,7 @@ export function SortableStepCard({
   step,
   variant,
   isProjectCompleted,
+  hobbyTracksHours,
   onAllStepsCompleted,
 }: SortableStepCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -45,6 +47,7 @@ export function SortableStepCard({
           step={step}
           variant={variant}
           isProjectCompleted={isProjectCompleted}
+          hobbyTracksHours={hobbyTracksHours}
           onAllStepsCompleted={onAllStepsCompleted}
         />
       </div>

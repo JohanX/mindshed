@@ -75,17 +75,21 @@ export async function seedHobby(opts: {
   color?: string
   icon?: string | null
   sortOrder?: number
+  /** Story 30.5 / FR129 — opt in for hour-tracking tests. Defaults to false
+   * so existing tests remain unchanged. */
+  hoursTrackingEnabled?: boolean
 }): Promise<SeededHobby> {
   const client = await getClient()
   const id = randomUUID()
   const color = opts.color ?? 'hsl(25, 45%, 40%)' // Walnut
   const icon = opts.icon ?? null
   const sortOrder = opts.sortOrder ?? 0
+  const hoursTrackingEnabled = opts.hoursTrackingEnabled ?? false
 
   await client.query(
-    `INSERT INTO hobby (id, name, color, icon, sort_order, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, now(), now())`,
-    [id, opts.name, color, icon, sortOrder],
+    `INSERT INTO hobby (id, name, color, icon, sort_order, hours_tracking_enabled, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, now(), now())`,
+    [id, opts.name, color, icon, sortOrder, hoursTrackingEnabled],
   )
 
   return { id, name: opts.name, color, icon, sortOrder }

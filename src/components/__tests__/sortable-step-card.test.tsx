@@ -33,21 +33,43 @@ const mockStep = {
   notes: [],
   images: [],
   blockers: [],
+  hoursLogged: null,
 }
 
 describe('SortableStepCard', () => {
   it('renders drag handle when project is not completed', () => {
-    render(<SortableStepCard step={mockStep} variant="other" isProjectCompleted={false} />)
+    render(
+      <SortableStepCard
+        step={mockStep}
+        variant="other"
+        isProjectCompleted={false}
+        hobbyTracksHours={false}
+      />,
+    )
     expect(screen.getByLabelText('Drag to reorder')).toBeInTheDocument()
   })
 
   it('hides drag handle when project is completed', () => {
-    render(<SortableStepCard step={mockStep} variant="other" isProjectCompleted={true} />)
+    render(
+      <SortableStepCard
+        step={mockStep}
+        variant="other"
+        isProjectCompleted={true}
+        hobbyTracksHours={false}
+      />,
+    )
     expect(screen.queryByLabelText('Drag to reorder')).not.toBeInTheDocument()
   })
 
   it('renders StepCard with correct props', () => {
-    render(<SortableStepCard step={mockStep} variant="current" isProjectCompleted={false} />)
+    render(
+      <SortableStepCard
+        step={mockStep}
+        variant="current"
+        isProjectCompleted={false}
+        hobbyTracksHours={false}
+      />,
+    )
     expect(screen.getByTestId('mock-step-card')).toHaveTextContent('Test Step')
   })
 })

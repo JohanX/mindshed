@@ -24,7 +24,14 @@ vi.mock('@/lib/image-storage/adapter', () => ({
   getImageStorageAdapter: vi.fn(),
 }))
 
-import { createStep, updateStep, deleteStep, updateStepState, reorderSteps } from '../step'
+import {
+  createStep,
+  updateStep,
+  deleteStep,
+  updateStepState,
+  reorderSteps,
+  setStepHours,
+} from '../step'
 import { prisma } from '@/lib/db'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 
@@ -573,5 +580,94 @@ describe('reorderSteps', () => {
 
     // Should call updateProjectActivity (revalidatePath + lastActivityAt)
     expect(mockProjectUpdate).toHaveBeenCalled()
+  })
+})
+
+describe('setStepHours (Story 30.5 / FR129)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockProjectUpdate.mockResolvedValue({ hobbyId: 'h1' } as never)
+  })
+
+  const VALID_STEP_ID = '550e8400-e29b-41d4-a716-446655440000'
+
+  it('rejects invalid uuid', async () => {
+    const result = await setStepHours({ id: 'not-a-uuid', hours: 1 })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toContain('Invalid')
+  })
+
+  it('rejects negative hours', async () => {
+    const result = await setStepHours({ id: VALID_STEP_ID, hours: -1 })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toContain('non-negative multiple of 0.5')
+  })
+
+  it('rejects fractional hours that are not 0.5 multiples', async () => {
+    const result = await setStepHours({ id: VALID_STEP_ID, hours: 0.7 })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toContain('non-negative multiple of 0.5')
+  })
+
+  it('accepts null (clears the value)', async () => {
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        step: {
+          findUniqueOrThrow: vi
+            .fn()
+            .mockResolvedValue({ projectId: 'p1', project: { isCompleted: false } }),
+          update: vi.fn().mockResolvedValue({ projectId: 'p1' }),
+        },
+      }
+      return fn(tx as never)
+    })
+    const result = await setStepHours({ id: VALID_STEP_ID, hours: null })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts a 0.5 multiple and persists it', async () => {
+    const stepUpdate = vi.fn().mockResolvedValue({ projectId: 'p1' })
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        step: {
+          findUniqueOrThrow: vi
+            .fn()
+            .mockResolvedValue({ projectId: 'p1', project: { isCompleted: false } }),
+          update: stepUpdate,
+        },
+      }
+      return fn(tx as never)
+    })
+    const result = await setStepHours({ id: VALID_STEP_ID, hours: 2.5 })
+    expect(result.success).toBe(true)
+    expect(stepUpdate).toHaveBeenCalledWith({
+      where: { id: VALID_STEP_ID },
+      data: { hoursLogged: 2.5 },
+      select: { projectId: true },
+    })
+  })
+
+  it('blocks when project is completed', async () => {
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        step: {
+          findUniqueOrThrow: vi
+            .fn()
+            .mockResolvedValue({ projectId: 'p1', project: { isCompleted: true } }),
+          update: vi.fn(),
+        },
+      }
+      return fn(tx as never)
+    })
+    const result = await setStepHours({ id: VALID_STEP_ID, hours: 1 })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Cannot modify steps on a completed project.')
+  })
+
+  it('returns "Step not found." on Prisma P2025', async () => {
+    mockTransaction.mockRejectedValue({ code: 'P2025' })
+    const result = await setStepHours({ id: VALID_STEP_ID, hours: 1 })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('Step not found.')
   })
 })

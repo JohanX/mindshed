@@ -25,6 +25,8 @@ interface StepCardListProps {
   initialSteps: StepCardData[]
   currentStepId: string | null
   isProjectCompleted: boolean
+  /** Story 30.5 / FR129 — gates the per-step hours counter render in StepCard. */
+  hobbyTracksHours: boolean
   projectId: string
   /**
    * Story 30.3 / FR127. Called when a step transition brings every step to
@@ -40,6 +42,7 @@ export function StepCardList({
   initialSteps,
   currentStepId,
   isProjectCompleted,
+  hobbyTracksHours,
   projectId,
   onAllStepsCompleted,
 }: StepCardListProps) {
@@ -88,6 +91,7 @@ export function StepCardList({
               step={step}
               variant={step.id === currentStepId ? 'current' : 'other'}
               isProjectCompleted={isProjectCompleted}
+              hobbyTracksHours={hobbyTracksHours}
               onAllStepsCompleted={onAllStepsCompleted}
             />
           ))}

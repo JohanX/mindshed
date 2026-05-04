@@ -13,13 +13,14 @@ datasource db {
 }
 
 model Hobby {
-  id        String   @id @default(uuid())
-  name      String
-  color     String
-  icon      String?
-  sortOrder Int      @default(0) @map("sort_order")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id                    String   @id @default(uuid())
+  name                  String
+  color                 String
+  icon                  String?
+  sortOrder             Int      @default(0) @map("sort_order")
+  hoursTrackingEnabled  Boolean  @default(false) @map("hours_tracking_enabled")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
 
   projects       Project[]
   ideas          Idea[]
@@ -74,7 +75,8 @@ model Step {
   createdAt     DateTime   @default(now()) @map("created_at")
   updatedAt     DateTime   @updatedAt @map("updated_at")
 
-  excludeFromGallery Boolean @default(false) @map("exclude_from_gallery")
+  excludeFromGallery Boolean  @default(false) @map("exclude_from_gallery")
+  hoursLogged        Decimal? @db.Decimal(5, 1) @map("hours_logged")
 
   project          Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   resultForProject Project?    @relation("ResultStep")

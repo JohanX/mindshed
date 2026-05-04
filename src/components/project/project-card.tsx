@@ -4,6 +4,7 @@ import { ProjectStatusBadge } from '@/components/project/project-status-badge'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
 import { hobbyColorWithAlpha, getReadableHobbyColor } from '@/lib/hobby-color'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
+import { formatHours } from '@/lib/hours-format'
 import type { DerivedProjectStatus } from '@/lib/project-status'
 
 export interface ProjectCardData {
@@ -18,6 +19,10 @@ export interface ProjectCardData {
    * importable from client components without dragging in the image-storage
    * adapter and its native deps. */
   latestPhotoUrl?: string | null
+  /** Story 30.5 / FR129 — sum of step.hoursLogged across the project, or
+   * null when the parent hobby has tracking disabled. The server-rendered
+   * card hides this field via `formatHours` (also returns null for 0). */
+  totalHoursLogged?: number | null
 }
 
 interface ProjectCardProps {
@@ -61,6 +66,9 @@ export function ProjectCard({ project, hobby, showHobbyBadge }: ProjectCardProps
               <span className="text-lg font-medium truncate">{project.name}</span>
               <span className="text-xs text-muted-foreground shrink-0">
                 {project.completedSteps}/{project.totalSteps} steps
+                {formatHours(project.totalHoursLogged) && (
+                  <> · {formatHours(project.totalHoursLogged)}</>
+                )}
               </span>
             </div>
             <div className="flex items-center gap-2">

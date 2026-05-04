@@ -32,7 +32,15 @@ export async function findPublicGalleryProjects() {
   })
 }
 
-/** Journey gallery shape: project + steps with images + notes. */
+/** Journey gallery shape: project + steps with images + notes.
+ *
+ * Returns ALL steps (not filtered by `excludeFromGallery`) so the gallery
+ * page can sum the FR129 project hours total over the WHOLE project, not
+ * just visible steps. The page renderer + metadata helper filter on
+ * `excludeFromGallery: false` at render time. This keeps the journey total
+ * consistent with the result-gallery total and the project-detail total
+ * (all three sum the entire project).
+ */
 export const findJourneyGalleryBySlug = cache(async (slug: string) => {
   return prisma.project.findUnique({
     where: { gallerySlug: slug },
@@ -40,12 +48,15 @@ export const findJourneyGalleryBySlug = cache(async (slug: string) => {
       name: true,
       description: true,
       journeyGalleryEnabled: true,
-      hobby: { select: { name: true, color: true, icon: true } },
+      hobby: { select: { name: true, color: true, icon: true, hoursTrackingEnabled: true } },
       steps: {
-        where: { excludeFromGallery: false },
         orderBy: { sortOrder: 'asc' },
         select: {
           name: true,
+          excludeFromGallery: true,
+          // Story 30.5 / FR129 — exposed so the gallery page can sum the
+          // project total without a second query.
+          hoursLogged: true,
           images: {
             orderBy: { createdAt: 'desc' },
             // `createdAt` is exposed for Story 30.4's gallery-metadata helper
@@ -78,12 +89,16 @@ export const findResultGalleryBySlug = cache(async (slug: string) => {
       description: true,
       resultGalleryEnabled: true,
       resultStepId: true,
-      hobby: { select: { name: true, color: true, icon: true } },
+      hobby: { select: { name: true, color: true, icon: true, hoursTrackingEnabled: true } },
       steps: {
-        where: { state: 'COMPLETED' },
+        // The full step list (across ALL states) is needed for the FR129
+        // total — but the rendered result still uses only COMPLETED-step
+        // images per the page renderer's filter (see result/page.tsx).
         orderBy: { sortOrder: 'desc' },
         select: {
           id: true,
+          state: true,
+          hoursLogged: true,
           images: {
             orderBy: { createdAt: 'desc' },
             select: { storageKey: true, url: true, type: true, originalFilename: true },

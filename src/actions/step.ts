@@ -7,10 +7,12 @@ import {
   updateStepSchema,
   updateStepStateSchema,
   reorderStepsSchema,
+  setStepHoursSchema,
   type CreateStepInput,
   type UpdateStepInput,
   type UpdateStepStateInput,
   type ReorderStepsInput,
+  type SetStepHoursInput,
 } from '@/lib/schemas/step'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
@@ -283,5 +285,44 @@ export async function reorderSteps(input: ReorderStepsInput): Promise<ActionResu
         return { success: false, error: 'One or more steps do not belong to this project.' }
     }
     return { success: false, error: 'Failed to reorder steps. Please try again.' }
+  }
+}
+
+// Story 30.5 / FR129 — record hours spent on a step. Per-hobby opt-in
+// (the UI only renders the counter when `hobby.hoursTrackingEnabled`),
+// but the action validates the input regardless and rejects when the
+// project is completed. Null clears the value (back to "not tracked").
+export async function setStepHours(input: SetStepHoursInput): Promise<ActionResult<null>> {
+  const parsed = setStepHoursSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
+  }
+
+  try {
+    const step = await prisma.$transaction(async (tx) => {
+      const existing = await tx.step.findUniqueOrThrow({
+        where: { id: parsed.data.id },
+        select: { projectId: true, project: { select: { isCompleted: true } } },
+      })
+      if (existing.project.isCompleted) throw new Error('PROJECT_COMPLETED')
+
+      return tx.step.update({
+        where: { id: parsed.data.id },
+        data: { hoursLogged: parsed.data.hours },
+        select: { projectId: true },
+      })
+    })
+
+    await updateProjectActivity(step.projectId)
+    return { success: true, data: null }
+  } catch (error: unknown) {
+    console.error('setStepHours failed:', error)
+    if (error instanceof Error && error.message === 'PROJECT_COMPLETED') {
+      return { success: false, error: 'Cannot modify steps on a completed project.' }
+    }
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return { success: false, error: 'Step not found.' }
+    }
+    return { success: false, error: 'Failed to set step hours.' }
   }
 }

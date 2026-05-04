@@ -15,6 +15,7 @@ import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 import { fetchLatestPhotosByProject } from '@/lib/project-photos'
 import { deriveProjectStatus } from '@/lib/project-status'
+import { computeProjectTotalHours } from '@/lib/project-hours'
 import { findActiveBlockers } from './blocker'
 import type {
   DashboardData,
@@ -36,9 +37,17 @@ export async function findDashboardData(idleThresholdDate: Date): Promise<Dashbo
         orderBy: { lastActivityAt: 'desc' },
         take: DASHBOARD_LIMITS.RECENT_PROJECTS,
         include: {
-          hobby: { select: { id: true, name: true, color: true, icon: true } },
+          hobby: {
+            select: {
+              id: true,
+              name: true,
+              color: true,
+              icon: true,
+              hoursTrackingEnabled: true,
+            },
+          },
           steps: {
-            select: { id: true, name: true, state: true, sortOrder: true },
+            select: { id: true, name: true, state: true, sortOrder: true, hoursLogged: true },
             orderBy: { sortOrder: 'asc' },
           },
         },
@@ -57,9 +66,17 @@ export async function findDashboardData(idleThresholdDate: Date): Promise<Dashbo
         orderBy: { lastActivityAt: 'asc' },
         take: DASHBOARD_LIMITS.IDLE_PROJECTS,
         include: {
-          hobby: { select: { id: true, name: true, color: true, icon: true } },
+          hobby: {
+            select: {
+              id: true,
+              name: true,
+              color: true,
+              icon: true,
+              hoursTrackingEnabled: true,
+            },
+          },
           steps: {
-            select: { id: true, name: true, state: true, sortOrder: true },
+            select: { id: true, name: true, state: true, sortOrder: true, hoursLogged: true },
             orderBy: { sortOrder: 'asc' },
           },
         },
@@ -111,12 +128,18 @@ export async function findDashboardData(idleThresholdDate: Date): Promise<Dashbo
       name: project.name,
       lastActivityAt: project.lastActivityAt,
       hobbyId: project.hobbyId,
-      hobby: project.hobby,
+      hobby: {
+        id: project.hobby.id,
+        name: project.hobby.name,
+        color: project.hobby.color,
+        icon: project.hobby.icon,
+      },
       currentStep: currentStepData ? { id: currentStepData.id, name: currentStepData.name } : null,
       latestPhoto: latestPhotoByProject.get(project.id) ?? null,
       totalSteps: project.steps.length,
       completedSteps: project.steps.filter((step) => step.state === 'COMPLETED').length,
       derivedStatus: deriveProjectStatus(project.steps),
+      totalHoursLogged: computeProjectTotalHours(project.steps, project.hobby.hoursTrackingEnabled),
     }
   })
 
@@ -145,8 +168,14 @@ export async function findDashboardData(idleThresholdDate: Date): Promise<Dashbo
       name: project.name,
       lastActivityAt: project.lastActivityAt,
       hobbyId: project.hobbyId,
-      hobby: project.hobby,
+      hobby: {
+        id: project.hobby.id,
+        name: project.hobby.name,
+        color: project.hobby.color,
+        icon: project.hobby.icon,
+      },
       currentStep: currentStepData ? { id: currentStepData.id, name: currentStepData.name } : null,
+      totalHoursLogged: computeProjectTotalHours(project.steps, project.hobby.hoursTrackingEnabled),
     }
   })
 

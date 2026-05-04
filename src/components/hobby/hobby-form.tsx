@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ColorPicker } from './color-picker'
 import { IconPicker } from './icon-picker'
+import { Switch } from '@/components/ui/switch'
 import { createHobby, updateHobby } from '@/actions/hobby'
 import { HOBBY_COLORS } from '@/lib/schemas/hobby'
 import { deferredSuccessToast, showErrorToast } from '@/lib/toast'
@@ -23,6 +24,7 @@ type HobbyData = {
   name: string
   color: string
   icon: string | null
+  hoursTrackingEnabled: boolean
 }
 
 type HobbyFormDialogProps = {
@@ -43,6 +45,9 @@ export function HobbyFormDialog({
   const [name, setName] = useState(hobby?.name ?? '')
   const [color, setColor] = useState<string | null>(hobby?.color ?? HOBBY_COLORS[0].value)
   const [icon, setIcon] = useState<string | null>(hobby?.icon ?? null)
+  const [hoursTrackingEnabled, setHoursTrackingEnabled] = useState(
+    hobby?.hoursTrackingEnabled ?? false,
+  )
   const [isPending, startTransition] = useTransition()
 
   function handleOpenChange(newOpen: boolean) {
@@ -50,6 +55,7 @@ export function HobbyFormDialog({
       setName(hobby.name)
       setColor(hobby.color)
       setIcon(hobby.icon)
+      setHoursTrackingEnabled(hobby.hoursTrackingEnabled)
     }
     if (onOpenChange) {
       onOpenChange(newOpen)
@@ -68,6 +74,7 @@ export function HobbyFormDialog({
       setName('')
       setColor(HOBBY_COLORS[0].value)
       setIcon(null)
+      setHoursTrackingEnabled(false)
     }
   }
 
@@ -82,6 +89,7 @@ export function HobbyFormDialog({
           name: name.trim(),
           color,
           icon,
+          hoursTrackingEnabled,
         })
         if (result.success) {
           handleOpenChange(false)
@@ -94,6 +102,7 @@ export function HobbyFormDialog({
           name: name.trim(),
           color,
           icon,
+          hoursTrackingEnabled,
         })
         if (result.success) {
           handleOpenChange(false)
@@ -135,6 +144,23 @@ export function HobbyFormDialog({
             <span className="text-xs text-muted-foreground">optional</span>
           </div>
           <IconPicker value={icon} onChange={setIcon} />
+        </div>
+        {/* Story 30.5 / FR129 — opt-in per-hobby step time tracking. */}
+        <div className="flex items-start gap-3">
+          <Switch
+            id="hobby-hours-tracking"
+            checked={hoursTrackingEnabled}
+            onCheckedChange={setHoursTrackingEnabled}
+            className="mt-1"
+          />
+          <div className="flex-1 space-y-1">
+            <Label htmlFor="hobby-hours-tracking" className="cursor-pointer">
+              Track hours per step
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Show an hours counter on each step and totals on project surfaces.
+            </p>
+          </div>
         </div>
         <div className="relative group">
           <Button type="submit" disabled={!isValid || isPending} className="w-full">

@@ -15,6 +15,7 @@ import { prisma } from '@/lib/db'
 import type { ProjectCardData } from '@/components/project/project-card'
 import { deriveProjectStatus } from '@/lib/project-status'
 import { fetchLatestPhotosByProject, resolveProjectThumbnailUrl } from '@/lib/project-photos'
+import { computeProjectTotalHours } from '@/lib/project-hours'
 
 /** Find a single project by id (no relations). */
 export async function findProjectById(id: string) {
@@ -75,7 +76,7 @@ export async function findAllActiveProjects(): Promise<ProjectWithHobby[]> {
     where: { isArchived: false, isCompleted: false },
     orderBy: { lastActivityAt: 'desc' },
     include: {
-      hobby: { select: { name: true, color: true, icon: true } },
+      hobby: { select: { name: true, color: true, icon: true, hoursTrackingEnabled: true } },
       steps: { orderBy: { sortOrder: 'asc' } },
     },
   })
@@ -95,7 +96,12 @@ export async function findAllActiveProjects(): Promise<ProjectWithHobby[]> {
       derivedStatus: deriveProjectStatus(project.steps),
       currentStepName: currentStep?.name ?? null,
       latestPhotoUrl: resolveProjectThumbnailUrl(latestPhotoByProject.get(project.id) ?? null),
-      hobby: project.hobby,
+      totalHoursLogged: computeProjectTotalHours(project.steps, project.hobby.hoursTrackingEnabled),
+      hobby: {
+        name: project.hobby.name,
+        color: project.hobby.color,
+        icon: project.hobby.icon,
+      },
     }
   })
 }
@@ -111,8 +117,9 @@ export async function findProjectsByHobby(hobbyId: string): Promise<ProjectWithP
     where: { hobbyId },
     orderBy: { lastActivityAt: 'desc' },
     include: {
+      hobby: { select: { hoursTrackingEnabled: true } },
       steps: {
-        select: { id: true, name: true, state: true, sortOrder: true },
+        select: { id: true, name: true, state: true, sortOrder: true, hoursLogged: true },
         orderBy: { sortOrder: 'asc' },
       },
     },
@@ -133,6 +140,7 @@ export async function findProjectsByHobby(hobbyId: string): Promise<ProjectWithP
       derivedStatus: deriveProjectStatus(project.steps),
       currentStepName: currentStep?.name ?? null,
       latestPhotoUrl: resolveProjectThumbnailUrl(latestPhotoByProject.get(project.id) ?? null),
+      totalHoursLogged: computeProjectTotalHours(project.steps, project.hobby.hoursTrackingEnabled),
       isArchived: project.isArchived,
       isCompleted: project.isCompleted,
     }
@@ -158,7 +166,7 @@ export async function findIdleProjects(threshold: Date): Promise<IdleProjectData
     },
     orderBy: { lastActivityAt: 'asc' },
     include: {
-      hobby: { select: { name: true, color: true, icon: true } },
+      hobby: { select: { name: true, color: true, icon: true, hoursTrackingEnabled: true } },
       steps: { orderBy: { sortOrder: 'asc' } },
     },
   })
@@ -175,7 +183,12 @@ export async function findIdleProjects(threshold: Date): Promise<IdleProjectData
       completedSteps: project.steps.filter((step) => step.state === 'COMPLETED').length,
       derivedStatus: deriveProjectStatus(project.steps),
       currentStepName: currentStep?.name ?? null,
-      hobby: project.hobby,
+      totalHoursLogged: computeProjectTotalHours(project.steps, project.hobby.hoursTrackingEnabled),
+      hobby: {
+        name: project.hobby.name,
+        color: project.hobby.color,
+        icon: project.hobby.icon,
+      },
       lastActivityAt: project.lastActivityAt,
     }
   })

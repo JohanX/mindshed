@@ -144,7 +144,8 @@ describe('findProjectsByHobby', () => {
         hobbyId: 'h1',
         isArchived: true,
         isCompleted: true,
-        steps: [{ state: 'COMPLETED' }],
+        hobby: { hoursTrackingEnabled: false },
+        steps: [{ state: 'COMPLETED', hoursLogged: null }],
       },
     ] as never)
     const result = await findProjectsByHobby('h1')

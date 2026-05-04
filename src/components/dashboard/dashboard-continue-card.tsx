@@ -66,6 +66,7 @@ export function DashboardContinueCard({ project, variant }: DashboardContinueCar
         derivedStatus: project.derivedStatus,
         currentStepName: project.currentStep?.name ?? null,
         latestPhotoUrl: resolveProjectThumbnailUrl(project.latestPhoto),
+        totalHoursLogged: project.totalHoursLogged,
       }}
       hobby={project.hobby}
       showHobbyBadge

@@ -11,6 +11,8 @@ interface StepCardListWithCompletionProps {
   initialSteps: StepCardData[]
   currentStepId: string | null
   isProjectCompleted: boolean
+  /** Story 30.5 / FR129 — drilled to StepCard via StepCardList → SortableStepCard. */
+  hobbyTracksHours: boolean
   projectId: string
   /**
    * Stable identity key for the inner StepCardList so it can remount on
@@ -33,6 +35,7 @@ export function StepCardListWithCompletion({
   initialSteps,
   currentStepId,
   isProjectCompleted,
+  hobbyTracksHours,
   projectId,
   stepKey,
 }: StepCardListWithCompletionProps) {
@@ -63,6 +66,7 @@ export function StepCardListWithCompletion({
         initialSteps={initialSteps}
         currentStepId={currentStepId}
         isProjectCompleted={isProjectCompleted}
+        hobbyTracksHours={hobbyTracksHours}
         projectId={projectId}
         onAllStepsCompleted={handleAllStepsCompleted}
       />

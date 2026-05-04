@@ -45,9 +45,10 @@ describe('getProjectsByHobby', () => {
         isArchived: false,
         isCompleted: false,
         lastActivityAt: new Date('2026-04-06'),
+        hobby: { hoursTrackingEnabled: false },
         steps: [
-          { id: 's1', name: 'Step 1', state: 'COMPLETED', sortOrder: 0 },
-          { id: 's2', name: 'Step 2', state: 'IN_PROGRESS', sortOrder: 1 },
+          { id: 's1', name: 'Step 1', state: 'COMPLETED', sortOrder: 0, hoursLogged: null },
+          { id: 's2', name: 'Step 2', state: 'IN_PROGRESS', sortOrder: 1, hoursLogged: null },
         ],
       },
       {
@@ -57,7 +58,10 @@ describe('getProjectsByHobby', () => {
         isArchived: false,
         isCompleted: false,
         lastActivityAt: new Date('2026-04-01'),
-        steps: [{ id: 's3', name: 'Step A', state: 'NOT_STARTED', sortOrder: 0 }],
+        hobby: { hoursTrackingEnabled: false },
+        steps: [
+          { id: 's3', name: 'Step A', state: 'NOT_STARTED', sortOrder: 0, hoursLogged: null },
+        ],
       },
     ]
     mockFindMany.mockResolvedValue(mockProjects as never)
@@ -80,11 +84,12 @@ describe('getProjectsByHobby', () => {
         isArchived: false,
         isCompleted: false,
         lastActivityAt: new Date(),
+        hobby: { hoursTrackingEnabled: false },
         steps: [
-          { id: 's1', name: 'Done', state: 'COMPLETED', sortOrder: 0 },
-          { id: 's2', name: 'Doing', state: 'IN_PROGRESS', sortOrder: 1 },
-          { id: 's3', name: 'Blocked', state: 'BLOCKED', sortOrder: 2 },
-          { id: 's4', name: 'Todo', state: 'NOT_STARTED', sortOrder: 3 },
+          { id: 's1', name: 'Done', state: 'COMPLETED', sortOrder: 0, hoursLogged: null },
+          { id: 's2', name: 'Doing', state: 'IN_PROGRESS', sortOrder: 1, hoursLogged: null },
+          { id: 's3', name: 'Blocked', state: 'BLOCKED', sortOrder: 2, hoursLogged: null },
+          { id: 's4', name: 'Todo', state: 'NOT_STARTED', sortOrder: 3, hoursLogged: null },
         ],
       },
     ] as never)
@@ -109,7 +114,8 @@ describe('getProjectsByHobby', () => {
         isArchived: false,
         isCompleted: false,
         lastActivityAt: new Date(),
-        steps: [{ id: 's1', name: 'Step', state: 'NOT_STARTED', sortOrder: 0 }],
+        hobby: { hoursTrackingEnabled: false },
+        steps: [{ id: 's1', name: 'Step', state: 'NOT_STARTED', sortOrder: 0, hoursLogged: null }],
       },
       {
         id: 'p2',
@@ -118,7 +124,8 @@ describe('getProjectsByHobby', () => {
         isArchived: true,
         isCompleted: false,
         lastActivityAt: new Date(),
-        steps: [{ id: 's2', name: 'Step', state: 'COMPLETED', sortOrder: 0 }],
+        hobby: { hoursTrackingEnabled: false },
+        steps: [{ id: 's2', name: 'Step', state: 'COMPLETED', sortOrder: 0, hoursLogged: null }],
       },
     ] as never)
 
@@ -140,10 +147,17 @@ describe('getProjectsByHobby', () => {
         isArchived: false,
         isCompleted: false,
         lastActivityAt: new Date(),
+        hobby: { hoursTrackingEnabled: false },
         steps: [
-          { id: 's1', name: 'Done Step', state: 'COMPLETED', sortOrder: 0 },
-          { id: 's2', name: 'Current Step', state: 'NOT_STARTED', sortOrder: 1 },
-          { id: 's3', name: 'Later Step', state: 'NOT_STARTED', sortOrder: 2 },
+          { id: 's1', name: 'Done Step', state: 'COMPLETED', sortOrder: 0, hoursLogged: null },
+          {
+            id: 's2',
+            name: 'Current Step',
+            state: 'NOT_STARTED',
+            sortOrder: 1,
+            hoursLogged: null,
+          },
+          { id: 's3', name: 'Later Step', state: 'NOT_STARTED', sortOrder: 2, hoursLogged: null },
         ],
       },
     ] as never)

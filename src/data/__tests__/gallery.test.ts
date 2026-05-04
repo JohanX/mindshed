@@ -41,24 +41,35 @@ describe('findJourneyGalleryBySlug', () => {
     expect(await findJourneyGalleryBySlug('missing')).toBeNull()
   })
 
-  it('selects steps that are not excluded from gallery', async () => {
+  it('selects ALL steps and exposes excludeFromGallery so caller can filter', async () => {
+    // Story 30.5 / FR129 — accessor returns ALL steps so the FR129 hours
+    // total sums the whole project (not just gallery-visible steps).
+    // The page renderer + metadata helper filter `excludeFromGallery` at
+    // render time. Keeps journey/result/detail totals consistent.
     mockFindUnique.mockResolvedValue({} as never)
     await findJourneyGalleryBySlug('walnut-table')
     const args = mockFindUnique.mock.calls[0][0]
     expect(args.where).toEqual({ gallerySlug: 'walnut-table' })
-    expect(args.select.steps.where).toEqual({ excludeFromGallery: false })
+    expect(args.select.steps.where).toBeUndefined()
+    expect(args.select.steps.select.excludeFromGallery).toBe(true)
+    expect(args.select.steps.select.hoursLogged).toBe(true)
   })
 })
 
 describe('findResultGalleryBySlug', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('selects only COMPLETED steps ordered by sortOrder desc', async () => {
+  it('selects all step states ordered by sortOrder desc — caller filters by state', async () => {
+    // Story 30.5 / FR129 — the result accessor exposes ALL steps so the
+    // gallery page can sum hours across the whole project. The page (and
+    // the metadata helper) filter to state=COMPLETED before picking the
+    // displayed result step.
     mockFindUnique.mockResolvedValue({} as never)
     await findResultGalleryBySlug('s1')
     const args = mockFindUnique.mock.calls[0][0]
-    expect(args.select.steps.where).toEqual({ state: 'COMPLETED' })
+    expect(args.select.steps.where).toBeUndefined()
     expect(args.select.steps.orderBy).toEqual({ sortOrder: 'desc' })
+    expect(args.select.steps.select.state).toBe(true)
   })
 })
 

@@ -39,15 +39,22 @@ export const createHobbySchema = z.object({
     .enum(HOBBY_ICON_OPTIONS as unknown as [string, ...string[]])
     .nullable()
     .optional(),
+  // Story 30.5 / FR129 — opt-in per hobby. When true, the project page
+  // renders an hours counter on each step and surfaces project totals on
+  // cards / detail page / galleries.
+  hoursTrackingEnabled: z.boolean().default(false),
 })
 
-export type CreateHobbyInput = z.infer<typeof createHobbySchema>
+// Use z.input so callers can omit fields with `.default()` in the schema
+// (e.g., Story 30.5's `hoursTrackingEnabled` defaults to false). Inside the
+// action body, `parsed.data` is the resolved output with defaults applied.
+export type CreateHobbyInput = z.input<typeof createHobbySchema>
 
 export const updateHobbySchema = createHobbySchema.extend({
   id: z.string().uuid(),
 })
 
-export type UpdateHobbyInput = z.infer<typeof updateHobbySchema>
+export type UpdateHobbyInput = z.input<typeof updateHobbySchema>
 
 export const reorderHobbiesSchema = z.object({
   orderedIds: z
@@ -64,6 +71,8 @@ export type HobbyWithCounts = {
   color: string
   icon: string | null
   sortOrder: number
+  /** Story 30.5 / FR129 — defaults to false (column NOT NULL DEFAULT false). */
+  hoursTrackingEnabled: boolean
   createdAt: Date
   updatedAt: Date
   projectCount: number

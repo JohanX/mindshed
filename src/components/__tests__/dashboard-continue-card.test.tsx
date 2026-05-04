@@ -52,6 +52,7 @@ const baseProject: RecentProject = {
   totalSteps: 5,
   completedSteps: 2,
   derivedStatus: 'IN_PROGRESS',
+  totalHoursLogged: null,
 }
 
 describe('DashboardContinueCard', () => {

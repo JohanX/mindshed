@@ -105,14 +105,18 @@ export async function buildJourneyMetadata(slug: string): Promise<Metadata> {
   const project = await findJourneyGalleryBySlug(slug)
   if (!project || !project.journeyGalleryEnabled) return {}
 
-  const stepsWithImages = project.steps.filter((step) => step.images.length > 0)
+  // Story 30.5: data accessor now returns ALL steps (for the FR129 hours
+  // total). For metadata images, filter to gallery-visible steps with
+  // images — match the page renderer.
+  const visibleSteps = project.steps.filter(
+    (step) => step.excludeFromGallery !== true && step.images.length > 0,
+  )
   // Primary og:image = most recent across all steps (matches dashboard
   // "latest photo" — major social unfurlers honour only the first image).
-  const imageUrls = collectImageUrls(flattenStepsByLatest(stepsWithImages))
+  const imageUrls = collectImageUrls(flattenStepsByLatest(visibleSteps))
 
   const title = `${project.name} — Journey Gallery`
-  const description =
-    project.description ?? `${stepsWithImages.length} steps from idea to completion.`
+  const description = project.description ?? `${visibleSteps.length} steps from idea to completion.`
 
   return {
     title,
@@ -136,13 +140,16 @@ export async function buildResultMetadata(slug: string): Promise<Metadata> {
   const project = await findResultGalleryBySlug(slug)
   if (!project || !project.resultGalleryEnabled) return {}
 
-  // Mirror the page renderer's selection rule (result/page.tsx:30-32):
-  //   resultStepId set → that step
-  //   else            → first step (already sorted desc by sortOrder, so
-  //                     this is the most recently completed step)
+  // Mirror the page renderer's selection rule (result/page.tsx):
+  //   resultStepId set → that step (must be COMPLETED)
+  //   else            → first COMPLETED step (sorted desc by sortOrder).
+  // Story 30.5 widened the data accessor to expose all steps (for the
+  // hours total); the metadata image must still come from a COMPLETED
+  // step to match the page render.
+  const completedSteps = project.steps.filter((step) => step.state === 'COMPLETED')
   const resultStep = project.resultStepId
-    ? project.steps.find((step) => step.id === project.resultStepId)
-    : project.steps[0]
+    ? completedSteps.find((step) => step.id === project.resultStepId)
+    : completedSteps[0]
 
   // Match the page renderer EXACTLY — when the chosen step has no images,
   // the page renders no images. Emitting og:image from arbitrary OTHER

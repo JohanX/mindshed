@@ -18,6 +18,7 @@ const mockHobbies = [
     color: 'hsl(25, 45%, 40%)',
     icon: 'hammer',
     sortOrder: 0,
+    hoursTrackingEnabled: false,
     createdAt: new Date(),
     updatedAt: new Date(),
     projectCount: 0,

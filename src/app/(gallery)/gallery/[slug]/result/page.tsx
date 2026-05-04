@@ -6,6 +6,8 @@ import { findResultGalleryBySlug } from '@/data/gallery'
 import { ResultGalleryView } from '@/components/gallery/result-gallery-view'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 import { buildResultMetadata } from '@/lib/gallery-metadata'
+import { computeProjectTotalHours } from '@/lib/project-hours'
+import { formatHours } from '@/lib/hours-format'
 
 interface ResultGalleryPageProps {
   params: Promise<{ slug: string }>
@@ -34,10 +36,19 @@ export default async function ResultGalleryPage({ params }: ResultGalleryPagePro
 
   if (!project || !project.resultGalleryEnabled) notFound()
 
-  // Determine result step: explicit or last completed
+  // Story 30.5 / FR129 — total hours summed across the WHOLE project (all
+  // states), not just completed steps. The displayed result-step image
+  // selection still uses only COMPLETED steps below.
+  const totalHoursLogged = computeProjectTotalHours(
+    project.steps,
+    project.hobby.hoursTrackingEnabled,
+  )
+
+  // Determine result step: explicit or last completed.
+  const completedSteps = project.steps.filter((step) => step.state === 'COMPLETED')
   const resultStep = project.resultStepId
-    ? project.steps.find((step) => step.id === project.resultStepId)
-    : project.steps[0] // Already sorted desc by sortOrder, first = last completed
+    ? completedSteps.find((step) => step.id === project.resultStepId)
+    : completedSteps[0] // Already sorted desc by sortOrder, first = last completed
 
   const images = (resultStep?.images ?? []).map((img) => ({
     displayUrl:
@@ -51,6 +62,7 @@ export default async function ResultGalleryPage({ params }: ResultGalleryPagePro
         name: project.name,
         description: project.description,
         hobby: project.hobby,
+        totalHoursLabel: formatHours(totalHoursLogged),
       }}
       images={images}
     />

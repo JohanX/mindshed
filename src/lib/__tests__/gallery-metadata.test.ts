@@ -258,8 +258,8 @@ describe('buildResultMetadata (Story 30.4 / FR128)', () => {
       resultStepId: 'step-explicit',
       hobby: { name: 'Pottery', color: 'red', icon: null },
       steps: [
-        { id: 'step-other', images: [makeUploadImage('photos/other')] },
-        { id: 'step-explicit', images: [makeUploadImage('photos/explicit')] },
+        { id: 'step-other', state: 'COMPLETED', images: [makeUploadImage('photos/other')] },
+        { id: 'step-explicit', state: 'COMPLETED', images: [makeUploadImage('photos/explicit')] },
       ],
     } as never)
 
@@ -277,8 +277,8 @@ describe('buildResultMetadata (Story 30.4 / FR128)', () => {
       resultStepId: null,
       hobby: { name: 'Pottery', color: 'red', icon: null },
       steps: [
-        { id: 'step-1', images: [makeUploadImage('photos/last')] },
-        { id: 'step-2', images: [makeUploadImage('photos/earlier')] },
+        { id: 'step-1', state: 'COMPLETED', images: [makeUploadImage('photos/last')] },
+        { id: 'step-2', state: 'COMPLETED', images: [makeUploadImage('photos/earlier')] },
       ],
     } as never)
 
@@ -297,8 +297,8 @@ describe('buildResultMetadata (Story 30.4 / FR128)', () => {
       resultStepId: 'step-empty',
       hobby: { name: 'Pottery', color: 'red', icon: null },
       steps: [
-        { id: 'step-empty', images: [] },
-        { id: 'step-other', images: [makeUploadImage('photos/other')] },
+        { id: 'step-empty', state: 'COMPLETED', images: [] },
+        { id: 'step-other', state: 'COMPLETED', images: [makeUploadImage('photos/other')] },
       ],
     } as never)
 

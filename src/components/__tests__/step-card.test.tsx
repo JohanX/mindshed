@@ -69,12 +69,14 @@ const baseStep = {
   notes: [],
   images: [],
   blockers: [],
+  hoursLogged: null,
 }
 
 const defaultProps = {
   step: baseStep,
   variant: 'current' as const,
   isProjectCompleted: false,
+  hobbyTracksHours: false,
 }
 
 describe('StepCard', () => {

@@ -34,6 +34,7 @@ export async function createHobby(input: CreateHobbyInput): Promise<ActionResult
           color: parsed.data.color,
           icon: parsed.data.icon ?? null,
           sortOrder: nextSortOrder,
+          hoursTrackingEnabled: parsed.data.hoursTrackingEnabled,
         },
       })
     })
@@ -74,6 +75,7 @@ export async function updateHobby(input: UpdateHobbyInput): Promise<ActionResult
         name: parsed.data.name,
         color: parsed.data.color,
         icon: parsed.data.icon ?? null,
+        hoursTrackingEnabled: parsed.data.hoursTrackingEnabled,
       },
     })
 
