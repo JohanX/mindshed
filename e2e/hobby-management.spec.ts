@@ -125,4 +125,78 @@ test.describe('Hobby Management', () => {
       page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) }),
     ).toBeVisible()
   })
+
+  // Story 30.2 / FR126 / GH #1
+  // Regression guard for the success-toast lifecycle. The bug was reported on
+  // real iOS Safari (toast lingering past auto-dismiss after hobby
+  // create/update); Playwright Chromium does not reproduce the iOS-specific
+  // visibilitychange + focus-pause race. This test asserts the lifecycle
+  // contract (toast appears, then unmounts within configured 3000ms duration
+  // + slack for the deferred-mount delay added by hobby-form.tsx + sonner's
+  // exit animation) so any future regression of the deferred toast pattern
+  // is caught. Real-device iOS Safari smoke remains the canonical AC
+  // verification — Chromium is not a substitute for the original repro
+  // environment.
+  test('success toast for hobby create unmounts within ~4s on small viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    const hobbyName = `${testPrefix} Toast Create`
+    await page.goto('/hobbies')
+    await addHobbyButton(page).click()
+    await page.getByPlaceholder('e.g., Woodworking').fill(hobbyName)
+    await page.getByTitle('Terracotta').click()
+    await page.getByRole('button', { name: 'Save' }).click()
+
+    const toastLocator = page.locator('[data-sonner-toast]', {
+      hasText: 'Hobby created',
+    })
+    // Appears (deferred ~100ms by deferredSuccessToast + action latency).
+    await expect(toastLocator).toBeVisible({ timeout: 2000 })
+
+    // Lifecycle invariant guard: still visible 1s after first appearance —
+    // catches regressions where toast duration is accidentally set to 0
+    // (toast would mount-and-vanish, currently passing the unmount check).
+    await page.waitForTimeout(1000)
+    await expect(toastLocator).toBeVisible()
+
+    // Unmounts within the remainder of the 3000ms duration + ~1000ms slack
+    // for sonner's exit animation and CI variance. (3000ms - 1000ms = 2000ms
+    // remaining nominal lifetime + 1000ms slack = 3000ms timeout.)
+    await expect(toastLocator).toHaveCount(0, { timeout: 3000 })
+  })
+
+  // Story 30.2 / FR126 / GH #1 — edit-path companion to the create test
+  // above. Same lifecycle contract for the "Hobby updated" toast.
+  test('success toast for hobby update unmounts within ~4s on small viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    const oldName = `${testPrefix} Toast Edit Old`
+    const newName = `${testPrefix} Toast Edit New`
+    await page.goto('/hobbies')
+
+    // Setup: create a hobby to edit.
+    await addHobbyButton(page).click()
+    await page.getByPlaceholder('e.g., Woodworking').fill(oldName)
+    await page.getByTitle('Terracotta').click()
+    await page.getByRole('button', { name: 'Save' }).click()
+    await expect(page.getByRole('link', { name: new RegExp(`${oldName}.*projects`) })).toBeVisible()
+    // Wait for the create-toast to clear before we measure the edit-toast.
+    await expect(page.locator('[data-sonner-toast]', { hasText: 'Hobby created' })).toHaveCount(0, {
+      timeout: 4500,
+    })
+
+    // Open edit dialog, change the name, save.
+    await hobbyActionsButton(page, new RegExp(oldName)).click()
+    await page.getByRole('menuitem', { name: 'Edit' }).click()
+    const nameInput = page.getByPlaceholder('e.g., Woodworking')
+    await nameInput.clear()
+    await nameInput.fill(newName)
+    await page.getByRole('button', { name: 'Save' }).click()
+
+    const toastLocator = page.locator('[data-sonner-toast]', {
+      hasText: 'Hobby updated',
+    })
+    await expect(toastLocator).toBeVisible({ timeout: 2000 })
+    await page.waitForTimeout(1000)
+    await expect(toastLocator).toBeVisible()
+    await expect(toastLocator).toHaveCount(0, { timeout: 3000 })
+  })
 })

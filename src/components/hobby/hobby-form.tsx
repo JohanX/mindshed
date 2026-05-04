@@ -15,7 +15,7 @@ import { ColorPicker } from './color-picker'
 import { IconPicker } from './icon-picker'
 import { createHobby, updateHobby } from '@/actions/hobby'
 import { HOBBY_COLORS } from '@/lib/schemas/hobby'
-import { showSuccessToast, showErrorToast } from '@/lib/toast'
+import { deferredSuccessToast, showErrorToast } from '@/lib/toast'
 import { Plus, Loader2 } from 'lucide-react'
 
 type HobbyData = {
@@ -84,8 +84,8 @@ export function HobbyFormDialog({
           icon,
         })
         if (result.success) {
-          showSuccessToast('Hobby updated')
           handleOpenChange(false)
+          deferredSuccessToast('Hobby updated')
         } else {
           showErrorToast(result.error)
         }
@@ -96,8 +96,8 @@ export function HobbyFormDialog({
           icon,
         })
         if (result.success) {
-          showSuccessToast('Hobby created')
           handleOpenChange(false)
+          deferredSuccessToast('Hobby created')
         } else {
           showErrorToast(result.error)
         }
