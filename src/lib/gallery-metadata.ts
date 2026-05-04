@@ -110,7 +110,7 @@ export async function buildJourneyMetadata(slug: string): Promise<Metadata> {
   // "latest photo" — major social unfurlers honour only the first image).
   const imageUrls = collectImageUrls(flattenStepsByLatest(stepsWithImages))
 
-  const title = `${project.name} — Journey`
+  const title = `${project.name} — Journey Gallery`
   const description =
     project.description ?? `${stepsWithImages.length} steps from idea to completion.`
 

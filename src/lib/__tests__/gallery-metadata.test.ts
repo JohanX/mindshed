@@ -90,7 +90,7 @@ describe('buildJourneyMetadata (Story 30.4 / FR128)', () => {
 
     const meta = await buildJourneyMetadata('walnut-side-table')
 
-    expect(meta.title).toBe('Walnut Side Table — Journey')
+    expect(meta.title).toBe('Walnut Side Table — Journey Gallery')
     expect(meta.description).toBe('A solid walnut piece for the living room.')
     expect(meta.openGraph?.type).toBe('website')
     // Newest image first (walnut-2), then walnut-1. og:image entries include
