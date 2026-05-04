@@ -30,8 +30,14 @@ export function proxy(request: NextRequest) {
   return new NextResponse('Unauthorized', { status: 401 })
 }
 
+// `icon$` and `apple-icon$` are anchored — the metadata routes live at
+// exactly /icon and /apple-icon. Bare `icon`/`apple-icon` would match any
+// path starting with those substrings (e.g., a future `/iconography` page),
+// silently bypassing auth. Anchoring keeps the bypass tight to the
+// programmatic icon route handlers from `app/icon.tsx` and `app/apple-icon.tsx`.
+// `favicon.ico` is left unanchored to match the pre-existing convention.
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|icon$|apple-icon$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
