@@ -1,65 +1,60 @@
 import {
   Hammer,
   Paintbrush,
-  Printer,
   Scissors,
   Cpu,
   Wrench,
   Palette,
-  Flame,
-  Ruler,
   Pencil,
-  Layers,
+  Code,
   Cog,
   BookOpen,
   Utensils,
   CookingPot,
-  Wine,
   Camera,
   Guitar,
   Bike,
-  TreePine,
   Gem,
-  Zap,
   Sword,
-  CircuitBoard,
-  Brush,
+  PocketKnife,
   Flower2,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { createElement } from 'react'
 
+// 19 lucide icons + the explicit "None" button in the picker = 20 total
+// buttons, which fills the 5-col mobile grid cleanly (4 rows × 5 cols)
+// after the Story 31.4 follow-up reduced the picker columns. Curated
+// for one icon per distinct hobby family: workshop tools, creative,
+// kitchen, tech, lifestyle. Removed redundancies: Brush ≈ Paintbrush,
+// CircuitBoard ≈ Cpu, TreePine ≈ Flower2 (both nature). Removed niche
+// icons that didn't map to a clear hobby: Printer, Wine, Flame, Zap,
+// Layers, Ruler. Sword is kept alongside PocketKnife — ornamental long
+// blade vs utility folding knife are distinct aesthetic options.
 export const HOBBY_ICONS: Record<string, LucideIcon> = {
   // Workshop
   hammer: Hammer,
   wrench: Wrench,
-  ruler: Ruler,
   cog: Cog,
   scissors: Scissors,
-  printer: Printer,
   sword: Sword,
+  'pocket-knife': PocketKnife,
   // Creative
   paintbrush: Paintbrush,
-  brush: Brush,
   palette: Palette,
   pencil: Pencil,
-  layers: Layers,
   gem: Gem,
   camera: Camera,
   // Kitchen
   utensils: Utensils,
   'cooking-pot': CookingPot,
-  wine: Wine,
-  flame: Flame,
   // Tech
   cpu: Cpu,
-  'circuit-board': CircuitBoard,
-  zap: Zap,
-  // Outdoors & Hobbies
+  code: Code,
+  // Lifestyle
   'book-open': BookOpen,
   guitar: Guitar,
   bike: Bike,
-  'tree-pine': TreePine,
   flower: Flower2,
 }
 
