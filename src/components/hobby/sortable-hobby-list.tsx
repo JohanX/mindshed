@@ -92,7 +92,12 @@ export function SortableHobbyList({ hobbies: initialHobbies }: SortableHobbyList
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+    <DndContext
+      id="sortable-hobby-list"
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
       <SortableContext
         items={hobbies.map((hobby) => hobby.id)}
         strategy={verticalListSortingStrategy}

@@ -38,10 +38,13 @@ function DialogOverlay({
         // overlay's bottom edge is shrunk by `--kb-inset` so on iOS the
         // visible scrollable area sits above the soft keyboard (the
         // visualViewport-driven inset is set by ViewportInsetTracker).
-        // Layout: items-start on mobile so the dialog anchors near the
-        // top and the user can scroll the bottom of a tall dialog into
-        // view; items-center on sm+ for the classic centred modal.
-        'anim-dialog-overlay fixed inset-x-0 top-0 isolate z-50 flex items-start justify-center overflow-y-auto bg-black/10 p-4 supports-backdrop-filter:backdrop-blur-xs sm:items-center',
+        // Layout: items-start always so a tall dialog anchors near the
+        // top and the user can scroll its bottom into view. The
+        // previous `sm:items-center` for desktop caused tall dialogs
+        // (e.g. inventory edit with photos) to render with their top
+        // off-screen, which made the close button unclickable under
+        // load (Story 31.4).
+        'anim-dialog-overlay fixed inset-x-0 top-0 isolate z-50 flex items-start justify-center overflow-y-auto bg-black/10 p-4 supports-backdrop-filter:backdrop-blur-xs',
         className,
       )}
       style={{ bottom: 'var(--kb-inset, 0px)', ...style }}

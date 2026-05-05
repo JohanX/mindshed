@@ -82,7 +82,12 @@ export function StepCardList({
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+    <DndContext
+      id="step-card-list"
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
       <SortableContext items={steps.map((step) => step.id)} strategy={verticalListSortingStrategy}>
         <div className="space-y-3">
           {steps.map((step) => (

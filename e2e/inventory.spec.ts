@@ -35,10 +35,17 @@ test.describe('Inventory Management', () => {
     await page.waitForLoadState('networkidle')
 
     await page.getByRole('button', { name: 'Add Item' }).first().click()
+    // Wait for the Radix dialog open-animation to finish.
+    await expect(page.getByRole('dialog')).toBeVisible()
     await page.getByLabel('Name').fill('Router Table')
 
-    // Select Tool type
-    await page.getByLabel('Type').click()
+    // Select Tool type. Scroll the trigger into view explicitly — under
+    // parallel E2E load Playwright's auto-scroll has been seen to land
+    // on a "not stable / outside viewport" loop while the dialog is
+    // still settling.
+    const typeTrigger = page.getByLabel('Type')
+    await typeTrigger.scrollIntoViewIfNeeded()
+    await typeTrigger.click()
     await page.getByRole('option', { name: 'Tool' }).click()
 
     await page.getByRole('button', { name: 'Add Item' }).last().click()
@@ -102,24 +109,27 @@ test.describe('Inventory Management', () => {
     await page.goto('/inventory')
     await page.waitForLoadState('networkidle')
 
-    const itemCount = await page.locator('[data-slot="card"]').count()
+    // Capture the name of the first item so we can assert it specifically
+    // disappears after delete. A previous version of this test compared
+    // total card counts before/after, which flaked under parallel E2E
+    // load when other specs created or deleted items in the shared test
+    // DB between the two snapshots.
+    const firstDeleteButton = page.getByLabel(/^Delete /).first()
+    const ariaLabel = (await firstDeleteButton.getAttribute('aria-label')) ?? ''
+    const itemName = ariaLabel.replace(/^Delete\s+/, '')
+    expect(itemName).not.toBe('')
 
-    // Click delete on the first item (aria-label now includes item name)
-    await page
-      .getByLabel(/^Delete /)
-      .first()
-      .click()
+    await firstDeleteButton.click()
     await page.waitForTimeout(500)
 
     // Confirm deletion
     await page.getByRole('button', { name: 'Delete' }).click()
     await page.waitForTimeout(1000)
 
-    // Verify one fewer item
+    // Verify the specific item is gone.
     await page.goto('/inventory')
     await page.waitForLoadState('networkidle')
-    const newCount = await page.locator('[data-slot="card"]').count()
-    expect(newCount).toBe(itemCount - 1)
+    await expect(page.getByLabel(`Delete ${itemName}`)).toHaveCount(0)
   })
 
   test('auto-renames case-insensitive collisions and soft-deletes items', async ({

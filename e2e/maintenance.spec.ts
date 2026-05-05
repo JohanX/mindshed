@@ -14,10 +14,15 @@ test.describe('Equipment Maintenance', () => {
     await page.waitForLoadState('networkidle')
 
     await page.getByRole('button', { name: 'Add Item' }).first().click()
+    // Wait for the Radix dialog open-animation to finish.
+    await expect(page.getByRole('dialog')).toBeVisible()
     await page.getByLabel('Name').fill(`${testPrefix} Table Saw`)
 
-    // Select Tool type
-    await page.getByLabel('Type').click()
+    // Select Tool type — scroll the trigger into view explicitly so
+    // parallel E2E load doesn't race Playwright's auto-scroll.
+    const typeTrigger = page.getByLabel('Type')
+    await typeTrigger.scrollIntoViewIfNeeded()
+    await typeTrigger.click()
     await page.getByRole('option', { name: 'Tool' }).click()
 
     await page.getByRole('button', { name: 'Add Item' }).last().click()

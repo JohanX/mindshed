@@ -14,13 +14,18 @@ interface DashboardGalleriesSectionProps {
   galleries: PublicGallery[]
 }
 
-function CopyButton({ url }: { url: string }) {
+function CopyButton({ path }: { path: string }) {
   const [copied, setCopied] = useState(false)
 
   async function handleCopy(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    await navigator.clipboard.writeText(url)
+    // Read window.location.origin lazily so SSR markup matches the
+    // initial client render — see the SSR-hydration note on the parent
+    // section. Falls back to the relative path if the clipboard API is
+    // unavailable.
+    const absolute = typeof window !== 'undefined' ? `${window.location.origin}${path}` : path
+    await navigator.clipboard.writeText(absolute)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -41,7 +46,9 @@ function CopyButton({ url }: { url: string }) {
 export function DashboardGalleriesSection({ galleries }: DashboardGalleriesSectionProps) {
   if (galleries.length === 0) return null
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  // Hrefs render as relative paths so the SSR markup matches the
+  // initial client render — `window.location.origin` is undefined on
+  // the server. The CopyButton resolves the absolute URL at click time.
 
   return (
     <section className="space-y-3">
@@ -97,7 +104,7 @@ export function DashboardGalleriesSection({ galleries }: DashboardGalleriesSecti
                   {gallery.journeyGalleryEnabled && (
                     <div className="flex items-center gap-1">
                       <a
-                        href={`${origin}/gallery/${gallery.gallerySlug}`}
+                        href={`/gallery/${gallery.gallerySlug}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs font-medium hover:underline"
@@ -105,13 +112,13 @@ export function DashboardGalleriesSection({ galleries }: DashboardGalleriesSecti
                       >
                         Journey
                       </a>
-                      <CopyButton url={`${origin}/gallery/${gallery.gallerySlug}`} />
+                      <CopyButton path={`/gallery/${gallery.gallerySlug}`} />
                     </div>
                   )}
                   {gallery.resultGalleryEnabled && (
                     <div className="flex items-center gap-1">
                       <a
-                        href={`${origin}/gallery/${gallery.gallerySlug}/result`}
+                        href={`/gallery/${gallery.gallerySlug}/result`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs font-medium hover:underline"
@@ -119,7 +126,7 @@ export function DashboardGalleriesSection({ galleries }: DashboardGalleriesSecti
                       >
                         Result
                       </a>
-                      <CopyButton url={`${origin}/gallery/${gallery.gallerySlug}/result`} />
+                      <CopyButton path={`/gallery/${gallery.gallerySlug}/result`} />
                     </div>
                   )}
                 </div>

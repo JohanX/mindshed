@@ -37,6 +37,10 @@ test.describe('Inventory Photos (Story 21.2)', () => {
     await page.waitForLoadState('networkidle')
 
     await page.getByRole('button', { name: `Edit ${testPrefix} Clay` }).click()
+    // Wait for the Radix dialog open-animation to finish before asserting
+    // on its inner content — under parallel E2E load the animation can
+    // outlast Playwright's auto-stability check.
+    await expect(page.getByRole('dialog')).toBeVisible()
     await expect(page.getByTestId('photos-section')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Upload' })).toBeVisible()
     await expect(page.getByTestId('image-form-inputs-link-prompt')).toBeVisible()

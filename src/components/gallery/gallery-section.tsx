@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useSyncExternalStore, useTransition } from 'react'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { Copy, Check } from 'lucide-react'
@@ -31,18 +31,31 @@ interface GallerySectionProps {
   steps: GalleryStep[]
 }
 
-function CopyLinkButton({ url }: { url: string }) {
+const NOOP_SUBSCRIBE = () => () => {}
+
+function CopyLinkButton({ path }: { path: string }) {
   const [copied, setCopied] = useState(false)
+  // The displayed URL needs `window.location.origin`, which is undefined
+  // during SSR. Render the bare path on first paint so server + client
+  // markup match, then resolve to the absolute URL after mount via the
+  // SSR-safe useSyncExternalStore pattern (avoids setState-in-effect).
+  const origin = useSyncExternalStore(
+    NOOP_SUBSCRIBE,
+    () => window.location.origin,
+    () => '',
+  )
+  const display = `${origin}${path}`
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(url)
+    const absolute = typeof window !== 'undefined' ? `${window.location.origin}${path}` : path
+    await navigator.clipboard.writeText(absolute)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
   return (
     <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
-      <span className="truncate font-mono text-xs min-w-0">{url}</span>
+      <span className="truncate font-mono text-xs min-w-0">{display}</span>
       <Button
         variant="ghost"
         size="icon"
@@ -73,9 +86,8 @@ export function GallerySection({
   const [journeyOn, setJourneyOn] = useState(journeyEnabled)
   const [resultOn, setResultOn] = useState(resultEnabled)
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  const journeyUrl = slug ? `${origin}/gallery/${slug}` : null
-  const resultUrl = slug ? `${origin}/gallery/${slug}/result` : null
+  const journeyPath = slug ? `/gallery/${slug}` : null
+  const resultPath = slug ? `/gallery/${slug}/result` : null
 
   function handleJourneyToggle(enabled: boolean) {
     setJourneyOn(enabled)
@@ -146,9 +158,9 @@ export function GallerySection({
               className=""
             />
           </div>
-          {journeyOn && journeyUrl && (
+          {journeyOn && journeyPath && (
             <div className="space-y-3">
-              <CopyLinkButton url={journeyUrl} />
+              <CopyLinkButton path={journeyPath} />
               <StepInclusionList steps={steps} />
             </div>
           )}
@@ -168,9 +180,9 @@ export function GallerySection({
               className=""
             />
           </div>
-          {resultOn && resultUrl && (
+          {resultOn && resultPath && (
             <div className="space-y-3">
-              <CopyLinkButton url={resultUrl} />
+              <CopyLinkButton path={resultPath} />
               {completedSteps.length > 0 && (
                 <ResultStepSelector
                   projectId={projectId}
