@@ -6,6 +6,7 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -42,7 +43,10 @@ function SortableItem({ hobby }: { hobby: HobbyWithCounts }) {
   return (
     <div ref={setNodeRef} style={style} className="flex items-center gap-2">
       <button
-        className="hidden sm:flex items-center justify-center min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing shrink-0"
+        // Story 32.1: handle visible at every viewport. `touch-none` hands
+        // the drag to dnd-kit's TouchSensor without iOS Safari fighting it;
+        // `select-none` kills long-press text selection on the handle.
+        className="flex items-center justify-center min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing shrink-0 touch-none select-none"
         aria-label="Drag to reorder"
         {...attributes}
         {...listeners}
@@ -61,8 +65,13 @@ export function SortableHobbyList({ hobbies: initialHobbies }: SortableHobbyList
   const lastConfirmedOrderRef = useRef(initialHobbies)
   const [, startTransition] = useTransition()
 
+  // PointerSensor: desktop mouse drag — instant activation on 5-px move.
+  // TouchSensor: mobile finger drag — 250 ms long-press hold with up to
+  // 5 px tolerance during the hold (Story 32.1).
+  // KeyboardSensor: a11y reorder via Space + Arrow keys.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 

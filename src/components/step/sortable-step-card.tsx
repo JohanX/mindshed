@@ -34,7 +34,11 @@ export function SortableStepCard({
     <div ref={setNodeRef} style={style} className="flex items-center gap-2" data-step-id={step.id}>
       {!isProjectCompleted && (
         <button
-          className="hidden sm:flex items-center justify-center min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing shrink-0"
+          // Story 32.1: handle is visible at every viewport. `touch-none`
+          // hands the drag gesture to dnd-kit's TouchSensor without iOS
+          // Safari fighting it with bouncy scroll; `select-none` kills
+          // long-press text selection on the handle.
+          className="flex items-center justify-center min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing shrink-0 touch-none select-none"
           aria-label="Drag to reorder"
           {...attributes}
           {...listeners}

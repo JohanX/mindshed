@@ -74,7 +74,7 @@ test.describe('Settings — Hobby Management', () => {
     await page.goto('/settings')
     await addHobbyButton(page).click()
     await page.getByPlaceholder('e.g., Woodworking').fill(hobbyName)
-    await page.getByTitle('Sage').click()
+    await page.getByTitle('Forest').click()
     await page.getByRole('button', { name: 'Save' }).click()
     await expect(
       page.getByRole('link', { name: new RegExp(`${hobbyName}.*projects`) }),

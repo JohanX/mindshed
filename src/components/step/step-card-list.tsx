@@ -6,6 +6,7 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -50,8 +51,14 @@ export function StepCardList({
   const lastConfirmedOrderRef = useRef(initialSteps)
   const [, startTransition] = useTransition()
 
+  // PointerSensor: desktop mouse drag — instant activation on 5-px move.
+  // TouchSensor: mobile finger drag — long-press hold for 250 ms with up to
+  // 5 px of finger jitter tolerated. Without an explicit TouchSensor,
+  // dnd-kit ignores `pointerType: 'touch'` events on mobile (Story 32.1).
+  // KeyboardSensor: a11y reorder via Space + Arrow keys.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
