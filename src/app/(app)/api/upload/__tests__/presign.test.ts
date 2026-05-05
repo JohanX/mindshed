@@ -109,6 +109,7 @@ describe('POST /api/upload/presign', () => {
     const mockPresign = vi.fn().mockResolvedValue({ url: 'https://test.com', key: 'test' })
     mockAdapter.mockReturnValue({
       getPublicUrl: vi.fn(),
+      getThumbnailUrl: vi.fn(),
       deleteObject: vi.fn(),
       generatePresignedUrl: mockPresign,
       upload: vi.fn(),
@@ -142,6 +143,7 @@ describe('POST /api/upload/presign', () => {
     const mockAdapter = vi.mocked(getImageStorageAdapter)
     mockAdapter.mockReturnValue({
       getPublicUrl: vi.fn(),
+      getThumbnailUrl: vi.fn(),
       deleteObject: vi.fn(),
       generatePresignedUrl: vi.fn().mockRejectedValue(new Error('does not support presigned URLs')),
       upload: vi.fn(),

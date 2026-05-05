@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+# Story 31.2 — block commits with type errors or lint errors. Tests + build
+# are too slow for pre-commit; they run manually and in CI.
+
+set -e
+
+pnpm typecheck
+pnpm lint

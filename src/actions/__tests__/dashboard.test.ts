@@ -33,11 +33,11 @@ const mockStepImageFindMany = vi.mocked(prisma.stepImage.findMany)
 // the provided list for the include-shape calls and an empty list for the
 // gallery select-shape call (so `steps.flatMap(s => s.images)` is a no-op).
 function setProjectFindManyReturns(data: unknown[]) {
-  mockProjectFindMany.mockImplementation(async (args: unknown) => {
+  mockProjectFindMany.mockImplementation(((args: unknown) => {
     const a = args as { select?: { gallerySlug?: boolean } } | undefined
-    if (a?.select?.gallerySlug) return [] as never
-    return data as never
-  })
+    if (a?.select?.gallerySlug) return Promise.resolve([] as never)
+    return Promise.resolve(data as never)
+  }) as never)
 }
 
 describe('getDashboardData', () => {

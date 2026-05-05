@@ -41,7 +41,8 @@ describe('findBomItemsByProject', () => {
   it('orders by sortOrder asc', async () => {
     mockFindMany.mockResolvedValue([])
     await findBomItemsByProject('p1')
-    expect(mockFindMany.mock.calls[0][0].orderBy).toEqual({ sortOrder: 'asc' })
+    const args = mockFindMany.mock.calls[0]![0] as { orderBy: unknown }
+    expect(args.orderBy).toEqual({ sortOrder: 'asc' })
   })
 
   it('returns empty array when no rows', async () => {

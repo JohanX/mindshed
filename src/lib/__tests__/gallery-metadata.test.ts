@@ -92,7 +92,7 @@ describe('buildJourneyMetadata (Story 30.4 / FR128)', () => {
 
     expect(meta.title).toBe('Walnut Side Table — Journey Gallery')
     expect(meta.description).toBe('A solid walnut piece for the living room.')
-    expect(meta.openGraph?.type).toBe('website')
+    expect((meta.openGraph as { type?: string } | undefined)?.type).toBe('website')
     // Newest image first (walnut-2), then walnut-1. og:image entries include
     // width/height so Slack/LinkedIn/Discord can lay out the card before
     // fetching the image.

@@ -26,7 +26,10 @@ describe('findPublicGalleryProjects', () => {
   it('queries projects with at least one gallery enabled and a slug, ordered by updatedAt desc', async () => {
     mockFindMany.mockResolvedValue([])
     await findPublicGalleryProjects()
-    const args = mockFindMany.mock.calls[0][0]
+    const args = mockFindMany.mock.calls[0]![0] as {
+      where: { gallerySlug: unknown; OR: unknown }
+      orderBy: unknown
+    }
     expect(args.where).toMatchObject({ gallerySlug: { not: null } })
     expect(args.where.OR).toBeDefined()
     expect(args.orderBy).toEqual({ updatedAt: 'desc' })
@@ -48,7 +51,15 @@ describe('findJourneyGalleryBySlug', () => {
     // render time. Keeps journey/result/detail totals consistent.
     mockFindUnique.mockResolvedValue({} as never)
     await findJourneyGalleryBySlug('walnut-table')
-    const args = mockFindUnique.mock.calls[0][0]
+    const args = mockFindUnique.mock.calls[0]![0] as {
+      where: unknown
+      select: {
+        steps: {
+          where?: unknown
+          select: { excludeFromGallery: boolean; hoursLogged: boolean }
+        }
+      }
+    }
     expect(args.where).toEqual({ gallerySlug: 'walnut-table' })
     expect(args.select.steps.where).toBeUndefined()
     expect(args.select.steps.select.excludeFromGallery).toBe(true)
@@ -66,7 +77,15 @@ describe('findResultGalleryBySlug', () => {
     // displayed result step.
     mockFindUnique.mockResolvedValue({} as never)
     await findResultGalleryBySlug('s1')
-    const args = mockFindUnique.mock.calls[0][0]
+    const args = mockFindUnique.mock.calls[0]![0] as {
+      select: {
+        steps: {
+          where?: unknown
+          orderBy: unknown
+          select: { state: boolean }
+        }
+      }
+    }
     expect(args.select.steps.where).toBeUndefined()
     expect(args.select.steps.orderBy).toEqual({ sortOrder: 'desc' })
     expect(args.select.steps.select.state).toBe(true)

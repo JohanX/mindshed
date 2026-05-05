@@ -39,7 +39,9 @@ describe('findUpcomingReminders', () => {
     const now = new Date('2026-04-27T12:00:00Z')
     const until = new Date('2026-05-04T12:00:00Z')
     await findUpcomingReminders(now, until)
-    const args = mockFindMany.mock.calls[0][0]
+    const args = mockFindMany.mock.calls[0]![0] as {
+      where: { isDismissed: boolean; OR: unknown; dueDate: unknown }
+    }
     expect(args.where.isDismissed).toBe(false)
     expect(args.where.OR).toEqual([{ snoozedUntil: null }, { snoozedUntil: { lt: now } }])
     expect(args.where.dueDate).toEqual({ lte: until })

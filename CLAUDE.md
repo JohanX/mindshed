@@ -7,6 +7,7 @@
 - `pnpm test run` — unit tests (vitest)
 - `pnpm format` — prettier
 - `pnpm lint` — eslint
+- `pnpm typecheck` — `tsc --noEmit` over source AND test files (vitest does not enforce types on its own)
 - `pnpm build` — production build
 - `pnpm test:e2e` — E2E tests (all browsers)
 - `pnpm test:e2e:chrome` — E2E chromium only
@@ -29,7 +30,7 @@ Every story must follow this sequence:
    - QA navigates the feature, verifies behavior, identifies edge cases via live browser
    - Then writes E2E test scripts grounded in observed behavior
 3. Switch back to DEV agent to execute rest of the steps
-4. Run `pnpm format`, `pnpm lint`, `pnpm test run`, `pnpm build`
+4. Run `pnpm format`, `pnpm lint`, `pnpm typecheck`, `pnpm test run`, `pnpm build`
 5. Run E2E tests
 6. Run code review (bmad-code-review skill)
 7. Auto-apply review patches (no pause for approval)

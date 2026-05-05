@@ -42,6 +42,7 @@ vi.mock('@/lib/image-storage/adapter', () => ({
 import { addStepImageLink, addStepImage, getStepImages, deleteStepImage } from '../image'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 import { prisma } from '@/lib/db'
+import type { AddStepImageInput } from '@/lib/schemas/image'
 
 const mockProjectUpdate = vi.mocked(prisma.project.update)
 
@@ -159,7 +160,7 @@ describe('addStepImageLink', () => {
 
 const mockTransaction = vi.mocked(prisma.$transaction)
 
-const validUploadInput = {
+const validUploadInput: AddStepImageInput = {
   stepId: VALID_UUID,
   storageKey: 'steps/abc/def.jpg',
   originalFilename: 'photo.jpg',
@@ -189,7 +190,10 @@ describe('addStepImage', () => {
   })
 
   it('rejects empty contentType', async () => {
-    const result = await addStepImage({ ...validUploadInput, contentType: '' })
+    const result = await addStepImage({
+      ...validUploadInput,
+      contentType: '' as AddStepImageInput['contentType'],
+    })
     expect(result.success).toBe(false)
   })
 
@@ -445,6 +449,7 @@ describe('deleteStepImage', () => {
     const mockDeleteObj = vi.fn().mockResolvedValue(undefined)
     mockAdapter.mockReturnValue({
       getPublicUrl: vi.fn(),
+      getThumbnailUrl: vi.fn(),
       deleteObject: mockDeleteObj,
       generatePresignedUrl: vi.fn(),
       upload: vi.fn(),
@@ -468,6 +473,7 @@ describe('deleteStepImage', () => {
     const mockDeleteObj = vi.fn()
     mockAdapter.mockReturnValue({
       getPublicUrl: vi.fn(),
+      getThumbnailUrl: vi.fn(),
       deleteObject: mockDeleteObj,
       generatePresignedUrl: vi.fn(),
       upload: vi.fn(),
@@ -490,6 +496,7 @@ describe('deleteStepImage', () => {
     const mockDeleteObj = vi.fn().mockRejectedValue(new Error('Storage error'))
     mockAdapter.mockReturnValue({
       getPublicUrl: vi.fn(),
+      getThumbnailUrl: vi.fn(),
       deleteObject: mockDeleteObj,
       generatePresignedUrl: vi.fn(),
       upload: vi.fn(),

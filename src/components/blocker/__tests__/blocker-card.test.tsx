@@ -54,7 +54,10 @@ describe('BlockerCard — Story 29.3 retroactive: held-resolved feedback', () =>
   })
 
   it('switches to the held-resolved UI on Resolve click', () => {
-    mockResolve.mockResolvedValue({ success: true, data: null })
+    mockResolve.mockResolvedValue({
+      success: true,
+      data: { id: 'b1', description: 'Need clay', isResolved: true },
+    })
     render(<BlockerCard id="b1" description="Need clay" />)
 
     fireEvent.click(screen.getByRole('button', { name: /resolve blocker/i }))
@@ -70,7 +73,10 @@ describe('BlockerCard — Story 29.3 retroactive: held-resolved feedback', () =>
   })
 
   it('does NOT call resolveBlocker until the hold duration elapses', () => {
-    mockResolve.mockResolvedValue({ success: true, data: null })
+    mockResolve.mockResolvedValue({
+      success: true,
+      data: { id: 'b1', description: 'Need clay', isResolved: true },
+    })
     render(<BlockerCard id="b1" description="Need clay" />)
 
     fireEvent.click(screen.getByRole('button', { name: /resolve blocker/i }))
@@ -86,7 +92,10 @@ describe('BlockerCard — Story 29.3 retroactive: held-resolved feedback', () =>
   })
 
   it('fires the success toast after a successful resolve', async () => {
-    mockResolve.mockResolvedValue({ success: true, data: null })
+    mockResolve.mockResolvedValue({
+      success: true,
+      data: { id: 'b1', description: 'Need clay', isResolved: true },
+    })
     render(<BlockerCard id="b1" description="Need clay" />)
 
     fireEvent.click(screen.getByRole('button', { name: /resolve blocker/i }))
@@ -112,7 +121,10 @@ describe('BlockerCard — Story 29.3 retroactive: held-resolved feedback', () =>
   })
 
   it('debounces double-clicks — second click does not re-fire the action', () => {
-    mockResolve.mockResolvedValue({ success: true, data: null })
+    mockResolve.mockResolvedValue({
+      success: true,
+      data: { id: 'b1', description: 'Need clay', isResolved: true },
+    })
     render(<BlockerCard id="b1" description="Need clay" />)
 
     const button = screen.getByRole('button', { name: /resolve blocker/i })
@@ -136,7 +148,10 @@ describe('BlockerCard — Story 29.3 retroactive: held-resolved feedback', () =>
     })
 
     it('skips the held-resolved view and fires the action immediately', () => {
-      mockResolve.mockResolvedValue({ success: true, data: null })
+      mockResolve.mockResolvedValue({
+        success: true,
+        data: { id: 'b1', description: 'Need clay', isResolved: true },
+      })
       render(<BlockerCard id="b1" description="Need clay" />)
 
       fireEvent.click(screen.getByRole('button', { name: /resolve blocker/i }))

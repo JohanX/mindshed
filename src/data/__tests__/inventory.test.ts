@@ -69,13 +69,15 @@ describe('findInventoryItemsList', () => {
   it('filters out deleted items', async () => {
     mockFindMany.mockResolvedValue([])
     await findInventoryItemsList()
-    expect(mockFindMany.mock.calls[0][0].where).toMatchObject({ isDeleted: false })
+    const args = mockFindMany.mock.calls[0]![0] as { where: unknown }
+    expect(args.where).toMatchObject({ isDeleted: false })
   })
 
   it('applies type filter when provided', async () => {
     mockFindMany.mockResolvedValue([])
     await findInventoryItemsList('TOOL')
-    expect(mockFindMany.mock.calls[0][0].where).toMatchObject({ type: 'TOOL' })
+    const args = mockFindMany.mock.calls[0]![0] as { where: unknown }
+    expect(args.where).toMatchObject({ type: 'TOOL' })
   })
 
   it('builds heroThumbnailUrl from UPLOAD storage key', async () => {
@@ -152,8 +154,8 @@ describe('findInventoryItemOptions', () => {
   it('scopes to hobby + untagged when hobby filter provided (FR102)', async () => {
     mockFindMany.mockResolvedValue([])
     await findInventoryItemOptions('h1')
-    const where = mockFindMany.mock.calls[0][0].where as { OR: unknown[] }
-    expect(where.OR).toHaveLength(2)
+    const args = mockFindMany.mock.calls[0]![0] as { where: { OR: unknown[] } }
+    expect(args.where.OR).toHaveLength(2)
   })
 
   it('resolves heroThumbnailUrl from UPLOAD images', async () => {

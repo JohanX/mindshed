@@ -285,7 +285,7 @@ describe('promoteIdea', () => {
     if (result.success) expect(result.data.projectId).toBe('p-new')
 
     expect(tx.project.create).toHaveBeenCalledOnce()
-    const createArg = tx.project.create.mock.calls[0][0] as {
+    const createArg = (tx.project.create.mock.calls as unknown as unknown[][])[0]![0] as {
       data: { name: string; description: string | null; hobbyId: string; lastActivityAt: Date }
     }
     expect(createArg.data.name).toBe('Curved bookends')
@@ -294,7 +294,7 @@ describe('promoteIdea', () => {
     expect(createArg.data.lastActivityAt).toBeInstanceOf(Date)
 
     expect(tx.idea.update).toHaveBeenCalledOnce()
-    const updateArg = tx.idea.update.mock.calls[0][0] as {
+    const updateArg = (tx.idea.update.mock.calls as unknown as unknown[][])[0]![0] as {
       data: { isPromoted: boolean }
     }
     expect(updateArg.data.isPromoted).toBe(true)

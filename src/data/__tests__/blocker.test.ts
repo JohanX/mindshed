@@ -52,7 +52,9 @@ describe('findActiveBlockers', () => {
   it('includes step + project + hobby in the select shape', async () => {
     mockFindMany.mockResolvedValue([])
     await findActiveBlockers()
-    const args = mockFindMany.mock.calls[0][0]
+    const args = mockFindMany.mock.calls[0]![0] as {
+      select: { step: { select: { id: true; name: true; project: unknown } } }
+    }
     expect(args.select.step.select).toHaveProperty('id')
     expect(args.select.step.select).toHaveProperty('name')
     expect(args.select.step.select.project).toBeDefined()

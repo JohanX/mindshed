@@ -48,15 +48,16 @@ App runs at http://localhost:3000
 
 ### Scripts
 
-| Script                     | Description                              |
-| -------------------------- | ---------------------------------------- |
-| `pnpm dev`                 | Start dev server with Turbopack          |
-| `pnpm build`               | Production build                         |
-| `pnpm lint`                | Run ESLint                               |
-| `pnpm test`                | Run Vitest unit tests                    |
-| `pnpm test run --coverage` | Unit tests with coverage report          |
-| `pnpm test:e2e`            | Run Playwright E2E tests (all browsers)  |
-| `pnpm test:e2e:chrome`     | Run Playwright E2E tests (Chromium only) |
+| Script                     | Description                                                  |
+| -------------------------- | ------------------------------------------------------------ |
+| `pnpm dev`                 | Start dev server with Turbopack                              |
+| `pnpm build`               | Production build (runs `prisma migrate deploy` + typecheck)  |
+| `pnpm lint`                | Run ESLint                                                   |
+| `pnpm typecheck`           | `tsc --noEmit` over source AND test files (pre-commit gated) |
+| `pnpm test`                | Run Vitest unit tests                                        |
+| `pnpm test run --coverage` | Unit tests with coverage report                              |
+| `pnpm test:e2e`            | Run Playwright E2E tests (all browsers)                      |
+| `pnpm test:e2e:chrome`     | Run Playwright E2E tests (Chromium only)                     |
 
 ### Testing
 

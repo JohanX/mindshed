@@ -21,7 +21,7 @@ export const createIdeaSchema = z.object({
     .pipe(z.url('Please enter a valid URL').nullable()),
 })
 
-export type CreateIdeaInput = z.infer<typeof createIdeaSchema>
+export type CreateIdeaInput = z.input<typeof createIdeaSchema>
 
 export const updateIdeaSchema = z.object({
   id: z.uuid(),
@@ -40,4 +40,4 @@ export const updateIdeaSchema = z.object({
     .pipe(z.url('Please enter a valid URL').nullable()),
 })
 
-export type UpdateIdeaInput = z.infer<typeof updateIdeaSchema>
+export type UpdateIdeaInput = z.input<typeof updateIdeaSchema>

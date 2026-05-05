@@ -19,7 +19,7 @@ export const createInventoryItemSchema = z.object({
     .optional(),
 })
 
-export type CreateInventoryItemInput = z.infer<typeof createInventoryItemSchema>
+export type CreateInventoryItemInput = z.input<typeof createInventoryItemSchema>
 
 export const updateInventoryItemSchema = z.object({
   id: z.uuid(),
@@ -39,7 +39,7 @@ export const updateInventoryItemSchema = z.object({
     .optional(),
 })
 
-export type UpdateInventoryItemInput = z.infer<typeof updateInventoryItemSchema>
+export type UpdateInventoryItemInput = z.input<typeof updateInventoryItemSchema>
 
 export type InventoryItemOption = {
   id: string

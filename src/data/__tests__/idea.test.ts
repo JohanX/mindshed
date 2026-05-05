@@ -121,7 +121,7 @@ describe('findAllIdeas', () => {
   it('includes hobby + image in the include shape', async () => {
     mockFindMany.mockResolvedValue([])
     await findAllIdeas()
-    const args = mockFindMany.mock.calls[0][0]
+    const args = mockFindMany.mock.calls[0]![0] as { include: unknown }
     expect(args.include).toHaveProperty('hobby')
     expect(args.include).toHaveProperty('image')
   })
