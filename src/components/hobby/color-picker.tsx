@@ -12,7 +12,7 @@ interface ColorPickerProps {
 
 export function ColorPicker({ value, onChange }: ColorPickerProps) {
   return (
-    <div className="grid grid-cols-7 gap-2">
+    <div className="grid grid-cols-5 gap-2 sm:grid-cols-7">
       {HOBBY_COLORS.map((color) => (
         <button
           key={color.value}
