@@ -106,7 +106,6 @@ test.describe('Inventory Photos (Story 21.2)', () => {
   })
 
   test('lightbox swipe navigates between photos on touch (Story 29.6 / FR124)', async ({
-    page,
     browser,
   }) => {
     // Story 29.6: horizontal swipe gesture navigates the lightbox on

@@ -12,7 +12,21 @@ const eslintConfig = defineConfig([
     'out/**',
     'build/**',
     'next-env.d.ts',
+    // Vitest coverage report (regenerated; never tracked).
+    'coverage/**',
   ]),
+
+  // Story 31.3 — interface-shaped stubs (e.g., the cloudinary/s3 storage
+  // adapters) keep parameters they don't use to satisfy the broader
+  // ImageStorageAdapter contract. Underscore-prefix the unused names.
+  {
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+    },
+  },
 
   // Data Access Layer guard (architecture.md § "Data Access Layer", Epic 24).
   //

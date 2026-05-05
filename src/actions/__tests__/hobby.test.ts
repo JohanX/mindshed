@@ -32,7 +32,6 @@ import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 
 const mockHobbyFindMany = vi.mocked(prisma.hobby.findMany)
 const mockHobbyUpdate = vi.mocked(prisma.hobby.update)
-const mockHobbyDelete = vi.mocked(prisma.hobby.delete)
 const mockProjectGroupBy = vi.mocked(prisma.project.groupBy)
 const mockTransaction = vi.mocked(prisma.$transaction)
 const mockGetAdapter = vi.mocked(getImageStorageAdapter)
