@@ -62,6 +62,11 @@ Every story must follow this sequence:
 - Tailwind CSS v4 with oklch colors
 - shadcn/ui v4 components in `src/components/ui/`
 
+## Prisma Migrations
+
+- **Folder naming:** every migration folder MUST use the full `YYYYMMDDHHMMSS_<name>` timestamp prefix that `prisma migrate dev` produces by default. Date-only prefixes (`YYYYMMDD_<name>`) sort incorrectly against full timestamps when the shadow DB replays migrations and trigger `P3006`. See Story 31.1 for the historical fix.
+- **Out-of-band SQL:** anything that cannot be applied via `prisma migrate deploy` (data backfills, fixes to `_prisma_migrations` itself, etc.) lives in `prisma/manual/YYYY-MM-DD_<description>.sql`. Files must be idempotent and document whether they run before or after the next `migrate deploy`. See `prisma/manual/README.md`.
+
 ## Testing
 
 - Separate test DB (`mindshed_test`) — auto-truncated before each E2E run via `e2e/global-setup.ts`
