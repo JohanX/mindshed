@@ -30,11 +30,11 @@ export function DashboardContinueSection({ projects }: DashboardContinueSectionP
         <Play className="h-5 w-5 text-primary" />
         Continue
       </h2>
-      <DashboardContinueCard project={primary} variant="primary" />
+      <DashboardContinueCard project={primary} />
       {secondary.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {secondary.map((project) => (
-            <DashboardContinueCard key={project.id} project={project} variant="secondary" />
+            <DashboardContinueCard key={project.id} project={project} />
           ))}
         </div>
       )}

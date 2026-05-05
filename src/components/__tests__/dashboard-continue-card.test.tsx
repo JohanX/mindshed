@@ -12,15 +12,7 @@ vi.mock('next/link', () => ({
   ),
 }))
 
-// Mock next/image
-vi.mock('next/image', () => ({
-  default: ({ src, alt, ...rest }: { src: string; alt: string }) => (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={alt} {...rest} />
-  ),
-}))
-
-// Mock image storage adapter
+// Mock image storage adapter so resolveProjectThumbnailUrl returns a known URL.
 vi.mock('@/lib/image-storage/adapter', () => ({
   getImageStorageAdapter: () => ({
     getPublicUrl: (key: string) => `https://r2.example.com/bucket/${key}`,
@@ -56,89 +48,50 @@ const baseProject: RecentProject = {
 }
 
 describe('DashboardContinueCard', () => {
-  describe('primary variant', () => {
-    it('renders project name', () => {
-      render(<DashboardContinueCard project={baseProject} variant="primary" />)
-      expect(screen.getByText('Walnut Side Table')).toBeInTheDocument()
-    })
-
-    it('renders hobby badge', () => {
-      render(<DashboardContinueCard project={baseProject} variant="primary" />)
-      expect(screen.getByText('Woodworking')).toBeInTheDocument()
-    })
-
-    it('renders current step name', () => {
-      render(<DashboardContinueCard project={baseProject} variant="primary" />)
-      expect(screen.getByText('Apply danish oil')).toBeInTheDocument()
-    })
-
-    it('renders photo thumbnail when latestPhoto exists', () => {
-      render(<DashboardContinueCard project={baseProject} variant="primary" />)
-      const img = screen.getByAltText('Latest photo for Walnut Side Table')
-      expect(img).toBeInTheDocument()
-      expect(img).toHaveAttribute('src', 'https://r2.example.com/bucket/images/photo-1.jpg?w=128')
-    })
-
-    it('does not render photo when latestPhoto is null', () => {
-      const noPhoto = { ...baseProject, latestPhoto: null }
-      render(<DashboardContinueCard project={noPhoto} variant="primary" />)
-      expect(screen.queryByRole('img')).not.toBeInTheDocument()
-    })
-
-    it('links to correct project URL', () => {
-      const { container } = render(
-        <DashboardContinueCard project={baseProject} variant="primary" />,
-      )
-      const link = container.querySelector('a')
-      expect(link?.getAttribute('href')).toBe('/hobbies/hobby-1/projects/proj-1')
-    })
-
-    it('renders without current step when null', () => {
-      const noStep = { ...baseProject, currentStep: null }
-      render(<DashboardContinueCard project={noStep} variant="primary" />)
-      expect(screen.getByText('Walnut Side Table')).toBeInTheDocument()
-      expect(screen.queryByText('Apply danish oil')).not.toBeInTheDocument()
-    })
-
-    it('has min 44px touch target', () => {
-      const { container } = render(
-        <DashboardContinueCard project={baseProject} variant="primary" />,
-      )
-      const link = container.querySelector('a')
-      expect(link?.className).toContain('min-h-[44px]')
-    })
+  it('renders project name', () => {
+    render(<DashboardContinueCard project={baseProject} />)
+    expect(screen.getByText('Walnut Side Table')).toBeInTheDocument()
   })
 
-  describe('secondary variant', () => {
-    it('renders project name', () => {
-      render(<DashboardContinueCard project={baseProject} variant="secondary" />)
-      expect(screen.getByText('Walnut Side Table')).toBeInTheDocument()
-    })
+  it('renders hobby badge', () => {
+    render(<DashboardContinueCard project={baseProject} />)
+    expect(screen.getByText('Woodworking')).toBeInTheDocument()
+  })
 
-    it('renders current step name', () => {
-      render(<DashboardContinueCard project={baseProject} variant="secondary" />)
-      expect(screen.getByText('Apply danish oil')).toBeInTheDocument()
-    })
+  it('renders current step name', () => {
+    render(<DashboardContinueCard project={baseProject} />)
+    expect(screen.getByText('Apply danish oil')).toBeInTheDocument()
+  })
 
-    it('does not render photo in secondary variant', () => {
-      render(<DashboardContinueCard project={baseProject} variant="secondary" />)
-      expect(screen.queryByRole('img')).not.toBeInTheDocument()
-    })
+  it('renders photo thumbnail when latestPhoto exists', () => {
+    render(<DashboardContinueCard project={baseProject} />)
+    const img = screen.getByAltText('Latest photo for Walnut Side Table')
+    expect(img).toBeInTheDocument()
+    expect(img).toHaveAttribute('src', 'https://r2.example.com/bucket/images/photo-1.jpg?w=128')
+  })
 
-    it('links to correct project URL', () => {
-      const { container } = render(
-        <DashboardContinueCard project={baseProject} variant="secondary" />,
-      )
-      const link = container.querySelector('a')
-      expect(link?.getAttribute('href')).toBe('/hobbies/hobby-1/projects/proj-1')
-    })
+  it('does not render photo when latestPhoto is null', () => {
+    const noPhoto = { ...baseProject, latestPhoto: null }
+    render(<DashboardContinueCard project={noPhoto} />)
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+  })
 
-    it('has min 44px touch target', () => {
-      const { container } = render(
-        <DashboardContinueCard project={baseProject} variant="secondary" />,
-      )
-      const link = container.querySelector('a')
-      expect(link?.className).toContain('min-h-[44px]')
-    })
+  it('links to correct project URL', () => {
+    const { container } = render(<DashboardContinueCard project={baseProject} />)
+    const link = container.querySelector('a')
+    expect(link?.getAttribute('href')).toBe('/hobbies/hobby-1/projects/proj-1')
+  })
+
+  it('renders without current step when null', () => {
+    const noStep = { ...baseProject, currentStep: null }
+    render(<DashboardContinueCard project={noStep} />)
+    expect(screen.getByText('Walnut Side Table')).toBeInTheDocument()
+    expect(screen.queryByText('Apply danish oil')).not.toBeInTheDocument()
+  })
+
+  it('has min 44px touch target', () => {
+    const { container } = render(<DashboardContinueCard project={baseProject} />)
+    const link = container.querySelector('a')
+    expect(link?.className).toContain('min-h-[44px]')
   })
 })
