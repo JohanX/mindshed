@@ -48,3 +48,41 @@ export async function findMaxStepSortOrder(projectId: string): Promise<number> {
   })
   return result._max.sortOrder ?? -1
 }
+
+/**
+ * Slim shape used by the result-gallery setter to validate the step
+ * exists in the given project AND is COMPLETED. Story 33.2.
+ */
+export async function findStepForResultGuard(id: string) {
+  return prisma.step.findUnique({
+    where: { id },
+    select: { projectId: true, state: true },
+  })
+}
+
+/**
+ * Slim shape used by the gallery-exclusion toggle to flip the bit and
+ * revalidate the parent project's pages. Story 33.2.
+ */
+export async function findStepForExclusionToggle(id: string) {
+  return prisma.step.findUnique({
+    where: { id },
+    select: {
+      excludeFromGallery: true,
+      projectId: true,
+      project: { select: { hobbyId: true } },
+    },
+  })
+}
+
+/**
+ * Slim shape used by `createReminder` to confirm the step exists AND its
+ * parent project is not completed (reminders aren't allowed on locked
+ * projects). Story 33.2.
+ */
+export async function findStepForReminderGuard(id: string) {
+  return prisma.step.findUnique({
+    where: { id },
+    select: { project: { select: { isCompleted: true } } },
+  })
+}

@@ -15,6 +15,7 @@ import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 import {
   findInventoryItemImagesWithDisplayUrl,
+  findInventoryItemImageById,
   type InventoryItemImageWithDisplayUrl,
 } from '@/data/inventory-image'
 import { findDistinctProjectsForInventoryItem } from '@/data/bom'
@@ -258,15 +259,7 @@ export async function deleteInventoryItemImage(imageId: string): Promise<ActionR
   }
 
   try {
-    const image = await prisma.inventoryItemImage.findUnique({
-      where: { id: parsed.data },
-      select: {
-        id: true,
-        inventoryItemId: true,
-        type: true,
-        storageKey: true,
-      },
-    })
+    const image = await findInventoryItemImageById(parsed.data)
 
     if (!image) {
       return { success: false, error: 'Image not found.' }

@@ -4,6 +4,7 @@ import { z } from 'zod/v4'
 import { prisma } from '@/lib/db'
 import { revalidatePath } from 'next/cache'
 import { generateSlug, ensureUniqueSlug } from '@/lib/gallery-slug'
+import { findStepForResultGuard, findStepForExclusionToggle } from '@/data/step'
 import type { ActionResult } from '@/lib/action-result'
 
 function revalidateProject(hobbyId: string, projectId: string) {
@@ -193,10 +194,7 @@ export async function setResultStep(
   }
 
   try {
-    const step = await prisma.step.findUnique({
-      where: { id: parsedStep.data },
-      select: { projectId: true, state: true },
-    })
+    const step = await findStepForResultGuard(parsedStep.data)
     if (!step || step.projectId !== parsedProject.data) {
       return { success: false, error: 'Step not found in this project.' }
     }
@@ -222,10 +220,7 @@ export async function toggleStepGalleryExclusion(stepId: string): Promise<Action
   if (!parsed.success) return { success: false, error: 'Invalid step ID' }
 
   try {
-    const step = await prisma.step.findUnique({
-      where: { id: parsed.data },
-      select: { excludeFromGallery: true, projectId: true, project: { select: { hobbyId: true } } },
-    })
+    const step = await findStepForExclusionToggle(parsed.data)
     if (!step) return { success: false, error: 'Step not found.' }
 
     await prisma.step.update({

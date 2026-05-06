@@ -17,6 +17,7 @@ import {
   type IdeaWithThumbnail,
   type IdeaWithHobby,
 } from '@/data/idea'
+import { existsHobby } from '@/data/hobby'
 
 // Re-export types so existing callers (`import type { IdeaWithThumbnail } from '@/actions/idea'`)
 // continue to work after migration. New callers should import from '@/data/idea'.
@@ -29,12 +30,7 @@ export async function createIdea(input: CreateIdeaInput): Promise<ActionResult<{
   }
 
   try {
-    const hobby = await prisma.hobby.findUnique({
-      where: { id: parsed.data.hobbyId },
-      select: { id: true },
-    })
-
-    if (!hobby) {
+    if (!(await existsHobby(parsed.data.hobbyId))) {
       return { success: false, error: 'Hobby not found.' }
     }
 

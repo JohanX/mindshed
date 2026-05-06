@@ -23,6 +23,17 @@ export async function findProjectById(id: string) {
 }
 
 /**
+ * Slim shape used by `createReminder` to confirm the project exists AND
+ * is not completed. Story 33.2.
+ */
+export async function findProjectForReminderGuard(id: string) {
+  return prisma.project.findUnique({
+    where: { id },
+    select: { isCompleted: true },
+  })
+}
+
+/**
  * Project + everything the project detail page needs in one query:
  * hobby, ordered steps with notes/images/active blockers, BOM items with
  * inventory item hero image. Returns null when no project matches.

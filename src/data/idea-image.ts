@@ -31,6 +31,22 @@ export async function findIdeaImage(ideaId: string) {
 }
 
 /**
+ * Slim shape used by `deleteIdeaImage` — needs the storage key for
+ * post-commit storage cleanup and the parent hobbyId for revalidatePath.
+ * Story 33.2.
+ */
+export async function findIdeaImageForDelete(ideaId: string) {
+  return prisma.ideaImage.findUnique({
+    where: { ideaId },
+    select: {
+      type: true,
+      storageKey: true,
+      idea: { select: { hobbyId: true } },
+    },
+  })
+}
+
+/**
  * Find the IdeaImage with display + thumbnail URLs resolved server-side.
  * Used by the edit dialog. Returns null when no photo.
  */

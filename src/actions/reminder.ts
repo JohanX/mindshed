@@ -18,6 +18,8 @@ import {
   findRemindersForTarget as findRemindersForTargetData,
   findUpcomingReminders,
 } from '@/data/reminder'
+import { findStepForReminderGuard } from '@/data/step'
+import { findProjectForReminderGuard } from '@/data/project'
 
 export async function createReminder(
   input: CreateReminderInput,
@@ -30,18 +32,12 @@ export async function createReminder(
   try {
     // Verify target exists and project is not completed
     if (parsed.data.targetType === 'STEP') {
-      const step = await prisma.step.findUnique({
-        where: { id: parsed.data.targetId },
-        select: { project: { select: { isCompleted: true } } },
-      })
+      const step = await findStepForReminderGuard(parsed.data.targetId)
       if (!step) return { success: false, error: 'Step not found.' }
       if (step.project.isCompleted)
         return { success: false, error: 'Cannot set reminders on a completed project.' }
     } else {
-      const project = await prisma.project.findUnique({
-        where: { id: parsed.data.targetId },
-        select: { isCompleted: true },
-      })
+      const project = await findProjectForReminderGuard(parsed.data.targetId)
       if (!project) return { success: false, error: 'Project not found.' }
       if (project.isCompleted)
         return { success: false, error: 'Cannot set reminders on a completed project.' }

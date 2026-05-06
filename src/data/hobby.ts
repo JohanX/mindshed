@@ -16,6 +16,15 @@ export async function findHobbyById(id: string) {
   return prisma.hobby.findUnique({ where: { id } })
 }
 
+/**
+ * Existence check used by `createIdea` (and similar pre-write guards)
+ * — no row data needed, just whether the hobby exists. Story 33.2.
+ */
+export async function existsHobby(id: string): Promise<boolean> {
+  const row = await prisma.hobby.findUnique({ where: { id }, select: { id: true } })
+  return row !== null
+}
+
 /** Minimal projection used by pages that just need name+color+icon. */
 export async function findHobbyHeader(id: string) {
   return prisma.hobby.findUnique({

@@ -12,7 +12,11 @@ import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES } from '@/lib/constants/image-upload'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
-import { findIdeaImageWithDisplayUrl, type IdeaImageWithDisplayUrl } from '@/data/idea-image'
+import {
+  findIdeaImageWithDisplayUrl,
+  findIdeaImageForDelete,
+  type IdeaImageWithDisplayUrl,
+} from '@/data/idea-image'
 
 // Re-export type for existing callers; new ones should import from '@/data/idea-image'.
 export type { IdeaImageWithDisplayUrl } from '@/data/idea-image'
@@ -261,14 +265,7 @@ export async function deleteIdeaImage(ideaId: string): Promise<ActionResult<null
   }
 
   try {
-    const image = await prisma.ideaImage.findUnique({
-      where: { ideaId: parsed.data },
-      select: {
-        type: true,
-        storageKey: true,
-        idea: { select: { hobbyId: true } },
-      },
-    })
+    const image = await findIdeaImageForDelete(parsed.data)
 
     if (!image) {
       return { success: false, error: 'Image not found.' }

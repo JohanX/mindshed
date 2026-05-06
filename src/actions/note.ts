@@ -10,6 +10,7 @@ import {
 } from '@/lib/schemas/note'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
+import { findStepNotes } from '@/data/note'
 import type { StepNote } from '@/generated/prisma/client'
 
 export async function addStepNote(input: CreateNoteInput): Promise<ActionResult<{ id: string }>> {
@@ -66,10 +67,7 @@ export async function getStepNotes(stepId: string): Promise<ActionResult<StepNot
   }
 
   try {
-    const notes = await prisma.stepNote.findMany({
-      where: { stepId: parsed.data },
-      orderBy: { createdAt: 'desc' },
-    })
+    const notes = await findStepNotes(parsed.data)
 
     return { success: true, data: notes }
   } catch (error) {
