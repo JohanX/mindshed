@@ -2,10 +2,12 @@
 
 import { useRef, useState, useCallback, useEffect } from 'react'
 import { Dialog as DialogPrimitive, VisuallyHidden } from 'radix-ui'
+import { motion } from 'motion/react'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, X, ImageIcon, Loader2 } from 'lucide-react'
 import { ImageDeleteButton } from '@/components/image/image-delete-button'
 import type { GalleryImage } from '@/components/image/image-gallery'
+import { useMotionTokens } from '@/lib/motion/motion-tokens'
 
 import {
   determineSwipeAxis,
@@ -20,23 +22,28 @@ interface ImageLightboxProps {
   onClose: () => void
   showDelete?: boolean
   /**
-   * Story 29.1 / FR123: when set, the lightbox's currently-displayed
-   * `<img>` gets `view-transition-name: <viewTransitionName>` as an
-   * inline style. Pair it with a matching `viewTransitionName` on the
-   * source thumbnail and wrap the open/close in
-   * `document.startViewTransition(...)` at the caller — the Chromium
-   * View Transitions API then morphs between the two for the open
-   * transition. On browsers without view-transition support, the
-   * inline style is harmless (unknown CSS property) and the standard
-   * fade+scale CSS keyframes take over.
+   * Story 32.3: layout-animation hook for the open/close morph.
    *
-   * Each caller must use a unique value (e.g., 'inv-hero-' + item.id)
-   * so multiple lightboxes on a page never collide on the name. The
-   * lightbox sets it ONLY on the initially-shown image; subsequent
-   * navigations (next/prev arrows) don't morph (acceptable trade —
-   * the morph belongs to the open transition, not navigation).
+   * When set, the INITIALLY-displayed image gets this `layoutId` so
+   * Framer's layout system morphs from a thumbnail with the matching
+   * layoutId (set by the caller on its source `<motion.img>`).
+   * Navigations within the lightbox swap to a per-image layoutId
+   * (`lightbox-{imageId}`) which matches no thumbnail — close after a
+   * navigation skips the morph (acceptable; the user-facing complaint
+   * was the OPEN being brutal, close is secondary).
+   *
+   * Single-thumbnail callers (inventory hero, BOM row) pass a stable
+   * id derived from the entity (e.g. `inventory-hero-{itemId}`) and
+   * set the same on their thumbnail.
+   *
+   * Multi-thumbnail callers (galleries) skip this prop and instead
+   * give each gallery thumbnail a per-image `layoutId={`lightbox-${img.id}`}`;
+   * the lightbox's per-image fallback matches automatically.
+   *
+   * The lightbox MUST be rendered inside an `<AnimatePresence>` at the
+   * caller level for the close animation to play before unmount.
    */
-  viewTransitionName?: string
+  morphLayoutId?: string
 }
 
 /**
@@ -52,10 +59,11 @@ export function ImageLightbox({
   initialIndex,
   onClose,
   showDelete = true,
-  viewTransitionName,
+  morphLayoutId,
 }: ImageLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [broken, setBroken] = useState(false)
+  const tokens = useMotionTokens()
   // Story 29.6 (revised): explicit loading state during image swap.
   // Browsers keep the previous <img> visible while the new src loads,
   // which the user perceived as "navigation blocks until prefetched".
@@ -295,31 +303,18 @@ export function ImageLightbox({
 
   if (!current) return null
 
-  // Only morph the originally-clicked image; navigations don't carry the
-  // view-transition name (the open transition is the moment that earns
-  // the morph; arrow navigation is a different motion, future story).
-  const isOriginalImage = currentIndex === initialIndex
-  // Story 29.6 (revised): apply the live drag offset as a transform.
-  // - During `dragging`: no transition so the image tracks the finger.
-  // - During `committing`: transition for the slide-out animation.
-  // - When `idle` and dragOffset=0: no transform/transition (avoids
-  //   competing with the View Transition morph on the open frame).
-  // The transform/transition branch is only emitted while dragging or
-  // committing — keeping the open frame's `inlineImageStyle` to just
-  // `viewTransitionName` (or empty) avoids fighting the View Transition
-  // morph. `useState(0)` for dragOffset means this branch is empty on
-  // first paint by construction.
-  const inlineImageStyle: React.CSSProperties = {
-    ...(viewTransitionName && isOriginalImage ? { viewTransitionName } : {}),
-    ...(dragOffset !== 0 || isCommitting
+  // Story 29.6: live swipe drag offset. The Framer `layout` prop is
+  // gated off during dragging/committing (see `<motion.img>` below) so
+  // the swipe transform doesn't fight Framer's layout-animation system.
+  const inlineImageStyle: React.CSSProperties =
+    dragOffset !== 0 || isCommitting
       ? {
           transform: `translateX(${dragOffset}px)`,
           transition: isDragging
             ? 'none'
             : `transform var(--anim-duration-medium) var(--anim-easing)`,
         }
-      : {}),
-  }
+      : {}
 
   // Story 29.6 (revised): the hidden-img prefetch was REMOVED after
   // smoke testing — browsers de-prioritise zero-size hidden images and
@@ -414,9 +409,29 @@ export function ImageLightbox({
                   </div>
                 ) : (
                   <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    {/* Story 32.3: motion.img with `layoutId` keyed by
+                        the image's stable id + a per-caller context
+                        suffix. The matching `layoutId` on the source
+                        thumbnail (set in each caller's <motion.img>)
+                        morphs from thumbnail position to lightbox
+                        position. Layout is gated OFF during swipe
+                        gestures so the inline transform from Story
+                        29.6 doesn't fight Framer's layout system. */}
+                    <motion.img
                       key={current.id}
+                      // For the initially-shown image, use morphLayoutId
+                      // when set (single-thumbnail callers); otherwise
+                      // fall back to per-image id (multi-thumbnail
+                      // gallery callers). After navigation, switch to
+                      // per-image id (which won't match anything; close
+                      // post-nav skips the morph as documented).
+                      layoutId={
+                        currentIndex === initialIndex && morphLayoutId
+                          ? morphLayoutId
+                          : `lightbox-${current.id}`
+                      }
+                      layout={!isDragging && !isCommitting}
+                      transition={tokens.transitions.layout}
                       ref={(node) => {
                         // Cached-image race: if the browser already had
                         // this URL in cache, `onLoad` may have fired

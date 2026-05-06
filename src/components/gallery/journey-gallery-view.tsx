@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
 import { ImageLightbox } from '@/components/image/image-lightbox'
 import type { GalleryImage } from '@/components/image/image-gallery'
+import { useMotionTokens } from '@/lib/motion/motion-tokens'
 import { cn } from '@/lib/utils'
 
 interface JourneyStep {
@@ -25,6 +27,7 @@ interface JourneyGalleryViewProps {
 
 export function JourneyGalleryView({ project, steps }: JourneyGalleryViewProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const tokens = useMotionTokens()
 
   // Flatten all images across steps with step context for the lightbox.
   // Story 29.4 / FR124: caption metadata travels with each image; the
@@ -102,8 +105,14 @@ export function JourneyGalleryView({ project, steps }: JourneyGalleryViewProps) 
                   onClick={() => openLightbox(stepIdx, imgIdx)}
                   aria-label={`View ${img.originalFilename ?? `${step.name} image ${imgIdx + 1}`}`}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  {/* Story 32.3: layoutId matches the lightbox's
+                      per-image fallback (`lightbox-{img.id}`) so the
+                      open/close morph plays. The synthetic id pattern
+                      `journey-{stepIdx}-{imgIdx}` is stable per page
+                      render. */}
+                  <motion.img
+                    layoutId={`lightbox-journey-${stepIdx}-${imgIdx}`}
+                    transition={tokens.transitions.layout}
                     src={img.thumbnailUrl || img.displayUrl}
                     alt={img.originalFilename ?? `${step.name} image ${imgIdx + 1}`}
                     className="h-full w-full object-cover"
@@ -130,14 +139,16 @@ export function JourneyGalleryView({ project, steps }: JourneyGalleryViewProps) 
         <p className="text-center text-muted-foreground py-12">No steps to display.</p>
       )}
 
-      {lightboxIndex !== null && (
-        <ImageLightbox
-          images={allImages}
-          initialIndex={lightboxIndex}
-          onClose={closeLightbox}
-          showDelete={false}
-        />
-      )}
+      <AnimatePresence>
+        {lightboxIndex !== null && (
+          <ImageLightbox
+            images={allImages}
+            initialIndex={lightboxIndex}
+            onClose={closeLightbox}
+            showDelete={false}
+          />
+        )}
+      </AnimatePresence>
     </article>
   )
 }

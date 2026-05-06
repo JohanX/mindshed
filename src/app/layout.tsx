@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { MotionConfig } from 'motion/react'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import { ViewportInsetTracker } from '@/components/layout/viewport-inset-tracker'
@@ -58,9 +59,19 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans antialiased">
         <ThemeProvider>
-          <ViewportInsetTracker />
-          {children}
-          <Toaster />
+          {/* Story 32.3: MotionConfig with reducedMotion="user" makes
+              every Framer Motion surface in the app honour the
+              `prefers-reduced-motion: reduce` media query at the
+              library level (collapses transitions to 0 duration,
+              neutralises layout/spring motion). The
+              `useMotionTokens()` hook from Story 32.2 redundantly
+              checks the same preference for surfaces that need the
+              duration values directly. */}
+          <MotionConfig reducedMotion="user">
+            <ViewportInsetTracker />
+            {children}
+            <Toaster />
+          </MotionConfig>
         </ThemeProvider>
       </body>
     </html>

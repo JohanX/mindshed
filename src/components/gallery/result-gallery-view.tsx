@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { AnimatePresence } from 'motion/react'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
 import { ImageSlideshow } from '@/components/gallery/image-slideshow'
 import { ImageLightbox } from '@/components/image/image-lightbox'
@@ -58,14 +59,16 @@ export function ResultGalleryView({ project, images }: ResultGalleryViewProps) {
       {images.length > 0 ? (
         <>
           <ImageSlideshow images={images} onImageClick={openLightbox} />
-          {lightboxIndex !== null && (
-            <ImageLightbox
-              images={lightboxImages}
-              initialIndex={lightboxIndex}
-              onClose={closeLightbox}
-              showDelete={false}
-            />
-          )}
+          <AnimatePresence>
+            {lightboxIndex !== null && (
+              <ImageLightbox
+                images={lightboxImages}
+                initialIndex={lightboxIndex}
+                onClose={closeLightbox}
+                showDelete={false}
+              />
+            )}
+          </AnimatePresence>
         </>
       ) : (
         <p className="text-center text-muted-foreground py-12">No images available</p>

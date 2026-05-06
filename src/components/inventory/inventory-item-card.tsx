@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { flushSync } from 'react-dom'
+import { AnimatePresence, motion } from 'motion/react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,7 +16,7 @@ import { Pencil, Trash2, Loader2 } from 'lucide-react'
 import type { InventoryItemData } from '@/lib/schemas/inventory'
 import type { GalleryImage } from '@/components/image/image-gallery'
 import { getContrastTextColor } from '@/lib/hobby-color'
-import { runWithViewTransition } from '@/lib/view-transition'
+import { useMotionTokens } from '@/lib/motion/motion-tokens'
 
 const TYPE_CONFIG = {
   MATERIAL: { label: 'Material', colorClass: 'bg-step-in-progress text-white' },
@@ -31,28 +31,17 @@ interface InventoryItemCardProps {
 
 export function InventoryItemCard({ item, hobbies }: InventoryItemCardProps) {
   const typeConfig = TYPE_CONFIG[item.type]
+  const tokens = useMotionTokens()
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [isDeleting, startTransition] = useTransition()
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxImages, setLightboxImages] = useState<GalleryImage[]>([])
   const [lightboxLoading, setLightboxLoading] = useState(false)
-
-  // Story 29.1: shared `view-transition-name` between this card's hero
-  // thumbnail and the lightbox image. Per-instance unique (item.id is
-  // unique across the inventory list) so concurrent lightboxes from
-  // sibling cards never collide on the name.
-  //
-  // Known perf trade-off: the View Transitions API snapshots EVERY DOM
-  // element carrying `view-transition-name`, regardless of whether it
-  // pairs in the new state. With ~50+ inventory items rendered on the
-  // page, the open transition snapshots 50+ thumbnails when only one is
-  // morphing — measurable jank at scale. The clean fix lifts a single
-  // `openingId` into the parent (`/inventory` page) and only sets the
-  // name on the matching card synchronously before
-  // `runWithViewTransition`. Acceptable at current single-user scale;
-  // revisit if inventory list grows past ~30 cards.
-  const viewTransitionName = `inv-hero-${item.id}`
+  // Story 32.3: Framer layoutId — same string on this thumbnail and
+  // on the lightbox's initial-image so the open transition morphs
+  // between them. Stable per inventory item id.
+  const morphLayoutId = `inventory-hero-${item.id}`
 
   async function openLightbox() {
     setLightboxLoading(true)
@@ -67,29 +56,13 @@ export function InventoryItemCard({ item, hobbies }: InventoryItemCardProps) {
       thumbnailUrl: img.thumbnailUrl,
       originalFilename: img.originalFilename,
     }))
-
-    // Wrap the visible-state-change in a view transition for the
-    // thumbnail → lightbox morph (Chromium). flushSync forces React to
-    // commit the DOM update synchronously inside the transition's
-    // callback so the browser's "after" snapshot includes the rendered
-    // lightbox (and the matching `view-transition-name` on its image).
-    // On browsers without view-transition support, the fallback path
-    // just runs the state updates directly — the CSS keyframes
-    // (anim-reveal) drive the open animation instead.
-    const performOpen = () => {
-      flushSync(() => {
-        setLightboxImages(images)
-        setLightboxOpen(true)
-        setLightboxLoading(false)
-      })
-    }
-    runWithViewTransition(performOpen)
+    setLightboxImages(images)
+    setLightboxOpen(true)
+    setLightboxLoading(false)
   }
 
   function closeLightbox() {
-    runWithViewTransition(() => {
-      flushSync(() => setLightboxOpen(false))
-    })
+    setLightboxOpen(false)
   }
 
   function handleDelete() {
@@ -118,12 +91,16 @@ export function InventoryItemCard({ item, hobbies }: InventoryItemCardProps) {
                   onClick={() => void openLightbox()}
                   aria-label={`View photos of ${item.name}`}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  {/* Story 32.3: motion.img with `layoutId` matching the
+                      lightbox's `morphLayoutId` prop — Framer's layout
+                      system morphs the thumbnail into the lightbox image
+                      on open. */}
+                  <motion.img
+                    layoutId={morphLayoutId}
+                    transition={tokens.transitions.layout}
                     src={item.heroThumbnailUrl}
                     alt={item.name}
                     className="h-full w-full object-cover"
-                    style={{ viewTransitionName }}
                   />
                 </button>
               )}
@@ -210,15 +187,19 @@ export function InventoryItemCard({ item, hobbies }: InventoryItemCardProps) {
           <Loader2 className="h-8 w-8 animate-spin text-white" />
         </div>
       )}
-      {lightboxOpen && !lightboxLoading && lightboxImages.length > 0 && (
-        <ImageLightbox
-          images={lightboxImages}
-          initialIndex={0}
-          onClose={closeLightbox}
-          showDelete={false}
-          viewTransitionName={viewTransitionName}
-        />
-      )}
+      {/* Story 32.3: AnimatePresence lets the lightbox play its
+          close-morph after `lightboxOpen` flips false. */}
+      <AnimatePresence>
+        {lightboxOpen && !lightboxLoading && lightboxImages.length > 0 && (
+          <ImageLightbox
+            images={lightboxImages}
+            initialIndex={0}
+            onClose={closeLightbox}
+            showDelete={false}
+            morphLayoutId={morphLayoutId}
+          />
+        )}
+      </AnimatePresence>
     </>
   )
 }

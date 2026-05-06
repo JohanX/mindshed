@@ -82,7 +82,6 @@ Simple fade-in:
 ```tsx
 import { motion } from 'motion/react'
 import { transitions } from '@/lib/motion/motion-tokens'
-
 ;<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={transitions.fade}>
   ...
 </motion.div>

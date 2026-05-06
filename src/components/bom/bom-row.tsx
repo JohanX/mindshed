@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState, useTransition } from 'react'
-import { createPortal, flushSync } from 'react-dom'
+import { createPortal } from 'react-dom'
+import { AnimatePresence, motion } from 'motion/react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,7 +22,7 @@ import {
 } from '@/actions/bom'
 import { getInventoryItemImages } from '@/actions/inventory-image'
 import { showErrorToast, showSuccessToast } from '@/lib/toast'
-import { runWithViewTransition } from '@/lib/view-transition'
+import { useMotionTokens } from '@/lib/motion/motion-tokens'
 import {
   renderAvailable,
   isRowShort,
@@ -128,16 +129,16 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
   const [lightboxImages, setLightboxImages] = useState<GalleryImage[]>([])
   const [lightboxLoading, setLightboxLoading] = useState(false)
 
+  const tokens = useMotionTokens()
   const isEditingLocked = row.consumptionState !== 'NOT_CONSUMED'
   const displayName = row.inventoryItem?.name ?? row.label ?? '(unnamed)'
   const inventoryItemId = row.inventoryItem?.id ?? null
-  // Both `variant="desktop"` and `variant="mobile"` of BomRow are always
-  // mounted simultaneously (CSS toggles which is visible). Including
-  // `variant` in the view-transition name keeps the two from colliding —
-  // `view-transition-name` is captured from every element with the
-  // property regardless of CSS visibility, and the spec requires
-  // uniqueness for predictable morphing.
-  const viewTransitionName = inventoryItemId ? `bom-thumb-${inventoryItemId}-${variant}` : undefined
+  // Story 32.3: Framer layoutId — both `variant="desktop"` and
+  // `variant="mobile"` of BomRow are always mounted simultaneously (CSS
+  // toggles which is visible). Including the variant in the layoutId
+  // keeps the two from collapsing onto each other; the lightbox's
+  // `morphLayoutId` matches whichever one is currently visible.
+  const morphLayoutId = inventoryItemId ? `bom-thumb-${inventoryItemId}-${variant}` : undefined
 
   async function openBomLightbox() {
     if (!inventoryItemId) return
@@ -153,19 +154,13 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
       thumbnailUrl: img.thumbnailUrl,
       originalFilename: img.originalFilename,
     }))
-    runWithViewTransition(() => {
-      flushSync(() => {
-        setLightboxImages(images)
-        setLightboxOpen(true)
-        setLightboxLoading(false)
-      })
-    })
+    setLightboxImages(images)
+    setLightboxOpen(true)
+    setLightboxLoading(false)
   }
 
   function closeBomLightbox() {
-    runWithViewTransition(() => {
-      flushSync(() => setLightboxOpen(false))
-    })
+    setLightboxOpen(false)
   }
   const canMarkConsumed =
     row.consumptionState === 'NOT_CONSUMED' &&
@@ -299,15 +294,17 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
                 <Loader2 className="h-8 w-8 animate-spin text-white" />
               </div>
             )}
-            {lightboxOpen && !lightboxLoading && lightboxImages.length > 0 && (
-              <ImageLightbox
-                images={lightboxImages}
-                initialIndex={0}
-                onClose={closeBomLightbox}
-                showDelete={false}
-                viewTransitionName={viewTransitionName}
-              />
-            )}
+            <AnimatePresence>
+              {lightboxOpen && !lightboxLoading && lightboxImages.length > 0 && (
+                <ImageLightbox
+                  images={lightboxImages}
+                  initialIndex={0}
+                  onClose={closeBomLightbox}
+                  showDelete={false}
+                  morphLayoutId={morphLayoutId}
+                />
+              )}
+            </AnimatePresence>
           </>,
           document.body,
         )
@@ -451,12 +448,12 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
                   aria-label={`View photos of ${displayName}`}
                   disabled={lightboxLoading}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <motion.img
+                    layoutId={morphLayoutId}
+                    transition={tokens.transitions.layout}
                     src={row.inventoryItem.heroThumbnailUrl}
                     alt=""
                     className="h-full w-full object-cover"
-                    style={{ viewTransitionName }}
                   />
                 </button>
               )}
@@ -517,12 +514,12 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
                 aria-label={`View photos of ${displayName}`}
                 disabled={lightboxLoading}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <motion.img
+                  layoutId={morphLayoutId}
+                  transition={tokens.transitions.layout}
                   src={row.inventoryItem.heroThumbnailUrl}
                   alt=""
                   className="h-full w-full object-cover"
-                  style={{ viewTransitionName }}
                 />
               </button>
             )}

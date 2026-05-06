@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import { Camera, ImageIcon } from 'lucide-react'
 import { ImageUploadButton } from '@/components/image/image-upload-button'
 import { ImageLinkInput } from '@/components/image/image-link-input'
 import { ImageLightbox } from '@/components/image/image-lightbox'
 import { ImageDeleteButton } from '@/components/image/image-delete-button'
+import { useMotionTokens } from '@/lib/motion/motion-tokens'
 import { cn } from '@/lib/utils'
 
 export interface GalleryImage {
@@ -41,6 +43,7 @@ function BrokenImagePlaceholder() {
 export function ImageGallery({ images, stepId }: ImageGalleryProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set())
+  const tokens = useMotionTokens()
 
   const handleImageError = useCallback((imageId: string) => {
     setBrokenImages((prev) => new Set(prev).add(imageId))
@@ -91,8 +94,11 @@ export function ImageGallery({ images, stepId }: ImageGalleryProps) {
               {brokenImages.has(image.id) ? (
                 <BrokenImagePlaceholder />
               ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                // Story 32.3: layoutId matches lightbox per-image fallback
+                // (`lightbox-{img.id}`) so open/close morphs play.
+                <motion.img
+                  layoutId={`lightbox-${image.id}`}
+                  transition={tokens.transitions.layout}
                   src={image.thumbnailUrl || image.displayUrl}
                   alt={image.originalFilename ?? ''}
                   loading="lazy"
@@ -111,9 +117,11 @@ export function ImageGallery({ images, stepId }: ImageGalleryProps) {
         ))}
       </div>
 
-      {lightboxIndex !== null && (
-        <ImageLightbox images={images} initialIndex={lightboxIndex} onClose={closeLightbox} />
-      )}
+      <AnimatePresence>
+        {lightboxIndex !== null && (
+          <ImageLightbox images={images} initialIndex={lightboxIndex} onClose={closeLightbox} />
+        )}
+      </AnimatePresence>
     </>
   )
 }

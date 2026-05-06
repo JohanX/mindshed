@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import type { IdeaWithThumbnail } from '@/actions/idea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +13,7 @@ import { showErrorToast } from '@/lib/toast'
 import { formatReferenceUrl } from '@/lib/idea-utils'
 import { hobbyColorWithAlpha, getReadableHobbyColor } from '@/lib/hobby-color'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
+import { useMotionTokens } from '@/lib/motion/motion-tokens'
 import { ExternalLink, Loader2 } from 'lucide-react'
 
 export interface IdeaCardHobby {
@@ -35,9 +37,13 @@ export function IdeaCard({ idea, hobby, showHobbyBadge = true }: IdeaCardProps) 
     style: { color: getReadableHobbyColor(hobby.color) },
   })
 
+  const tokens = useMotionTokens()
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxImages, setLightboxImages] = useState<GalleryImage[]>([])
   const [lightboxLoading, setLightboxLoading] = useState(false)
+  // Story 32.3: matches the lightbox's `morphLayoutId` for the open
+  // morph; stable per idea entity.
+  const morphLayoutId = `idea-thumb-${idea.id}`
 
   async function openLightbox() {
     setLightboxOpen(true)
@@ -81,8 +87,14 @@ export function IdeaCard({ idea, hobby, showHobbyBadge = true }: IdeaCardProps) 
                 onClick={() => void openLightbox()}
                 aria-label={`View photo of ${idea.title}`}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={idea.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                {/* Story 32.3: layoutId matches lightbox morphLayoutId. */}
+                <motion.img
+                  layoutId={morphLayoutId}
+                  transition={tokens.transitions.layout}
+                  src={idea.thumbnailUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
               </button>
             )}
             <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -134,14 +146,17 @@ export function IdeaCard({ idea, hobby, showHobbyBadge = true }: IdeaCardProps) 
           <Loader2 className="h-8 w-8 animate-spin text-white" />
         </div>
       )}
-      {lightboxOpen && !lightboxLoading && lightboxImages.length > 0 && (
-        <ImageLightbox
-          images={lightboxImages}
-          initialIndex={0}
-          onClose={() => setLightboxOpen(false)}
-          showDelete={false}
-        />
-      )}
+      <AnimatePresence>
+        {lightboxOpen && !lightboxLoading && lightboxImages.length > 0 && (
+          <ImageLightbox
+            images={lightboxImages}
+            initialIndex={0}
+            onClose={() => setLightboxOpen(false)}
+            showDelete={false}
+            morphLayoutId={morphLayoutId}
+          />
+        )}
+      </AnimatePresence>
     </>
   )
 }
