@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { DragHandle } from '@/components/dnd/drag-handle'
 import { updateStepState, updateStep, deleteStep } from '@/actions/step'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Input } from '@/components/ui/input'
@@ -28,6 +29,7 @@ import { StepHoursCounter } from '@/components/step/step-hours-counter'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import type { StepState } from '@/lib/step-states'
+import type { DraggableAttributes, DraggableSyntheticListeners } from '@dnd-kit/core'
 
 interface StepNoteData {
   id: string
@@ -76,6 +78,17 @@ interface StepCardProps {
    * complete?" confirmation dialog in response.
    */
   onAllStepsCompleted?: () => void
+  /**
+   * Story 34.3 / FR130 — `useSortable` `attributes` + `listeners` threaded
+   * from `SortableStepCard` so the drag handle can render INSIDE the card's
+   * collapsed header at the leftmost edge (instead of as a 52 px sibling
+   * column to the LEFT of the card). When undefined the handle button is
+   * not rendered (e.g. on a completed project where reordering is locked).
+   */
+  dragHandle?: {
+    attributes: DraggableAttributes
+    listeners: DraggableSyntheticListeners
+  }
 }
 
 export function StepCard({
@@ -84,6 +97,7 @@ export function StepCard({
   isProjectCompleted,
   hobbyTracksHours,
   onAllStepsCompleted,
+  dragHandle,
 }: StepCardProps) {
   const [expanded, setExpanded] = useState(variant === 'current')
   const [isPending, startTransition] = useTransition()
@@ -143,6 +157,21 @@ export function StepCard({
     <>
       <Card data-testid={`step-card-${step.id}`} className={cn(!expanded && 'gap-0 py-0')}>
         <div className="flex items-center">
+          {dragHandle && !editing && (
+            // Story 34.3 / FR130 — INLINE drag handle (mobile only).
+            // On `sm:` and up the handle is rendered as a sibling-of-card
+            // column by `SortableStepCard` instead, restoring the
+            // pre-34.3 desktop layout. `-ml-2` pulls the visible icon
+            // flush with the card's outer edge while the 44 × 44 hit
+            // area extends invisibly into the card's left gutter. Hidden
+            // during inline name-edit so the form input claims full row
+            // width and we don't risk a stray drag while typing.
+            <DragHandle
+              attributes={dragHandle.attributes}
+              listeners={dragHandle.listeners}
+              className="-ml-2 sm:hidden"
+            />
+          )}
           {editing ? (
             <form
               className="flex-1 flex items-center gap-2 px-3 py-1.5"

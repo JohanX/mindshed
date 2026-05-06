@@ -3,7 +3,7 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { StepCard, type StepCardData } from '@/components/step/step-card'
-import { GripVertical } from 'lucide-react'
+import { DragHandle } from '@/components/dnd/drag-handle'
 
 interface SortableStepCardProps {
   step: StepCardData
@@ -30,21 +30,27 @@ export function SortableStepCard({
     opacity: isDragging ? 0.5 : 1,
   }
 
+  // Story 34.3 / FR130 — responsive handle layout:
+  //   < sm  (mobile): handle renders INSIDE StepCard at the leftmost
+  //                   edge of the collapsed-header row (saves the 52 px
+  //                   sibling rail that was eating ~14% of every row at
+  //                   320–375 px viewports).
+  //   ≥ sm  (desktop/tablet): handle renders here as a SIBLING of the
+  //                   card (the pre-34.3 layout). Desktop has plenty of
+  //                   horizontal room; the user's reported pain was
+  //                   mobile-specific so the desktop layout is preserved
+  //                   verbatim.
+  // Both renderings share the same `useSortable` listeners — only one is
+  // visible per viewport.
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-2" data-step-id={step.id}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      data-step-id={step.id}
+      className="flex items-center sm:gap-2"
+    >
       {!isProjectCompleted && (
-        <button
-          // Story 32.1: handle is visible at every viewport. `touch-none`
-          // hands the drag gesture to dnd-kit's TouchSensor without iOS
-          // Safari fighting it with bouncy scroll; `select-none` kills
-          // long-press text selection on the handle.
-          className="flex items-center justify-center min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing shrink-0 touch-none select-none"
-          aria-label="Drag to reorder"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="h-5 w-5" />
-        </button>
+        <DragHandle attributes={attributes} listeners={listeners} className="hidden sm:flex" />
       )}
       <div className="flex-1 min-w-0">
         <StepCard
@@ -53,6 +59,7 @@ export function SortableStepCard({
           isProjectCompleted={isProjectCompleted}
           hobbyTracksHours={hobbyTracksHours}
           onAllStepsCompleted={onAllStepsCompleted}
+          dragHandle={!isProjectCompleted ? { attributes, listeners } : undefined}
         />
       </div>
     </div>

@@ -19,8 +19,8 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical } from 'lucide-react'
 import { HobbyCard } from './hobby-card'
+import { DragHandle } from '@/components/dnd/drag-handle'
 import { reorderHobbies } from '@/actions/hobby'
 import { showErrorToast } from '@/lib/toast'
 import type { HobbyWithCounts } from '@/lib/schemas/hobby'
@@ -41,20 +41,21 @@ function SortableItem({ hobby }: { hobby: HobbyWithCounts }) {
   }
 
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-2">
-      <button
-        // Story 32.1: handle visible at every viewport. `touch-none` hands
-        // the drag to dnd-kit's TouchSensor without iOS Safari fighting it;
-        // `select-none` kills long-press text selection on the handle.
-        className="flex items-center justify-center min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing shrink-0 touch-none select-none"
-        aria-label="Drag to reorder"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="h-5 w-5" />
-      </button>
+    // Story 34.3 / FR130 — responsive handle layout:
+    //   < sm  (mobile): handle renders INSIDE HobbyCard absolute-
+    //                   positioned at the card's leftmost edge.
+    //                   `dragHandle` prop drives that render.
+    //   ≥ sm  (desktop/tablet): handle renders here as a SIBLING of the
+    //                   card (the pre-34.3 layout). Desktop has plenty
+    //                   of horizontal room; the user's reported pain
+    //                   was mobile-specific so the desktop layout is
+    //                   preserved verbatim.
+    // Both renderings share the same `useSortable` listeners — only one
+    // is visible per viewport.
+    <div ref={setNodeRef} style={style} className="flex items-center sm:gap-2">
+      <DragHandle attributes={attributes} listeners={listeners} className="hidden sm:flex" />
       <div className="flex-1 min-w-0">
-        <HobbyCard hobby={hobby} />
+        <HobbyCard hobby={hobby} dragHandle={{ attributes, listeners }} />
       </div>
     </div>
   )
