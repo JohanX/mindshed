@@ -1,6 +1,7 @@
 import { TopBar } from '@/components/layout/top-bar'
 import { MobileNav } from '@/components/layout/mobile-nav'
 import { MobileBrand } from '@/components/layout/mobile-brand'
+import { RouteTransition } from '@/components/layout/route-transition'
 import { getHobbies } from '@/actions/hobby'
 
 export default async function AppLayout({
@@ -16,7 +17,10 @@ export default async function AppLayout({
       <TopBar hobbies={hobbies} />
       <MobileBrand />
       <main className="relative z-10 pt-0 lg:pt-16 pb-20 lg:pb-0">
-        <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">{children}</div>
+        <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
+          {/* Story 32.5: fades + subtle slide between (app) routes. */}
+          <RouteTransition>{children}</RouteTransition>
+        </div>
       </main>
       <MobileNav hobbies={hobbies} />
     </>
