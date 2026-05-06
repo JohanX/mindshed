@@ -158,18 +158,18 @@ export function StepCard({
       <Card data-testid={`step-card-${step.id}`} className={cn(!expanded && 'gap-0 py-0')}>
         <div className="flex items-center">
           {dragHandle && !editing && (
-            // Story 34.3 / FR130 — drag handle rendered INSIDE the card's
-            // leftmost header position via the shared `DragHandle`
-            // component. `-ml-2` pulls the visible icon flush with the
-            // card's outer edge while the 44 × 44 hit area extends
-            // invisibly into the card's left gutter (transparent padding
-            // pattern from CLAUDE.md § Touch targets). Hidden during
-            // inline name-edit so the form input claims full row width
-            // and we don't risk a stray drag while the user is typing.
+            // Story 34.3 / FR130 — INLINE drag handle (mobile only).
+            // On `sm:` and up the handle is rendered as a sibling-of-card
+            // column by `SortableStepCard` instead, restoring the
+            // pre-34.3 desktop layout. `-ml-2` pulls the visible icon
+            // flush with the card's outer edge while the 44 × 44 hit
+            // area extends invisibly into the card's left gutter. Hidden
+            // during inline name-edit so the form input claims full row
+            // width and we don't risk a stray drag while typing.
             <DragHandle
               attributes={dragHandle.attributes}
               listeners={dragHandle.listeners}
-              className="-ml-2"
+              className="-ml-2 sm:hidden"
             />
           )}
           {editing ? (

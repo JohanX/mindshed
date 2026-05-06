@@ -20,6 +20,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { HobbyCard } from './hobby-card'
+import { DragHandle } from '@/components/dnd/drag-handle'
 import { reorderHobbies } from '@/actions/hobby'
 import { showErrorToast } from '@/lib/toast'
 import type { HobbyWithCounts } from '@/lib/schemas/hobby'
@@ -40,14 +41,22 @@ function SortableItem({ hobby }: { hobby: HobbyWithCounts }) {
   }
 
   return (
-    // Story 34.3 / FR130 — handle is rendered INSIDE HobbyCard at the
-    // leftmost edge (absolute-positioned, mirroring the meatball menu on
-    // the right). The sibling-of-card flex column with `gap-2` is gone.
-    // `useSortable`'s attributes + listeners thread through the card's
-    // `dragHandle` prop. `touch-none select-none` posture is preserved
-    // verbatim from Story 32.1 inside the card's handle button.
-    <div ref={setNodeRef} style={style}>
-      <HobbyCard hobby={hobby} dragHandle={{ attributes, listeners }} />
+    // Story 34.3 / FR130 — responsive handle layout:
+    //   < sm  (mobile): handle renders INSIDE HobbyCard absolute-
+    //                   positioned at the card's leftmost edge.
+    //                   `dragHandle` prop drives that render.
+    //   ≥ sm  (desktop/tablet): handle renders here as a SIBLING of the
+    //                   card (the pre-34.3 layout). Desktop has plenty
+    //                   of horizontal room; the user's reported pain
+    //                   was mobile-specific so the desktop layout is
+    //                   preserved verbatim.
+    // Both renderings share the same `useSortable` listeners — only one
+    // is visible per viewport.
+    <div ref={setNodeRef} style={style} className="flex items-center sm:gap-2">
+      <DragHandle attributes={attributes} listeners={listeners} className="hidden sm:flex" />
+      <div className="flex-1 min-w-0">
+        <HobbyCard hobby={hobby} dragHandle={{ attributes, listeners }} />
+      </div>
     </div>
   )
 }

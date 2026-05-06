@@ -62,7 +62,15 @@ export function HobbyCard({ hobby, dragHandle }: HobbyCardProps) {
           <HobbyIdentity hobby={hobby} variant="accent">
             <Card className="border-0 ring-0 rounded-none">
               <CardContent
-                className={cn('flex items-center justify-between pr-12', dragHandle && 'pl-12')}
+                className={cn(
+                  'flex items-center justify-between pr-12',
+                  // Story 34.3 / FR130 — mobile-only padding to clear
+                  // the absolute-positioned handle below. On `sm:` and
+                  // up the handle is hidden (the desktop sibling
+                  // column in `sortable-hobby-list.tsx` renders it
+                  // instead) so we don't need extra left padding.
+                  dragHandle && 'max-sm:pl-12',
+                )}
               >
                 <HobbyIdentity hobby={hobby} variant="full" />
                 <span className="text-sm text-muted-foreground">
@@ -73,14 +81,15 @@ export function HobbyCard({ hobby, dragHandle }: HobbyCardProps) {
           </HobbyIdentity>
         </Link>
         {dragHandle && (
-          // Story 34.3 / FR130 — handle is absolute-positioned at the
-          // card's leftmost edge, mirroring the meatball-menu pattern on
-          // the right (below). Absolute positioning sidesteps the
-          // nested-interactive-element problem of putting a `<button>`
-          // inside a `<Link>` (which causes Link click-vs-button-click
-          // ambiguity in browsers). CardContent picks up `pl-12` to keep
-          // the handle from overlapping the hobby identity.
-          <div className="absolute top-1/2 left-2 -translate-y-1/2">
+          // Story 34.3 / FR130 — MOBILE-ONLY absolute-positioned handle
+          // at the card's leftmost edge, mirroring the meatball-menu
+          // pattern on the right. On `sm:` and up the handle is hidden
+          // (the sibling column in `sortable-hobby-list.tsx` renders it
+          // outside the card instead, restoring the pre-34.3 desktop
+          // layout). Absolute positioning sidesteps the nested-
+          // interactive-element problem of putting a `<button>` inside
+          // a `<Link>`.
+          <div className="absolute top-1/2 left-2 -translate-y-1/2 sm:hidden">
             <DragHandle
               attributes={dragHandle.attributes}
               listeners={dragHandle.listeners}

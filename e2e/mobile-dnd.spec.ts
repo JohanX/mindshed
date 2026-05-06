@@ -80,14 +80,20 @@ test.describe('Mobile drag-and-drop (Story 32.1)', () => {
       // Capture the drag handles in order. There are 3 steps; each renders
       // a sortable card with its own drag handle button labeled "Drag to
       // reorder". `data-step-id` on the wrapping div lets us scope.
+      // Story 34.3: each sortable now produces TWO handle buttons (a
+      // desktop sibling-column handle hidden via `sm:flex` and a mobile
+      // inline handle hidden via `sm:hidden`). At this 375 px touch
+      // viewport only the mobile inline is rendered visibly; `:visible`
+      // filters out the display:none desktop handle so we target the
+      // active hit zone.
       const firstHandle = touchPage
         .locator('[data-step-id]')
         .first()
-        .locator('button[aria-label="Drag to reorder"]')
+        .locator('button[aria-label="Drag to reorder"]:visible')
       const lastHandle = touchPage
         .locator('[data-step-id]')
         .last()
-        .locator('button[aria-label="Drag to reorder"]')
+        .locator('button[aria-label="Drag to reorder"]:visible')
 
       const firstBox = await firstHandle.boundingBox()
       const lastBox = await lastHandle.boundingBox()

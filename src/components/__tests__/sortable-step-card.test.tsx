@@ -60,7 +60,15 @@ const mockStep = {
 }
 
 describe('SortableStepCard', () => {
-  it('passes a dragHandle prop to StepCard when the project is NOT completed', () => {
+  // Story 34.3 / FR130 — the responsive layout renders TWO drag handles
+  // when reordering is enabled: a sibling-column instance for `sm:` and
+  // up (visible at desktop) and an inline-in-StepCard instance for the
+  // mobile-only path (rendered by the mock when `dragHandle` is passed).
+  // JSDOM has no viewport / media-query awareness so both render
+  // simultaneously in the test tree; we assert on the count rather than
+  // a single match.
+
+  it('renders both desktop + mobile drag handles when the project is NOT completed', () => {
     render(
       <SortableStepCard
         step={mockStep}
@@ -69,10 +77,10 @@ describe('SortableStepCard', () => {
         hobbyTracksHours={false}
       />,
     )
-    expect(screen.getByLabelText('Drag to reorder')).toBeInTheDocument()
+    expect(screen.getAllByLabelText('Drag to reorder')).toHaveLength(2)
   })
 
-  it('omits the dragHandle prop when the project IS completed', () => {
+  it('omits BOTH drag handles when the project IS completed', () => {
     render(
       <SortableStepCard
         step={mockStep}
