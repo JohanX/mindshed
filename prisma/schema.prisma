@@ -214,7 +214,14 @@ model BomItem {
 
   // Partial unique index UNIQUE(project_id, inventory_item_id) WHERE inventory_item_id IS NOT NULL
   // applied via prisma/post-push.mjs.
-
+  //
+  // Supports the BOM section's ordered list on the project detail page
+  // (WHERE project_id = ? ORDER BY sort_order). The CREATE INDEX was
+  // historically issued by the catchup migration but never declared
+  // here, so every `prisma migrate dev` would auto-generate a `DROP
+  // INDEX` to "fix" the drift. Story 33.3 declares the index here so
+  // the schema and migrations stay in parity.
+  @@index([projectId, sortOrder])
   @@map("bom_item")
 }
 

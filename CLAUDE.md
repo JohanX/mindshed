@@ -67,6 +67,8 @@ Every story must follow this sequence:
 
 - **Folder naming:** every migration folder MUST use the full `YYYYMMDDHHMMSS_<name>` timestamp prefix that `prisma migrate dev` produces by default. Date-only prefixes (`YYYYMMDD_<name>`) sort incorrectly against full timestamps when the shadow DB replays migrations and trigger `P3006`. See Story 31.1 for the historical fix.
 - **Out-of-band SQL:** anything that cannot be applied via `prisma migrate deploy` (data backfills, fixes to `_prisma_migrations` itself, etc.) lives in `prisma/manual/YYYY-MM-DD_<description>.sql`. Files must be idempotent and document whether they run before or after the next `migrate deploy`. See `prisma/manual/README.md`.
+- **Schema parity contract:** `prisma/schema.prisma` is the source of truth. Every `@@index`, `@@unique`, and column declaration must match the end-state of the migration history. Drift artifacts (e.g., a `CREATE INDEX` issued by an old migration but not declared in the schema) cause every subsequent `prisma migrate dev` to auto-generate a `DROP INDEX` to "fix" the perceived divergence — which then ships a regression. If you find drift, declare the missing thing in `schema.prisma` first, then verify the next `prisma migrate dev --create-only` produces an empty migration. See Story 33.3.
+- **Partial-unique-index exception:** Prisma's `@@index` doesn't support `WHERE` clauses, so partial-unique indexes live in `prisma/post-push.mjs` (applied after `prisma db push` in dev) and inside the migration files (applied by `prisma migrate deploy` in prod). They are a documented exception to the parity contract — `prisma migrate diff` will always report them as missing from the schema; that's expected.
 
 ## Testing
 
