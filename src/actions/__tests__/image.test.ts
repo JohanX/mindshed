@@ -403,14 +403,14 @@ describe('getStepImages', () => {
     }
   })
 
-  it('orders images by createdAt desc', async () => {
+  it('orders images by createdAt asc — Story 34.2 / FR131 build-log timeline narrative', async () => {
     mockStepImageFindMany.mockResolvedValue([])
 
     await getStepImages(VALID_UUID)
 
     expect(mockStepImageFindMany).toHaveBeenCalledWith({
       where: { stepId: VALID_UUID },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'asc' },
     })
   })
 

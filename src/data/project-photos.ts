@@ -23,6 +23,10 @@ export async function fetchLatestPhotosByProject(
 
   const photos = await prisma.stepImage.findMany({
     where: { step: { projectId: { in: projectIds } } },
+    // Project-card hero intentionally surfaces the most-recent photo (DESC).
+    // Contrast with step + gallery surfaces (Story 34.2 / FR131) which read
+    // ASC for build-log timeline narrative. Do NOT flip this query — the
+    // asymmetry is by design.
     orderBy: { createdAt: 'desc' },
     select: {
       storageKey: true,

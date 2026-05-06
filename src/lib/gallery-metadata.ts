@@ -155,9 +155,20 @@ export async function buildResultMetadata(slug: string): Promise<Metadata> {
   // the page renders no images. Emitting og:image from arbitrary OTHER
   // completed steps would diverge the unfurl preview from the landing
   // page (the unfurl shows photos the recipient can't find on click).
-  // Within the chosen step, images are already sorted by createdAt DESC by
-  // the data accessor — most recent first.
-  const imageUrls = collectImageUrls(resultStep?.images ?? [])
+  //
+  // Within the chosen step, the data accessor returns images sorted ASC by
+  // createdAt (Story 34.2 / FR131 — build-log timeline narrative on the
+  // landing page). For the OG image, however, the social-preview semantic
+  // is "show the finished piece" — the most recent photo of the result
+  // step. Re-sort DESC explicitly here so the OG cover stays consistent
+  // with the dashboard project-card "latest photo" pattern, even though
+  // the landing page renders ASC.
+  const sortedByLatest = [...(resultStep?.images ?? [])].sort((a, b) => {
+    const aTime = a.createdAt ? a.createdAt.getTime() : 0
+    const bTime = b.createdAt ? b.createdAt.getTime() : 0
+    return bTime - aTime
+  })
+  const imageUrls = collectImageUrls(sortedByLatest)
 
   const title = `${project.name} — Result`
   const description = project.description ?? `Final result from ${project.name}.`

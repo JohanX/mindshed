@@ -50,7 +50,13 @@ export async function findProjectDetail(id: string) {
         orderBy: { sortOrder: 'asc' },
         include: {
           notes: { orderBy: { createdAt: 'desc' } },
-          images: { orderBy: { createdAt: 'desc' } },
+          // FR131 — step images ASC by createdAt for build-log timeline
+          // narrative on the step view (collapsed thumbnail strip +
+          // expanded photo list). Story 33.6's
+          // step_image_step_id_created_at_idx is declared DESC; Postgres
+          // reverse-scans a B-tree at zero cost, so ASC queries continue
+          // to use the index.
+          images: { orderBy: { createdAt: 'asc' } },
           blockers: { where: { isResolved: false }, orderBy: { createdAt: 'desc' } },
         },
       },

@@ -50,7 +50,11 @@ export async function findStepImagesWithDisplayUrl(
 ): Promise<StepImageWithDisplayUrl[]> {
   const images = await prisma.stepImage.findMany({
     where: { stepId },
-    orderBy: { createdAt: 'desc' },
+    // FR131 — ASC by createdAt for build-log timeline narrative.
+    // Story 33.6's step_image_step_id_created_at_idx is declared DESC;
+    // Postgres reverse-scans a B-tree at zero cost, so ASC queries
+    // continue to use the index. Do NOT "fix" the index direction.
+    orderBy: { createdAt: 'asc' },
   })
 
   const adapter = getImageStorageAdapter()

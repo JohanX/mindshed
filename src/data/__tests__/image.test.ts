@@ -93,12 +93,12 @@ describe('findStepImagesWithDisplayUrl', () => {
     expect(result[0].thumbnailUrl).toBe('https://example.com/photo.jpg')
   })
 
-  it('orders by createdAt desc', async () => {
+  it('orders by createdAt asc — Story 34.2 / FR131 build-log timeline narrative', async () => {
     mockFindMany.mockResolvedValue([])
     await findStepImagesWithDisplayUrl('s1')
     expect(mockFindMany).toHaveBeenCalledWith({
       where: { stepId: 's1' },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'asc' },
     })
   })
 })
