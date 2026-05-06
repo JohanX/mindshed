@@ -24,11 +24,17 @@ The `mindshed/` directory is a git submodule. It has two remotes: `origin` and `
 
 **All new features and bugs are tracked as GitHub issues on the `JohanX/mindshed` repository.** Before starting work on a feature or bug, ensure a GitHub issue exists for it (create one via `gh issue create` if not). Reference the issue number in the branch name, commits, and PR.
 
+**When the work corresponds to a BMad story, reference the epic and story number too.** The GitHub issue title should include the story identifier (e.g. `Story 34.1: <name>` or `<name> (Story 34.1)`), the issue body should link to the story file under `_bmad-output/implementation-artifacts/`, and the branch name must include the story id (see naming convention below). Use this form whenever the work has a corresponding BMad story; otherwise drop the story segment.
+
 ### Feature branches (required)
 
 **Every new item — feature, bug fix, chore, refactor, docs — gets its own feature branch off `main`.** No work happens directly on `main`. The branch is short-lived: it exists only until its PR is merged, then it's deleted.
 
-- Naming convention: `<type>/issue-<N>-<short-slug>` where `<type>` is one of `feat`, `fix`, `chore`, `refactor`, `docs`, `test`, `perf`. Examples: `feat/issue-42-step-time-logging`, `fix/issue-7-toast-mobile`, `chore/issue-12-claude-md-pr-policy`.
+- Naming convention:
+  - Without a BMad story: `<type>/issue-<N>-<short-slug>`
+  - With a BMad story: `<type>/issue-<N>-story-<E>-<S>-<short-slug>` (use `-` not `.` between epic and story numbers, since `.` in branch names is awkward in some tooling)
+  - `<type>` is one of `feat`, `fix`, `chore`, `refactor`, `docs`, `test`, `perf`.
+  - Examples: `feat/issue-42-story-34-1-step-time-logging`, `fix/issue-7-toast-mobile`, `chore/issue-12-claude-md-pr-policy`, `refactor/issue-25-story-33-2-non-tx-prisma-reads`.
 - One branch per issue. If you discover unrelated work mid-branch, file a new issue and a new branch — don't bundle.
 - Never reuse a branch name after merge; create a fresh one.
 - The branch must be created from an up-to-date `main` (`git fetch origin && git checkout -b <branch> origin/main`).
