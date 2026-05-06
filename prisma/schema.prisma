@@ -52,9 +52,24 @@ model Project {
   resultStep Step?     @relation("ResultStep", fields: [resultStepId], references: [id], onDelete: SetNull)
   bomItems   BomItem[]
 
-  // Supports dashboard continue-section, hobby project list, and idle detection
-  // queries that filter by hobbyId and sort/filter by lastActivityAt. Story 18.2.
+  // Supports the hobby project list base case (no boolean filter) and any
+  // Project-by-hobby query that doesn't filter on isArchived/isCompleted.
+  // Story 18.2 baseline.
   @@index([hobbyId, lastActivityAt])
+
+  // Story 33.6 — supports the hobby detail page, which filters
+  // `where: { hobbyId, isArchived: false, isCompleted: false }` and orders
+  // by lastActivityAt. Includes the booleans in the index so Postgres can
+  // skip rows during the index scan rather than filter post-fetch.
+  @@index([hobbyId, isArchived, isCompleted, lastActivityAt])
+
+  // Story 33.6 — supports the dashboard's `recentProjects` and `idleProjects`
+  // queries which filter on the booleans WITHOUT a hobbyId filter and order
+  // by lastActivityAt. The 4-col composite above doesn't help these because
+  // Postgres reads B-tree indexes left-to-right (no leading hobbyId filter →
+  // can't use it).
+  @@index([isArchived, isCompleted, lastActivityAt])
+
   @@map("project")
 }
 
@@ -187,6 +202,13 @@ model InventoryItem {
   // Unique index UNIQUE(lower(name)) WHERE is_deleted = false enforced via raw SQL in migration
   // (Prisma cannot express partial/functional unique indexes natively).
 
+  // Story 33.6 — supports the inventory list query
+  // `where: { isDeleted: false, type? }` so Postgres can index-scan
+  // active items by type rather than seq-scanning + filtering on the
+  // boolean. isDeleted leads because it's the more selective filter
+  // (active items dominate; type narrows further).
+  @@index([isDeleted, type])
+
   @@map("inventory_item")
 }
 
@@ -243,7 +265,15 @@ model StepImage {
 
   step Step @relation(fields: [stepId], references: [id], onDelete: Cascade)
 
+  // FK index baseline (Story 22.3).
   @@index([stepId])
+
+  // Story 33.6 — supports `fetchLatestPhotosByProject`'s
+  // `WHERE step.projectId IN (...) ORDER BY step_image.created_at DESC`
+  // pattern. The composite lets Postgres index-scan the join + sort
+  // together rather than sequential-scanning step_image and sorting in
+  // memory. Sort: Desc matches the query's order-by.
+  @@index([stepId, createdAt(sort: Desc)])
   @@map("step_image")
 }
 

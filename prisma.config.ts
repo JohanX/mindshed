@@ -12,5 +12,13 @@ export default defineConfig({
     // Use DIRECT_URL for Prisma CLI (migrations, db push) in production (Supabase direct connection).
     // Falls back to DATABASE_URL for local development.
     url: process.env['DIRECT_URL'] ?? process.env['DATABASE_URL'],
+    // Shadow database for `prisma migrate dev` and `prisma migrate diff
+    // --from-migrations`. Story 33.6: the parity / index-audit workflows
+    // need an empty per-developer DB Prisma can use for replay. Override
+    // via `SHADOW_DATABASE_URL` if the default name collides on your
+    // machine.
+    shadowDatabaseUrl:
+      process.env['SHADOW_DATABASE_URL'] ??
+      'postgresql://mindshed:mindshed@localhost:5432/mindshed_shadow',
   },
 })
