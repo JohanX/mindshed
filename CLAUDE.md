@@ -20,24 +20,71 @@ Do NOT use compound commands with `cd directory && `.
 Root directory (`aine-sdd-project`) is a git repository. Origin remote is on github.
 The `mindshed/` directory is a git submodule. It has two remotes: `origin` and `mindshed-vercel`.
 
+## Issue tracking & PR workflow
+
+**All new features and bugs are tracked as GitHub issues on the `JohanX/mindshed` repository.** Before starting work on a feature or bug, ensure a GitHub issue exists for it (create one via `gh issue create` if not). Reference the issue number in the branch name, commits, and PR.
+
+**When the work corresponds to a BMad story, reference the epic and story number too.** The GitHub issue title should include the story identifier (e.g. `Story 34.1: <name>` or `<name> (Story 34.1)`), the issue body should link to the story file under `_bmad-output/implementation-artifacts/`, and the branch name must include the story id (see naming convention below). Use this form whenever the work has a corresponding BMad story; otherwise drop the story segment.
+
+### Feature branches (required)
+
+**Every new item — feature, bug fix, chore, refactor, docs — gets its own feature branch off `main`.** No work happens directly on `main`. The branch is short-lived: it exists only until its PR is merged, then it's deleted.
+
+- Naming convention:
+  - Without a BMad story: `<type>/issue-<N>-<short-slug>`
+  - With a BMad story: `<type>/issue-<N>-story-<E>-<S>-<short-slug>` (use `-` not `.` between epic and story numbers, since `.` in branch names is awkward in some tooling)
+  - `<type>` is one of `feat`, `fix`, `chore`, `refactor`, `docs`, `test`, `perf`.
+  - Examples: `feat/issue-42-story-34-1-step-time-logging`, `fix/issue-7-toast-mobile`, `chore/issue-12-claude-md-pr-policy`, `refactor/issue-25-story-33-2-non-tx-prisma-reads`.
+- One branch per issue. If you discover unrelated work mid-branch, file a new issue and a new branch — don't bundle.
+- Never reuse a branch name after merge; create a fresh one.
+- The branch must be created from an up-to-date `main` (`git fetch origin && git checkout -b <branch> origin/main`).
+
+**Every feature or story ships via a pull request — never directly to `main`.**
+
+1. Branch off `main` with a descriptive name that references the issue (e.g. `feat/issue-42-step-time-logging`, `fix/issue-7-toast-mobile`).
+2. Commit work to the branch and push to `origin` only (NOT `mindshed-vercel`).
+3. Open a PR against `main` via `gh pr create`. Include a clear summary, link the issue (`Closes #N`), and a test plan.
+4. **Wait for the user's explicit approval and merge instruction before merging.** Do NOT self-merge.
+5. After the user confirms, merge the PR (squash or merge per user's preference) and delete the branch.
+6. Update the submodule pointer in the root repo and commit it on root `main`.
+
+**Push directly to `main` only when the user explicitly says so.** All other work goes through a PR. This applies to both `mindshed/` (origin + mindshed-vercel) and the root `aine-sdd-project` repo when it relates to a feature/bug rather than e.g. agent infrastructure.
+
+### Production deploy (mindshed-vercel sync)
+
+Vercel deploys from `mindshed-vercel`, which is NOT auto-synced from `mindshed`. After a PR merges into `mindshed/main` and the user is ready to ship to production, the user (or Claude when explicitly instructed) runs:
+
+```sh
+git -C mindshed checkout main
+git -C mindshed pull origin main
+git -C mindshed push mindshed-vercel main
+```
+
+This is a manual gate — merging a PR does NOT automatically deploy. Only push to `mindshed-vercel` when the user says "deploy" / "ship to prod" / equivalent.
+
 ## Story Workflow
 
 Every story must follow this sequence:
 
-1. Invoke DEV agent to implement all tasks/subtasks in order
-2. Invoke QA agent to write E2E tests and identify potential gaps (required for every story)
+1. Confirm a GitHub issue exists for the work; create one if missing.
+2. Create a feature branch off `main`.
+3. Invoke DEV agent to implement all tasks/subtasks in order
+4. Invoke QA agent to write E2E tests and identify potential gaps (required for every story)
    - QA agent uses Playwright MCP server to interactively explore the running app before writing tests
    - QA navigates the feature, verifies behavior, identifies edge cases via live browser
    - Then writes E2E test scripts grounded in observed behavior
-3. Switch back to DEV agent to execute rest of the steps
-4. Run `pnpm format`, `pnpm lint`, `pnpm typecheck`, `pnpm test run`, `pnpm build`
-5. Run E2E tests
-6. Run code review (bmad-code-review skill)
-7. Auto-apply review patches (no pause for approval)
-8. Re-run all tests after patches
-9. Commit mindshed/ changes
-10. Commit \_bmad-output/ changes separately
-11. Push to git remotes
+5. Switch back to DEV agent to execute rest of the steps
+6. Run `pnpm format`, `pnpm lint`, `pnpm typecheck`, `pnpm test run`, `pnpm build`
+7. Run E2E tests
+8. Run code review (bmad-code-review skill)
+9. Auto-apply review patches (no pause for approval)
+10. Re-run all tests after patches
+11. Commit mindshed/ changes to the feature branch
+12. Commit \_bmad-output/ changes separately
+13. Push the feature branch to `origin` only
+14. Open a PR against `main`, link the GitHub issue, wait for user approval before merging
+15. After user approves and instructs merge: merge PR, update submodule pointer on root, push root only when instructed
+16. Production deploy is a separate, explicit step — do not push to `mindshed-vercel` unless the user says so (see "Production deploy" above)
 
 ## Type-check gate strategy
 
