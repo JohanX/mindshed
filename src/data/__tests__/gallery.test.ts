@@ -65,6 +65,21 @@ describe('findJourneyGalleryBySlug', () => {
     expect(args.select.steps.select.excludeFromGallery).toBe(true)
     expect(args.select.steps.select.hoursLogged).toBe(true)
   })
+
+  it('orders step images by createdAt asc — Story 34.2 / FR131 build-log timeline', async () => {
+    mockFindUnique.mockResolvedValue({} as never)
+    await findJourneyGalleryBySlug('walnut-table')
+    const args = mockFindUnique.mock.calls[0]![0] as {
+      select: {
+        steps: {
+          select: {
+            images: { orderBy: unknown }
+          }
+        }
+      }
+    }
+    expect(args.select.steps.select.images.orderBy).toEqual({ createdAt: 'asc' })
+  })
 })
 
 describe('findResultGalleryBySlug', () => {
@@ -89,6 +104,25 @@ describe('findResultGalleryBySlug', () => {
     expect(args.select.steps.where).toBeUndefined()
     expect(args.select.steps.orderBy).toEqual({ sortOrder: 'desc' })
     expect(args.select.steps.select.state).toBe(true)
+  })
+
+  it('orders step images by createdAt asc — Story 34.2 / FR131 build-log timeline', async () => {
+    // Note: the result-route OG metadata picker re-sorts DESC explicitly in
+    // `getResultGalleryMetadata` (gallery-metadata.ts) so the social-preview
+    // cover stays at the most recent photo. The data layer's ASC order is
+    // what the page renderer reads.
+    mockFindUnique.mockResolvedValue({} as never)
+    await findResultGalleryBySlug('walnut-table')
+    const args = mockFindUnique.mock.calls[0]![0] as {
+      select: {
+        steps: {
+          select: {
+            images: { orderBy: unknown }
+          }
+        }
+      }
+    }
+    expect(args.select.steps.select.images.orderBy).toEqual({ createdAt: 'asc' })
   })
 })
 

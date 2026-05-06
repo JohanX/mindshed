@@ -320,4 +320,40 @@ describe('buildResultMetadata (Story 30.4 / FR128)', () => {
     const meta = await buildResultMetadata('vase')
     expect(meta.description).toBe('Final result from Vase.')
   })
+
+  it('OG cover is the LATEST photo within the result step, even when data layer returns ASC (Story 34.2 / FR131)', async () => {
+    // Story 34.2 flipped the result-gallery data accessor's image
+    // ordering to ASC for the page renderer's build-log timeline. The
+    // OG metadata cover must continue to surface the most-recent photo
+    // ("show the finished piece" social-preview semantic) — the helper
+    // re-sorts DESC explicitly to decouple the OG cover from the page
+    // renderer's order. This test locks in that decoupling.
+    const t1 = new Date('2026-01-01T00:00:00Z')
+    const t2 = new Date('2026-02-01T00:00:00Z')
+    const t3 = new Date('2026-03-01T00:00:00Z')
+    mockFindResult.mockResolvedValue({
+      name: 'Vase',
+      description: 'Glazed.',
+      resultGalleryEnabled: true,
+      resultStepId: 'step-result',
+      hobby: { name: 'Pottery', color: 'red', icon: null },
+      steps: [
+        {
+          id: 'step-result',
+          state: 'COMPLETED',
+          // Returned in ASC order from the data layer (oldest first).
+          images: [
+            makeUploadImage('photos/oldest', t1),
+            makeUploadImage('photos/middle', t2),
+            makeUploadImage('photos/newest', t3),
+          ],
+        },
+      ],
+    } as never)
+
+    const meta = await buildResultMetadata('vase')
+    // Expect the LATEST photo (t3 / "newest") at the head of the OG list,
+    // not the data layer's first element ("oldest").
+    expect((meta.openGraph?.images as { url: string }[])[0].url).toContain('photos/newest')
+  })
 })

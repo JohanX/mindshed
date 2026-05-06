@@ -58,10 +58,16 @@ export const findJourneyGalleryBySlug = cache(async (slug: string) => {
           // project total without a second query.
           hoursLogged: true,
           images: {
-            orderBy: { createdAt: 'desc' },
-            // `createdAt` is exposed for Story 30.4's gallery-metadata helper
-            // so the OG primary image can be the most recent across ALL steps
-            // (matches the dashboard project-card "latest photo" pattern).
+            // FR131 — ASC by createdAt for build-log timeline narrative.
+            // Story 33.6's step_image_step_id_created_at_idx is declared
+            // DESC; Postgres reverse-scans a B-tree at zero cost, so ASC
+            // queries continue to use the index.
+            // `createdAt` is exposed for Story 30.4's gallery-metadata
+            // helper. NOTE: gallery-metadata picks the OG cover image
+            // explicitly via its own ordering (max(createdAt) across all
+            // steps), so this query's ASC order does not change the OG
+            // image selection.
+            orderBy: { createdAt: 'asc' },
             select: {
               storageKey: true,
               url: true,
@@ -100,8 +106,23 @@ export const findResultGalleryBySlug = cache(async (slug: string) => {
           state: true,
           hoursLogged: true,
           images: {
-            orderBy: { createdAt: 'desc' },
-            select: { storageKey: true, url: true, type: true, originalFilename: true },
+            // FR131 — ASC by createdAt for build-log timeline narrative on
+            // the result gallery page renderer. Story 33.6's
+            // step_image_step_id_created_at_idx is declared DESC; Postgres
+            // reverse-scans a B-tree at zero cost. The result-route OG
+            // metadata picker (`getResultGalleryMetadata` in
+            // `src/lib/gallery-metadata.ts`) re-sorts DESC explicitly to
+            // keep the social-preview cover at the most recent photo —
+            // independent of the page renderer's ASC order. `createdAt` is
+            // exposed for the metadata helper's re-sort.
+            orderBy: { createdAt: 'asc' },
+            select: {
+              storageKey: true,
+              url: true,
+              type: true,
+              originalFilename: true,
+              createdAt: true,
+            },
           },
         },
       },
