@@ -1,6 +1,6 @@
 'use server'
 
-import { getIdleThresholdDays } from '@/lib/settings'
+import { getIdleThresholdDays } from '@/data/settings'
 import type { ActionResult } from '@/lib/action-result'
 import type { DashboardData } from '@/lib/schemas/dashboard'
 import { findDashboardData } from '@/data/dashboard'

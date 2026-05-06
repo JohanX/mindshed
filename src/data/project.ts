@@ -14,7 +14,7 @@
 import { prisma } from '@/lib/db'
 import type { ProjectCardData } from '@/components/project/project-card'
 import { deriveProjectStatus } from '@/lib/project-status'
-import { fetchLatestPhotosByProject, resolveProjectThumbnailUrl } from '@/lib/project-photos'
+import { fetchLatestPhotosByProject, resolveProjectThumbnailUrl } from '@/data/project-photos'
 import { computeProjectTotalHours } from '@/lib/project-hours'
 
 /** Find a single project by id (no relations). */

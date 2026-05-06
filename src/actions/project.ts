@@ -11,7 +11,7 @@ import { z } from 'zod/v4'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 import { cleanupStorageKeys } from '@/lib/storage-cleanup'
-import { getIdleThresholdDays } from '@/lib/settings'
+import { getIdleThresholdDays } from '@/data/settings'
 import { nextCloneName } from '@/lib/project-clone'
 import {
   findAllActiveProjects,

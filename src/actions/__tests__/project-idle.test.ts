@@ -15,7 +15,7 @@ vi.mock('next/cache', () => ({
 }))
 
 // Mock settings to return the default threshold
-vi.mock('@/lib/settings', () => ({
+vi.mock('@/data/settings', () => ({
   getIdleThresholdDays: vi.fn(async () => 30),
 }))
 

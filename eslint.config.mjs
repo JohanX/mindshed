@@ -39,7 +39,7 @@ const eslintConfig = defineConfig([
   // write flows wrap reads + writes in prisma.$transaction(...) which is
   // an action-layer concern, not data-layer.
   {
-    files: ['src/app/**/*.{ts,tsx}', 'src/components/**/*.{ts,tsx}'],
+    files: ['src/app/**/*.{ts,tsx}', 'src/components/**/*.{ts,tsx}', 'src/lib/**/*.{ts,tsx}'],
     ignores: ['**/__tests__/**', '**/*.test.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
@@ -50,7 +50,7 @@ const eslintConfig = defineConfig([
               name: '@/lib/db',
               importNames: ['prisma'],
               message:
-                "Direct prisma access is restricted to src/data/<entity>.ts and src/actions/. Pages and components must read via src/data/* or call server actions. See _bmad-output/planning-artifacts/architecture.md § 'Data Access Layer'.",
+                "Direct prisma access is restricted to src/data/<entity>.ts and src/actions/. Pages, components, and lib helpers must read via src/data/* or call server actions. See _bmad-output/planning-artifacts/architecture.md § 'Data Access Layer'.",
             },
           ],
         },

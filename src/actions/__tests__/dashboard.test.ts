@@ -13,7 +13,7 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-vi.mock('@/lib/settings', () => ({
+vi.mock('@/data/settings', () => ({
   getIdleThresholdDays: vi.fn(async () => 30),
 }))
 

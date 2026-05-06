@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/db'
 import type { ActionResult } from '@/lib/action-result'
 import { idleThresholdSchema, SETTING_KEY_IDLE_THRESHOLD_DAYS } from '@/lib/schemas/settings'
-import { getIdleThresholdDays } from '@/lib/settings'
+import { getIdleThresholdDays } from '@/data/settings'
 
 export async function getIdleThreshold(): Promise<ActionResult<{ days: number }>> {
   try {

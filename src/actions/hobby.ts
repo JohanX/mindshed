@@ -14,7 +14,7 @@ import {
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/lib/action-result'
 import { cleanupStorageKeys } from '@/lib/storage-cleanup'
-import { getIdleThresholdDays } from '@/lib/settings'
+import { getIdleThresholdDays } from '@/data/settings'
 import { findHobbiesWithCounts } from '@/data/hobby'
 
 export async function createHobby(input: CreateHobbyInput): Promise<ActionResult<{ id: string }>> {

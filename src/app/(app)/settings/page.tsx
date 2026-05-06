@@ -5,7 +5,7 @@ import { ThemeSelector } from '@/components/theme-selector'
 import { IdleThresholdSetting } from '@/components/settings/idle-threshold-setting'
 import { EmptyStateCard } from '@/components/empty-state-card'
 import { getHobbies } from '@/actions/hobby'
-import { getIdleThresholdDays } from '@/lib/settings'
+import { getIdleThresholdDays } from '@/data/settings'
 
 export default async function SettingsPage() {
   const [result, idleThresholdDays] = await Promise.all([getHobbies(), getIdleThresholdDays()])

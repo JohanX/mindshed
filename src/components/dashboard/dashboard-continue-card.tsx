@@ -1,5 +1,5 @@
 import { ProjectCard } from '@/components/project/project-card'
-import { resolveProjectThumbnailUrl } from '@/lib/project-photos'
+import { resolveProjectThumbnailUrl } from '@/data/project-photos'
 import type { RecentProject } from '@/lib/schemas/dashboard'
 
 export interface DashboardContinueCardProps {
