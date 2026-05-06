@@ -39,6 +39,33 @@ Every story must follow this sequence:
 10. Commit \_bmad-output/ changes separately
 11. Push to git remotes
 
+## Type-check gate strategy
+
+Two gates protect against TypeScript errors. Neither alone is sufficient; both
+together cover source AND test files at the right times.
+
+**Gate 1 — Pre-commit (Husky).** `pnpm typecheck && pnpm lint` runs in
+`mindshed/.husky/pre-commit` with `set -e`. Catches type errors in BOTH
+source and test files before commits land. The canonical gate for test
+types — Vercel can't catch those (see gate 2 below).
+
+**Gate 2 — Vercel build (`next build`).** Next.js's bundled-files type
+check runs as part of `next build` (default behavior; `next.config.ts`
+deliberately does NOT set `typescript.ignoreBuildErrors`). Catches type
+errors in any source file that ships to production. Test files are NOT
+in the bundle, so test-only type errors slip past gate 2 — but gate 1
+catches them locally.
+
+**Why this layout (not three gates).** The `build` script previously included
+`pnpm typecheck` as a third gate (re-checking source + tests on every
+Vercel build). Removed in Story 33.4 — duplicate of gate 2 for prod-bound
+code, and runs on test files for no production benefit. The combination
+of gate 1 + gate 2 is sufficient.
+
+**Escape valve.** `git commit --no-verify` bypasses gate 1. Pushing such
+a commit means test-only type errors won't be caught by Vercel either.
+That's the developer's footgun; don't `--no-verify` casually.
+
 ## Code Conventions
 
 - **Imports:** `zod/v4` (not `zod`), `z.uuid()` (not `z.string().uuid()`)
