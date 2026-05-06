@@ -102,6 +102,58 @@ export function ImageLightbox({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [goNext, goPrev])
 
+  // Story 34.4 / FR133 — prefetch the next + previous images so a
+  // Next/Prev click usually hits the browser cache. JS-side `Image()`
+  // (constructor) issues a real network request the browser caches the
+  // same way it would for a regular `<img src>`; this avoids the
+  // hidden-DOM-img failure mode an earlier (Story 29.6) attempt hit
+  // (browsers de-prioritise zero-size hidden imgs regardless of the
+  // `loading` attribute, so the cache wasn't reliably warm). The
+  // detached HTMLImageElement is GC-eligible after this effect returns;
+  // the browser keeps the cached response independently of the JS ref.
+  //
+  // Indices wrap modulo `total` to match `goNext`/`goPrev`'s
+  // wrap-around navigation — clicking Next from the last image lands
+  // on index 0, so we should prefetch index 0 from the last image too.
+  //
+  // `fetchPriority: 'low'` (NOT 'high') because this is a SPECULATIVE
+  // prefetch — high-priority would preempt the bandwidth of the
+  // currently-viewed image (which itself may not be fully loaded yet).
+  // 'low' tells the browser "warm the cache when you have idle
+  // capacity, but don't compete with foreground requests". Older
+  // browsers ignore the hint — graceful degradation.
+  useEffect(() => {
+    if (total < 2) return
+    const indicesToPrefetch = [(currentIndex + 1) % total, (currentIndex - 1 + total) % total]
+    for (const index of indicesToPrefetch) {
+      const url = images[index]?.displayUrl
+      if (!url) continue
+      const img = new window.Image()
+      ;(
+        img as HTMLImageElement & {
+          fetchPriority?: 'high' | 'low' | 'auto'
+        }
+      ).fetchPriority = 'low'
+      img.src = url
+    }
+  }, [currentIndex, images, total])
+
+  // Story 34.4 / FR133 — last-rendered bounding box of the inner img,
+  // captured in `onLoad` as state (NOT a ref — React 19's
+  // react-hooks/refs rule prohibits reading ref.current during render,
+  // which is exactly what the consumer below needs to do). Used as
+  // min-width/min-height on the image-area div while `imageLoading` is
+  // true so DialogContent (sized to its content via `sm:w-auto
+  // sm:h-auto` on desktop) doesn't collapse during the natural fetch
+  // on Next/Prev — preventing the absolute-positioned controls
+  // (prev/next/close/delete/counter) from clumping in the centre of
+  // the viewport. The extra render-per-onLoad is negligible (fires
+  // once per image, batched with `setImageLoading(false)`).
+  const [lastImageBox, setLastImageBox] = useState<{
+    width: number
+    height: number
+  } | null>(null)
+
   // Story 29.6 (revised): axis-locked sliding gesture with flick
   // detection.
   //
@@ -316,16 +368,21 @@ export function ImageLightbox({
         }
       : {}
 
-  // Story 29.6 (revised): the hidden-img prefetch was REMOVED after
-  // smoke testing — browsers de-prioritise zero-size hidden images and
-  // the prefetch wasn't reliably warming the cache. Worse, navigating
-  // showed no loading feedback during the actual fetch (browser kept
-  // the previous image visible until the new one arrived, which the
-  // user perceived as "the lightbox blocks navigation"). The fix is
-  // explicit loading state via `imageLoading` + a Loader2 overlay; the
-  // browser's natural fetch on src-change carries the navigation.
-  // If/when prefetch becomes worth revisiting, use `Image()` from JS
-  // with `fetchPriority: 'high'` rather than a hidden DOM <img>.
+  // Story 34.4 / FR133 — historical context: Story 29.6 originally
+  // shipped a hidden-DOM-`<img>` prefetch but it was REMOVED in the
+  // post-29.6 follow-up because browsers de-prioritise zero-size hidden
+  // imgs (Chromium specifically: hidden imgs get scheduled at 'low'
+  // priority regardless of the `loading` attribute), so the cache
+  // wasn't reliably warm by the time the user clicked Next. The
+  // current implementation uses the JS-side `Image()` constructor in a
+  // `useEffect` near the top of this component (search for "Story 34.4
+  // / FR133 — prefetch") which issues a real network request the
+  // browser caches normally; subsequent `<img src=...>` requests for
+  // the same URL hit the cache. Pair-fix: a `useRef` holds the
+  // previous image's rendered bounding box and is applied as
+  // min-width/min-height on the image-area div while `imageLoading` is
+  // true, so DialogContent doesn't collapse during the natural fetch
+  // on cold-cache navigations.
 
   return (
     <DialogPrimitive.Root
@@ -401,7 +458,27 @@ export function ImageLightbox({
             {/* Main image. Mobile fills the viewport with padding; desktop
                 hugs the image (the image is the size driver). */}
             <div className="flex h-full w-full flex-col items-center justify-center p-12 sm:h-auto sm:w-auto sm:p-0">
-              <div className="relative flex flex-1 items-center justify-center min-h-0 w-full sm:flex-none">
+              <div
+                className="relative flex flex-1 items-center justify-center min-h-0 w-full sm:flex-none"
+                // Story 34.4 / FR133 — while the new image is loading,
+                // hold this div at the previous image's rendered size so
+                // DialogContent doesn't collapse (sm:w-auto sm:h-auto
+                // sizes to content on desktop). Once the new image
+                // loads, `onLoad` updates the ref and `imageLoading`
+                // flips to false → the inline style drops, natural
+                // sizing takes over. First lightbox open (ref still
+                // null) preserves the existing collapse-then-expand
+                // behaviour — typical use is "open then navigate" so
+                // the expensive case is the navigation, not the open.
+                style={
+                  imageLoading && lastImageBox
+                    ? {
+                        minWidth: lastImageBox.width,
+                        minHeight: lastImageBox.height,
+                      }
+                    : undefined
+                }
+              >
                 {broken ? (
                   <div className="flex flex-col items-center gap-2 text-white/60">
                     <ImageIcon className="h-16 w-16" />
@@ -458,7 +535,23 @@ export function ImageLightbox({
                         alt={current.originalFilename ?? ''}
                         className="block max-h-full max-w-full object-contain"
                         style={inlineImageStyle}
-                        onLoad={() => setImageLoading(false)}
+                        onLoad={(event) => {
+                          // Story 34.4 / FR133 — capture the rendered
+                          // bbox (post-clip to max-h-[90vh] /
+                          // max-w-[90vw], not raw naturalWidth/Height)
+                          // so the next navigation can stabilize the
+                          // image-area div's size while the new image
+                          // loads. See the image-area div's `style`
+                          // prop above for the consumer.
+                          const rect = event.currentTarget.getBoundingClientRect()
+                          if (rect.width > 0 && rect.height > 0) {
+                            setLastImageBox({
+                              width: rect.width,
+                              height: rect.height,
+                            })
+                          }
+                          setImageLoading(false)
+                        }}
                         onError={() => {
                           setBroken(true)
                           setImageLoading(false)
