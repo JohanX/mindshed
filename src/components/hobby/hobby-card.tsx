@@ -16,13 +16,28 @@ import { ConfirmDialog } from '@/components/confirm-dialog'
 import { deleteHobby } from '@/actions/hobby'
 import { showSuccessToast, showErrorToast } from '@/lib/toast'
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { DragHandle } from '@/components/dnd/drag-handle'
+import { cn } from '@/lib/utils'
 import type { HobbyWithCounts } from '@/lib/schemas/hobby'
+import type { DraggableAttributes, DraggableSyntheticListeners } from '@dnd-kit/core'
 
 interface HobbyCardProps {
   hobby: HobbyWithCounts
+  /**
+   * Story 34.3 / FR130 — `useSortable` `attributes` + `listeners` threaded
+   * from `SortableItem` (in `sortable-hobby-list.tsx`) so the drag handle
+   * can render INSIDE the card at the leftmost edge (instead of as a 52 px
+   * sibling column to the LEFT of the card). When undefined the handle is
+   * not rendered — keeps the existing card layout for non-sortable hobby
+   * surfaces (e.g. dashboard preview rows).
+   */
+  dragHandle?: {
+    attributes: DraggableAttributes
+    listeners: DraggableSyntheticListeners
+  }
 }
 
-export function HobbyCard({ hobby }: HobbyCardProps) {
+export function HobbyCard({ hobby, dragHandle }: HobbyCardProps) {
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [isDeleting, startDeleteTransition] = useTransition()
@@ -46,7 +61,9 @@ export function HobbyCard({ hobby }: HobbyCardProps) {
         <Link href={`/hobbies/${hobby.id}`} className="block">
           <HobbyIdentity hobby={hobby} variant="accent">
             <Card className="border-0 ring-0 rounded-none">
-              <CardContent className="flex items-center justify-between pr-12">
+              <CardContent
+                className={cn('flex items-center justify-between pr-12', dragHandle && 'pl-12')}
+              >
                 <HobbyIdentity hobby={hobby} variant="full" />
                 <span className="text-sm text-muted-foreground">
                   {hobby.projectCount} {hobby.projectCount === 1 ? 'project' : 'projects'}
@@ -55,6 +72,22 @@ export function HobbyCard({ hobby }: HobbyCardProps) {
             </Card>
           </HobbyIdentity>
         </Link>
+        {dragHandle && (
+          // Story 34.3 / FR130 — handle is absolute-positioned at the
+          // card's leftmost edge, mirroring the meatball-menu pattern on
+          // the right (below). Absolute positioning sidesteps the
+          // nested-interactive-element problem of putting a `<button>`
+          // inside a `<Link>` (which causes Link click-vs-button-click
+          // ambiguity in browsers). CardContent picks up `pl-12` to keep
+          // the handle from overlapping the hobby identity.
+          <div className="absolute top-1/2 left-2 -translate-y-1/2">
+            <DragHandle
+              attributes={dragHandle.attributes}
+              listeners={dragHandle.listeners}
+              onClick={(e) => e.preventDefault()}
+            />
+          </div>
+        )}
         <div className="absolute top-1/2 right-2 -translate-y-1/2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
