@@ -33,6 +33,11 @@ pnpm install
 # 2. Start local services (Postgres + MinIO)
 docker compose up -d
 # MinIO bucket is auto-created by the init service
+# Defaults: Postgres on 5432, MinIO on 9000 (API) / 9001 (console).
+# If those ports collide with services already running on your machine,
+# override before `docker compose up`:
+#   POSTGRES_HOST_PORT=5433 MINIO_HOST_PORT=9100 MINIO_CONSOLE_HOST_PORT=9101 docker compose up -d
+# Then update DATABASE_URL and R2_ENDPOINT in .env to match the new ports.
 
 # 3. Configure environment
 cp .env.example .env
@@ -48,16 +53,16 @@ App runs at http://localhost:3000
 
 ### Scripts
 
-| Script                     | Description                                                  |
-| -------------------------- | ------------------------------------------------------------ |
-| `pnpm dev`                 | Start dev server with Turbopack                              |
-| `pnpm build`               | Production build (runs `prisma migrate deploy` + typecheck)  |
-| `pnpm lint`                | Run ESLint                                                   |
-| `pnpm typecheck`           | `tsc --noEmit` over source AND test files (pre-commit gated) |
-| `pnpm test`                | Run Vitest unit tests                                        |
-| `pnpm test run --coverage` | Unit tests with coverage report                              |
-| `pnpm test:e2e`            | Run Playwright E2E tests (all browsers)                      |
-| `pnpm test:e2e:chrome`     | Run Playwright E2E tests (Chromium only)                     |
+| Script                     | Description                                                    |
+| -------------------------- | -------------------------------------------------------------- |
+| `pnpm dev`                 | Start dev server with Turbopack                                |
+| `pnpm build`               | Production build (runs `prisma migrate deploy` + `next build`) |
+| `pnpm lint`                | Run ESLint                                                     |
+| `pnpm typecheck`           | `tsc --noEmit` over source AND test files (pre-commit gated)   |
+| `pnpm test`                | Run Vitest unit tests                                          |
+| `pnpm test run --coverage` | Unit tests with coverage report                                |
+| `pnpm test:e2e`            | Run Playwright E2E tests (all browsers)                        |
+| `pnpm test:e2e:chrome`     | Run Playwright E2E tests (Chromium only)                       |
 
 ### Testing
 

@@ -2,7 +2,10 @@ services:
   postgres:
     image: postgres:16
     ports:
-      - '127.0.0.1:5432:5432'
+      # Story 33.5: host port is overridable via env to avoid collisions
+      # with another Postgres instance on the contributor's machine. The
+      # container port stays fixed at 5432.
+      - '127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432'
     environment:
       POSTGRES_USER: mindshed
       POSTGRES_PASSWORD: mindshed
@@ -14,8 +17,9 @@ services:
   minio:
     image: minio/minio:latest
     ports:
-      - '127.0.0.1:9000:9000'
-      - '127.0.0.1:9001:9001'
+      # Story 33.5: host ports overridable via env (API + console).
+      - '127.0.0.1:${MINIO_HOST_PORT:-9000}:9000'
+      - '127.0.0.1:${MINIO_CONSOLE_HOST_PORT:-9001}:9001'
     environment:
       MINIO_ROOT_USER: mindshed
       MINIO_ROOT_PASSWORD: mindshed123
