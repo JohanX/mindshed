@@ -50,34 +50,6 @@ The `mindshed/` directory is a git submodule. It has two remotes: `origin` and `
 
 **Push directly to `main` only when the user explicitly says so.** All other work goes through a PR. This applies to both `mindshed/` (origin + mindshed-vercel) and the root `aine-sdd-project` repo when it relates to a feature/bug rather than e.g. agent infrastructure.
 
-### GitHub identity for PRs and comments (required)
-
-**PRs and PR/issue comments authored by Claude must be created under a dedicated `claude` GitHub account, NOT the repo owner's account (`JohanX`).** GitHub does not allow a user to approve their own PRs, so PRs opened by `JohanX` cannot be approved by `JohanX`. Using a separate `claude` identity also keeps review threads readable — comments don't look like the owner talking to themselves.
-
-- **PRs (`gh pr create`):** open as `claude`.
-- **PR review comments and issue comments (`gh api .../comments`, `gh pr comment`, `gh issue comment`):** post as `claude`.
-- **Commits:** keep the author identity as configured in `git config` (typically `JohanX` or the user's real name/email). Commits do NOT need to be authored by `claude`. The `Co-Authored-By: Claude` trailer convention stays.
-- **Approving / merging PRs:** `JohanX` (the user). Claude does not self-approve.
-
-**Practical setup (one-time).** A separate `claude` GitHub account must be authenticated alongside `JohanX`:
-
-```sh
-# Add the claude account to gh CLI
-gh auth login   # follow prompts; pick the claude account
-
-# Verify both accounts are present
-gh auth status
-
-# Switch active account when Claude needs to create a PR / comment
-gh auth switch --user claude
-# ... run gh pr create / gh api / gh pr comment ...
-gh auth switch --user JohanX  # switch back when done
-```
-
-Alternative: use a per-command `GH_TOKEN` env var pointing at a `claude`-account PAT, leaving the default authenticated user unchanged. Either pattern is fine; the rule is that the resulting PR / comment is owned by `claude`, not `JohanX`.
-
-If the `claude` account is not yet provisioned, Claude must flag this BEFORE opening a PR rather than silently falling back to `JohanX`.
-
 ### Production deploy (mindshed-vercel sync)
 
 Vercel deploys from `mindshed-vercel`, which is NOT auto-synced from `mindshed`. After a PR merges into `mindshed/main` and the user is ready to ship to production, the user (or Claude when explicitly instructed) runs:
