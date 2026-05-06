@@ -409,15 +409,18 @@ export function ImageLightbox({
                   </div>
                 ) : (
                   <>
-                    {/* Story 32.3: motion.img with `layoutId` keyed by
-                        the image's stable id + a per-caller context
-                        suffix. The matching `layoutId` on the source
-                        thumbnail (set in each caller's <motion.img>)
-                        morphs from thumbnail position to lightbox
-                        position. Layout is gated OFF during swipe
-                        gestures so the inline transform from Story
-                        29.6 doesn't fight Framer's layout system. */}
-                    <motion.img
+                    {/* Story 34.1 (FR132): motion.div wrapper drives the
+                        layoutId morph reveal (Story 32.3); the inner
+                        <img> holds Story 29.6's swipe `translateX`
+                        inline style uncontested by Framer's projection.
+                        Splitting the two transforms onto separate DOM
+                        nodes lets them compose visually (CSS transforms
+                        cascade parent → child) instead of fighting on
+                        the same `style.transform` attribute. The
+                        `layout={!isDragging && !isCommitting}` gate is
+                        kept as defence in depth; the primary fix is the
+                        nesting. */}
+                    <motion.div
                       key={current.id}
                       // For the initially-shown image, use morphLayoutId
                       // when set (single-thumbnail callers); otherwise
@@ -425,6 +428,10 @@ export function ImageLightbox({
                       // gallery callers). After navigation, switch to
                       // per-image id (which won't match anything; close
                       // post-nav skips the morph as documented).
+                      // Framer's layoutId matches across element types
+                      // (motion.img source thumbnail ↔ motion.div
+                      // target wrapper) — the morph is bbox-driven, not
+                      // element-typed.
                       layoutId={
                         currentIndex === initialIndex && morphLayoutId
                           ? morphLayoutId
@@ -432,28 +439,33 @@ export function ImageLightbox({
                       }
                       layout={!isDragging && !isCommitting}
                       transition={tokens.transitions.layout}
-                      ref={(node) => {
-                        // Cached-image race: if the browser already had
-                        // this URL in cache, `onLoad` may have fired
-                        // before React attached its listener — leaving
-                        // `imageLoading` stuck at true. Check `complete`
-                        // synchronously on attach and clear if the image
-                        // is already decoded.
-                        if (node && node.complete && node.naturalWidth > 0) {
+                      className="inline-flex max-h-full max-w-full sm:max-h-[90vh] sm:max-w-[90vw]"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        ref={(node) => {
+                          // Cached-image race: if the browser already had
+                          // this URL in cache, `onLoad` may have fired
+                          // before React attached its listener — leaving
+                          // `imageLoading` stuck at true. Check `complete`
+                          // synchronously on attach and clear if the image
+                          // is already decoded.
+                          if (node && node.complete && node.naturalWidth > 0) {
+                            setImageLoading(false)
+                          }
+                        }}
+                        src={current.displayUrl}
+                        alt={current.originalFilename ?? ''}
+                        className="block max-h-full max-w-full object-contain"
+                        style={inlineImageStyle}
+                        onLoad={() => setImageLoading(false)}
+                        onError={() => {
+                          setBroken(true)
                           setImageLoading(false)
-                        }
-                      }}
-                      src={current.displayUrl}
-                      alt={current.originalFilename ?? ''}
-                      className="max-h-full max-w-full object-contain sm:max-h-[90vh] sm:max-w-[90vw]"
-                      style={inlineImageStyle}
-                      onLoad={() => setImageLoading(false)}
-                      onError={() => {
-                        setBroken(true)
-                        setImageLoading(false)
-                      }}
-                      data-testid="lightbox-image"
-                    />
+                        }}
+                        data-testid="lightbox-image"
+                      />
+                    </motion.div>
                     {imageLoading && (
                       <div
                         className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none"
