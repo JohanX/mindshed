@@ -144,11 +144,15 @@ export function ImageLightbox({
   // which is exactly what the consumer below needs to do). Used as
   // min-width/min-height on the image-area div while `imageLoading` is
   // true so DialogContent (sized to its content via `sm:w-auto
-  // sm:h-auto` on desktop) doesn't collapse during the natural fetch
-  // on Next/Prev — preventing the absolute-positioned controls
-  // (prev/next/close/delete/counter) from clumping in the centre of
-  // the viewport. The extra render-per-onLoad is negligible (fires
-  // once per image, batched with `setImageLoading(false)`).
+  // sm:h-auto` on desktop) doesn't visibly collapse during the natural
+  // fetch on Next/Prev — keeping the image area at the previous
+  // photo's footprint avoids a jarring shrink-then-grow as the new
+  // image loads. Issue #19 made the controls' layout independent of
+  // Content's size (they're `fixed` to the viewport now), so this
+  // stabilization no longer affects control placement — but it still
+  // matters for the image area itself. The extra render-per-onLoad is
+  // negligible (fires once per image, batched with
+  // `setImageLoading(false)`).
   const [lastImageBox, setLastImageBox] = useState<{
     width: number
     height: number
@@ -414,6 +418,15 @@ export function ImageLightbox({
             // block pinch-zoom on the lightbox image — a usability
             // regression for users who want to zoom into details.
             className="anim-lightbox-content relative flex h-[100dvh] w-screen max-w-full touch-[pan-y_pinch-zoom] flex-col items-center justify-center gap-0 rounded-none border-none bg-black/95 p-0 outline-none sm:h-auto sm:max-h-[90vh] sm:w-auto sm:max-w-[90vw] sm:rounded-md sm:bg-transparent"
+            // Issue #19 — suppress Radix's auto-focus on open. Without
+            // this, the first focusable inside Content (the close
+            // button) gets a programmatic .focus() that browsers match
+            // as `:focus-visible`, so opening the lightbox by mouse
+            // showed an orange focus ring on close. Tab into the
+            // dialog still works (Radix's focus trap is still active
+            // on Tab); keyboard users see rings as intended on real
+            // keyboard nav.
+            onOpenAutoFocus={(event) => event.preventDefault()}
             // Story 29.6: swipe gesture on touch devices — left = next,
             // right = prev. Coexists with on-screen arrows + keyboard.
             onPointerDown={handlePointerDown}
@@ -427,8 +440,41 @@ export function ImageLightbox({
               </DialogPrimitive.Title>
             </VisuallyHidden.Root>
 
+            {/* Issue #19 — controls are positioned with `fixed`
+                (relative to the viewport), NOT `absolute` (which would
+                resolve relative to the shrunk DialogContent and put
+                them on top of small images). Controls remain DOM
+                children of Content so:
+                  • Radix's outside-click logic correctly treats them
+                    as inside (no `onPointerDownOutside` workaround
+                    needed),
+                  • Radix's `aria-hidden` modal management leaves them
+                    visible to screen readers (only siblings of
+                    Content inside Portal get marked aria-hidden),
+                  • the focus trap covers them naturally.
+
+                The lightbox open/close keyframes (`anim-lightbox-*`,
+                see globals.css) are defined opacity-only (no
+                `transform: scale`) precisely so this `fixed`
+                positioning resolves to the viewport throughout the
+                animation. A `transform` on Content would establish a
+                new containing block for `fixed` descendants and the
+                buttons would visibly jump to the viewport edges at
+                end-of-animation.
+
+                For the prev/next arrows the `-translate-y-1/2` lives
+                on the wrapper div, NOT on the Button itself. Tailwind
+                v4 stores translate-x and translate-y in a single CSS
+                variable; applying `-translate-y-1/2` (centering) AND
+                `active:translate-y-px` (the Button's press cue) on
+                the same element makes the press REPLACE the
+                centering, dropping the button by ~22 px on press —
+                and the cursor lands on empty space, so slow clicks
+                stop firing. Splitting transforms onto two elements
+                composes cleanly. */}
+
             {/* Top-right controls: delete + close */}
-            <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
+            <div className="fixed right-3 top-3 z-50 flex items-center gap-2">
               {showDelete && (
                 <ImageDeleteButton
                   imageId={current.id}
@@ -449,7 +495,7 @@ export function ImageLightbox({
 
             {/* Image counter */}
             <div
-              className="absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-sm text-white"
+              className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-sm text-white"
               data-testid="lightbox-counter"
             >
               {currentIndex + 1} of {total}
@@ -594,30 +640,34 @@ export function ImageLightbox({
 
             {/* Previous arrow */}
             {total > 1 && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute left-3 top-1/2 z-10 h-11 w-11 -translate-y-1/2 rounded-full bg-black/50 supports-backdrop-filter:backdrop-blur-sm text-white hover:bg-black/70"
-                onClick={goPrev}
-                aria-label="Previous image"
-                data-testid="lightbox-prev"
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </Button>
+              <div className="fixed left-3 top-1/2 z-50 -translate-y-1/2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-11 w-11 rounded-full bg-black/50 supports-backdrop-filter:backdrop-blur-sm text-white hover:bg-black/70"
+                  onClick={goPrev}
+                  aria-label="Previous image"
+                  data-testid="lightbox-prev"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </Button>
+              </div>
             )}
 
             {/* Next arrow */}
             {total > 1 && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-3 top-1/2 z-10 h-11 w-11 -translate-y-1/2 rounded-full bg-black/50 supports-backdrop-filter:backdrop-blur-sm text-white hover:bg-black/70"
-                onClick={goNext}
-                aria-label="Next image"
-                data-testid="lightbox-next"
-              >
-                <ChevronRight className="h-6 w-6" />
-              </Button>
+              <div className="fixed right-3 top-1/2 z-50 -translate-y-1/2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-11 w-11 rounded-full bg-black/50 supports-backdrop-filter:backdrop-blur-sm text-white hover:bg-black/70"
+                  onClick={goNext}
+                  aria-label="Next image"
+                  data-testid="lightbox-next"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </Button>
+              </div>
             )}
           </DialogPrimitive.Content>
         </DialogPrimitive.Overlay>

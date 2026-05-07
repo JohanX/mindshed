@@ -306,17 +306,41 @@
  *   - dialog/alert-dialog: medium (220ms) — body-of-the-app modals
  *   - dropdown/popover: fast (150ms) — should feel responsive, not slow
  *
- * All four classes use the same anim-reveal/anim-settle keyframes; only
- * the duration token differs. Apply by adding the class alongside the
- * existing data-state-driven Tailwind classes; the data-state attribute
- * selectors here drive the animation. */
+ * Dialog/popup surfaces use the shared `anim-reveal` / `anim-settle`
+ * keyframes (opacity + small scale). The lightbox uses dedicated
+ * opacity-only keyframes — see Issue #19: the lightbox needs to
+ * position controls via `position: fixed` against the viewport, and a
+ * `transform` on the lightbox content/overlay would establish a new
+ * containing block that breaks `fixed` positioning during the
+ * animation. The 5% scale change is barely perceptible at lightbox
+ * size; opacity alone gives essentially the same visual fade.
+ *
+ * Apply by adding the class alongside the existing data-state-driven
+ * Tailwind classes; the data-state attribute selectors here drive the
+ * animation. */
+@keyframes anim-lightbox-reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes anim-lightbox-settle {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
 .anim-lightbox-content[data-state='open'],
 .anim-lightbox-overlay[data-state='open'] {
-  animation: anim-reveal var(--anim-duration-slow) var(--anim-easing);
+  animation: anim-lightbox-reveal var(--anim-duration-slow) var(--anim-easing);
 }
 .anim-lightbox-content[data-state='closed'],
 .anim-lightbox-overlay[data-state='closed'] {
-  animation: anim-settle var(--anim-duration-slow) var(--anim-easing);
+  animation: anim-lightbox-settle var(--anim-duration-slow) var(--anim-easing);
 }
 
 .anim-dialog-content[data-state='open'],
