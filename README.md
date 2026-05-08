@@ -168,20 +168,21 @@ Only needed if using R2 for image storage. Configure CORS on your R2 bucket:
 ## Features
 
 - **Hobby categories** with dramatic per-hobby color theming
-- **Project tracking** with configurable step workflows
+- **Project tracking** with configurable step workflows, including project cloning
 - **Step states:** Not Started, In Progress, Completed, Blocked (bidirectional transitions)
 - **Auto-derived project status** from step states
-- **Blocker tracking** with automatic step state management
+- **Blocker tracking** with automatic step state management; per-row creation from BOM shortages
 - **Notes** on every step with edit/delete
-- **Image documentation** via Cloudinary upload or external URL
-- **Camera capture** directly from the app
-- **Ideation pipeline** — capture ideas, promote to projects
-- **Dashboard** — recent projects, active blockers, idle projects, reminders, maintenance alerts
-- **Public galleries** — share project journeys and finished results via public URLs
-- **Inventory tracking** — materials, consumables, tools with blocker linkage
+- **Image documentation** via Cloudinary upload, paste, or external URL (with iOS native camera picker)
+- **Ideation pipeline** — capture ideas, attach a single photo, promote to projects
+- **Dashboard** — recent projects, active blockers, idle projects, reminders, maintenance alerts, public galleries
+- **Public galleries** — share project journeys and finished results via public URLs (with social-sharing meta tags)
+- **Inventory tracking** — materials, consumables, tools with photos, hobby associations, soft-delete and blocker linkage
+- **Bill of Materials (BOM)** — required materials per project, autocomplete + inline-create from inventory, shortage detection, mark-consumed with undo
 - **Reminders** — due dates on steps and projects with snooze
-- **Equipment maintenance** — track maintenance schedules
-- **Responsive** — works on mobile and desktop
+- **Equipment maintenance** — track maintenance schedules with dashboard alerts
+- **Time tracking per hobby** (opt-in) — log hours per step in 0.5h increments, totals on cards/detail pages/galleries
+- **Responsive** — works on mobile and desktop, with mobile drag-and-drop and motion-tokenized animations
 - **Drag-and-drop** sorting for hobbies and steps
 
 ## Tech Stack
