@@ -122,7 +122,7 @@ describe('deleteProject', () => {
           type: 'UPLOAD',
           storageKey: { not: null },
         },
-        select: { storageKey: true },
+        select: { storageKey: true, mediaType: true },
       })
       expect(deleteObject).toHaveBeenCalledTimes(3)
     })

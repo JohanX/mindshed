@@ -44,7 +44,7 @@ let warnedAdapterUnavailable = false
  * to a list of keys.
  */
 export async function cleanupStorageKeys(
-  keys: ReadonlyArray<{ storageKey: string | null }>,
+  keys: ReadonlyArray<{ storageKey: string | null; mediaType?: 'image' | 'video' }>,
 ): Promise<void> {
   if (keys.length === 0) return
 
@@ -57,22 +57,31 @@ export async function cleanupStorageKeys(
     return
   }
 
-  const validKeys = keys
-    .map((entry) => entry.storageKey)
-    .filter((storageKey): storageKey is string => storageKey !== null && storageKey !== undefined)
+  // Story 35.1 / Epic 35: each entry's mediaType is routed to adapter.deleteObject
+  // so the Cloudinary adapter can pass resource_type:'video' when needed.
+  // Entries without mediaType call deleteObject(key) with no opts — preserves
+  // the pre-35.1 IMAGE-only contract for callers that haven't been widened
+  // (e.g., deleteIdea / idea_image, which doesn't gain mediaType in V1).
+  const validEntries = keys.filter(
+    (entry): entry is { storageKey: string; mediaType?: 'image' | 'video' } =>
+      entry.storageKey !== null && entry.storageKey !== undefined,
+  )
 
-  for (let cursor = 0; cursor < validKeys.length; cursor += STORAGE_CLEANUP_CONCURRENCY) {
-    const chunk = validKeys.slice(cursor, cursor + STORAGE_CLEANUP_CONCURRENCY)
+  for (let cursor = 0; cursor < validEntries.length; cursor += STORAGE_CLEANUP_CONCURRENCY) {
+    const chunk = validEntries.slice(cursor, cursor + STORAGE_CLEANUP_CONCURRENCY)
     await Promise.allSettled(
-      chunk.map((storageKey) =>
-        adapter.deleteObject(storageKey).catch((error: unknown) => {
+      chunk.map((entry) => {
+        const promise = entry.mediaType
+          ? adapter.deleteObject(entry.storageKey, { mediaType: entry.mediaType })
+          : adapter.deleteObject(entry.storageKey)
+        return promise.catch((error: unknown) => {
           // Per-key catch so one bad key in a chunk doesn't reject the
           // outer promise (allSettled would log the rejection; we want
           // a clean console.error path that matches the sequential
           // version's contract).
           console.error('Storage cleanup failed:', error)
-        }),
-      ),
+        })
+      }),
     )
   }
 }

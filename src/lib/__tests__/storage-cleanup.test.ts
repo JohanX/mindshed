@@ -105,4 +105,67 @@ describe('cleanupStorageKeys', () => {
 
     expect(deleteObject).not.toHaveBeenCalled()
   })
+
+  it('routes opts.mediaType to deleteObject per entry (Epic 35)', async () => {
+    // Mixed-media cascade: a step with 2 IMAGE + 1 VIDEO rows triggers
+    // 3 deleteObject calls; the VIDEO call MUST carry { mediaType: 'video' }
+    // so the Cloudinary adapter passes resource_type:'video' (load-bearing
+    // for FR122 / FR137 — without it, video bytes are orphaned).
+    const deleteObject = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(getImageStorageAdapter).mockReturnValue({
+      deleteObject,
+    } as unknown as ReturnType<typeof getImageStorageAdapter>)
+
+    await cleanupStorageKeys([
+      { storageKey: 'steps/abc/1.jpg', mediaType: 'image' },
+      { storageKey: 'steps/abc/2.jpg', mediaType: 'image' },
+      { storageKey: 'steps/abc/3.mp4', mediaType: 'video' },
+    ])
+
+    expect(deleteObject).toHaveBeenCalledTimes(3)
+    expect(deleteObject).toHaveBeenCalledWith('steps/abc/1.jpg', { mediaType: 'image' })
+    expect(deleteObject).toHaveBeenCalledWith('steps/abc/2.jpg', { mediaType: 'image' })
+    expect(deleteObject).toHaveBeenCalledWith('steps/abc/3.mp4', { mediaType: 'video' })
+  })
+
+  it('preserves the pre-35.1 call shape when mediaType is absent (back-compat)', async () => {
+    // Callers that haven't been widened (e.g., deleteIdea's idea_image
+    // collection, which doesn't gain mediaType in V1) must continue to
+    // call deleteObject(key) with NO opts arg — proves the optional
+    // widening doesn't break the existing IMAGE-only contract.
+    const deleteObject = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(getImageStorageAdapter).mockReturnValue({
+      deleteObject,
+    } as unknown as ReturnType<typeof getImageStorageAdapter>)
+
+    await cleanupStorageKeys([
+      { storageKey: 'ideas/xyz/photo.jpg' },
+      { storageKey: 'ideas/xyz/cover.jpg' },
+    ])
+
+    expect(deleteObject).toHaveBeenCalledTimes(2)
+    // No second arg — the helper omits opts when mediaType is undefined.
+    expect(deleteObject).toHaveBeenNthCalledWith(1, 'ideas/xyz/photo.jpg')
+    expect(deleteObject).toHaveBeenNthCalledWith(2, 'ideas/xyz/cover.jpg')
+  })
+
+  it('handles mixed mediaType-present and mediaType-absent entries in one call (Epic 35)', async () => {
+    // deleteHobby collapses step_image (has mediaType) and idea_image (no
+    // mediaType) into one cleanup call. Both shapes must coexist.
+    const deleteObject = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(getImageStorageAdapter).mockReturnValue({
+      deleteObject,
+    } as unknown as ReturnType<typeof getImageStorageAdapter>)
+
+    await cleanupStorageKeys([
+      { storageKey: 'steps/abc/vid.mp4', mediaType: 'video' },
+      { storageKey: 'ideas/xyz/photo.jpg' },
+      { storageKey: 'steps/abc/img.jpg', mediaType: 'image' },
+    ])
+
+    expect(deleteObject).toHaveBeenCalledTimes(3)
+    expect(deleteObject).toHaveBeenCalledWith('steps/abc/vid.mp4', { mediaType: 'video' })
+    expect(deleteObject).toHaveBeenNthCalledWith(2, 'ideas/xyz/photo.jpg')
+    expect(deleteObject).toHaveBeenCalledWith('steps/abc/img.jpg', { mediaType: 'image' })
+  })
 })

@@ -340,7 +340,10 @@ describe('deleteHobby', () => {
           type: 'UPLOAD',
           storageKey: { not: null },
         },
-        select: { storageKey: true },
+        // Story 35.1: step_image collection adds mediaType to the select
+        // so the cleanup helper can route resource_type:'video' to
+        // Cloudinary's destroy() for video rows.
+        select: { storageKey: true, mediaType: true },
       })
       expect(ideaImageFindMany).toHaveBeenCalledWith({
         where: {
@@ -348,6 +351,7 @@ describe('deleteHobby', () => {
           type: 'UPLOAD',
           storageKey: { not: null },
         },
+        // idea_image does NOT gain mediaType in V1 (FR134 step-image only)
         select: { storageKey: true },
       })
       // 1 step image + 2 idea images = 3 total deletions

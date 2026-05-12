@@ -45,8 +45,34 @@ class CloudinaryStorageAdapter implements ImageStorageAdapter {
     return `https://res.cloudinary.com/${cloudName}/image/upload/f_auto,q_auto,w_${width}/${storageKey}`
   }
 
-  async deleteObject(storageKey: string): Promise<void> {
-    await cloudinary.uploader.destroy(storageKey)
+  getVideoUrl(storageKey: string): string {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME
+    if (!cloudName) {
+      throw new Error('Missing CLOUDINARY_CLOUD_NAME environment variable.')
+    }
+    // Cloudinary's /video/upload/ pipeline is required for video URLs;
+    // /image/upload/ would 404 for video assets.
+    return `https://res.cloudinary.com/${cloudName}/video/upload/${storageKey}`
+  }
+
+  getVideoPosterUrl(storageKey: string, width: number): string {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME
+    if (!cloudName) {
+      throw new Error('Missing CLOUDINARY_CLOUD_NAME environment variable.')
+    }
+    // so_auto picks a representative frame (Cloudinary heuristic — usually
+    // a high-motion frame near the middle); f_jpg forces JPEG output
+    // regardless of source codec; w_<width> sizes the poster for tile use.
+    return `https://res.cloudinary.com/${cloudName}/video/upload/so_auto,w_${width},f_jpg/${storageKey}.jpg`
+  }
+
+  async deleteObject(storageKey: string, opts?: { mediaType?: 'image' | 'video' }): Promise<void> {
+    // LOAD-BEARING: Cloudinary's destroy() defaults to resource_type:'image'.
+    // Calling it on a video key without resource_type:'video' silently
+    // returns { result: 'not found' } and orphans the video bytes — defeats
+    // the FR122 cascade-cleanup contract for video (Story 35.1 / Epic 35).
+    const resourceType = opts?.mediaType === 'video' ? 'video' : 'image'
+    await cloudinary.uploader.destroy(storageKey, { resource_type: resourceType })
   }
 
   async generatePresignedUrl(
@@ -62,14 +88,16 @@ class CloudinaryStorageAdapter implements ImageStorageAdapter {
     file: Buffer,
     key: string,
     contentType: string,
+    opts?: { mediaType?: 'image' | 'video' },
   ): Promise<{ publicUrl: string; storageKey: string }> {
     const ext = contentType.split('/')[1] || 'jpg'
     const dataUri = `data:${contentType};base64,${file.toString('base64')}`
+    const resourceType = opts?.mediaType === 'video' ? 'video' : 'image'
 
     const result = await cloudinary.uploader.upload(dataUri, {
       public_id: key.replace(/\.\w+$/, ''),
       folder: 'mindshed',
-      resource_type: 'image',
+      resource_type: resourceType,
       format: ext,
     })
 

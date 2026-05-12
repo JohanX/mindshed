@@ -63,7 +63,23 @@ class S3StorageAdapter implements ImageStorageAdapter {
     return this.getPublicUrl(storageKey)
   }
 
-  async deleteObject(storageKey: string): Promise<void> {
+  getVideoUrl(storageKey: string): string {
+    // S3-compatible storage serves raw bytes regardless of content type —
+    // a video stored at key K is reachable at the same URL shape as an
+    // image at key K. Browsers play MP4 natively from this URL.
+    return this.getPublicUrl(storageKey)
+  }
+
+  getVideoPosterUrl(_storageKey: string, _width: number): string | null {
+    // S3 has no URL-based transformation grammar — we cannot derive a poster
+    // frame from the video bytes. Callers MUST render a generic play-icon
+    // card when this returns null (Story 35.1 / Epic 35).
+    return null
+  }
+
+  async deleteObject(storageKey: string, _opts?: { mediaType?: 'image' | 'video' }): Promise<void> {
+    // S3 DeleteObject is content-type-agnostic — the opts.mediaType is
+    // accepted for interface conformance and ignored.
     const client = getClient()
     const bucket = getBucket()
     await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: storageKey }))
@@ -90,6 +106,7 @@ class S3StorageAdapter implements ImageStorageAdapter {
     _file: Buffer,
     _key: string,
     _contentType: string,
+    _opts?: { mediaType?: 'image' | 'video' },
   ): Promise<{ publicUrl: string; storageKey: string }> {
     throw new Error(
       'S3 adapter does not support server-side upload. Use generatePresignedUrl() for client-side direct upload.',

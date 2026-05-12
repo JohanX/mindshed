@@ -223,7 +223,7 @@ export async function deleteProject(id: string): Promise<ActionResult<{ hobbyId:
   }
 
   try {
-    const { project, storageKeys } = await prisma.$transaction(async (tx) => {
+    const { project, storageKeyRows } = await prisma.$transaction(async (tx) => {
       const steps = await tx.step.findMany({
         where: { projectId: parsed.data },
         select: { id: true },
@@ -233,7 +233,9 @@ export async function deleteProject(id: string): Promise<ActionResult<{ hobbyId:
       // FR122 / Story 28.1: collect step_image storage keys for every
       // step in this project BEFORE the cascade so they're captured
       // atomically with the parent delete.
-      const storageKeys =
+      // Story 35.1 / Epic 35: select mediaType so the cleanup helper can
+      // route resource_type:'video' to Cloudinary's destroy() for video rows.
+      const storageKeyRows =
         steps.length > 0
           ? await tx.stepImage.findMany({
               where: {
@@ -241,16 +243,21 @@ export async function deleteProject(id: string): Promise<ActionResult<{ hobbyId:
                 type: 'UPLOAD',
                 storageKey: { not: null },
               },
-              select: { storageKey: true },
+              select: { storageKey: true, mediaType: true },
             })
           : []
       const project = await tx.project.delete({ where: { id: parsed.data } })
-      return { project, storageKeys }
+      return { project, storageKeyRows }
     })
 
     // Best-effort post-commit storage cleanup. Failures NEVER fail the
     // action — see FR122 best-effort guarantee.
-    await cleanupStorageKeys(storageKeys)
+    await cleanupStorageKeys(
+      storageKeyRows.map(({ storageKey, mediaType }) => ({
+        storageKey,
+        mediaType: mediaType === 'VIDEO' ? 'video' : 'image',
+      })),
+    )
 
     revalidatePath(`/hobbies/${project.hobbyId}`)
     revalidatePath('/projects')
