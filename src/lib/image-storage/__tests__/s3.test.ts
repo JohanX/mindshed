@@ -93,6 +93,15 @@ describe('S3StorageAdapter', () => {
       const adapter = createS3Adapter()
       await expect(adapter.deleteObject('steps/abc/img.jpg')).resolves.toBeUndefined()
     })
+
+    it('ignores opts.mediaType — DeleteObject is content-type-agnostic (Epic 35)', async () => {
+      // S3 doesn't differentiate by content type at delete time; the opt
+      // is accepted for interface conformance and must not change behaviour.
+      const adapter = createS3Adapter()
+      await expect(adapter.deleteObject('vid.mp4', { mediaType: 'video' })).resolves.toBeUndefined()
+      await expect(adapter.deleteObject('img.jpg', { mediaType: 'image' })).resolves.toBeUndefined()
+      await expect(adapter.deleteObject('any.jpg')).resolves.toBeUndefined()
+    })
   })
 
   describe('upload', () => {
@@ -101,6 +110,40 @@ describe('S3StorageAdapter', () => {
       await expect(adapter.upload(Buffer.from('test'), 'key', 'image/jpeg')).rejects.toThrow(
         'does not support server-side upload',
       )
+    })
+
+    it('throws regardless of opts.mediaType (Epic 35 — opt accepted for interface conformance)', async () => {
+      const adapter = createS3Adapter()
+      await expect(
+        adapter.upload(Buffer.from('test'), 'vid.mp4', 'video/mp4', { mediaType: 'video' }),
+      ).rejects.toThrow('does not support server-side upload')
+    })
+  })
+
+  describe('getVideoUrl (Epic 35)', () => {
+    it('returns the same URL shape as getPublicUrl (S3 serves raw bytes)', () => {
+      const adapter = createS3Adapter()
+      const key = 'steps/abc/vid.mp4'
+      expect(adapter.getVideoUrl(key)).toBe(adapter.getPublicUrl(key))
+    })
+
+    it('respects R2_PUBLIC_URL when set', () => {
+      process.env.R2_PUBLIC_URL = 'https://cdn.example.com'
+      const adapter = createS3Adapter()
+      expect(adapter.getVideoUrl('vid.mp4')).toBe('https://cdn.example.com/test-bucket/vid.mp4')
+    })
+  })
+
+  describe('getVideoPosterUrl (Epic 35)', () => {
+    it('returns null — S3 has no URL-based transformation grammar', () => {
+      const adapter = createS3Adapter()
+      expect(adapter.getVideoPosterUrl('vid.mp4', 800)).toBeNull()
+    })
+
+    it('returns null regardless of width', () => {
+      const adapter = createS3Adapter()
+      expect(adapter.getVideoPosterUrl('vid', 64)).toBeNull()
+      expect(adapter.getVideoPosterUrl('vid', 1200)).toBeNull()
     })
   })
 })

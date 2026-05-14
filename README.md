@@ -192,6 +192,7 @@ Only needed if using R2 for image storage. Configure CORS on your R2 bucket:
 - **Styling:** Tailwind CSS v4 + shadcn/ui v4
 - **Database:** PostgreSQL via Prisma 7 (Supabase/Neon in production, Docker locally)
 - **Image Storage:** Cloudinary (recommended) or S3-compatible (R2, MinIO locally)
+  - Video support (Epic 35): both adapters store and serve video. Only Cloudinary derives **poster frames** via the `so_auto` URL transform; the S3-compatible adapter returns `null` from `getVideoPosterUrl` and the UI renders a generic play-icon card at tile size. Lightbox playback is identical on both adapters. See [`_bmad-output/planning-artifacts/architecture.md`](../_bmad-output/planning-artifacts/architecture.md) § "Image Storage Adapter — Video Methods" for the full pattern.
 - **Testing:** Vitest + Playwright
 
 ## License

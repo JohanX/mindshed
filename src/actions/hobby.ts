@@ -119,6 +119,8 @@ export async function deleteHobby(id: string): Promise<ActionResult<null>> {
       // affected image BEFORE the delete. Two paths converge under hobby:
       //   step_image (via projects → steps under this hobby)
       //   idea_image (via the hobby's ideas)
+      // Story 35.1 / Epic 35: select mediaType on step_image (idea_image
+      // does NOT gain mediaType in V1; FR134 scope is step images only).
       const stepImageKeys =
         steps.length > 0
           ? await tx.stepImage.findMany({
@@ -127,7 +129,7 @@ export async function deleteHobby(id: string): Promise<ActionResult<null>> {
                 type: 'UPLOAD',
                 storageKey: { not: null },
               },
-              select: { storageKey: true },
+              select: { storageKey: true, mediaType: true },
             })
           : []
       const ideaImageKeys = await tx.ideaImage.findMany({
@@ -139,7 +141,16 @@ export async function deleteHobby(id: string): Promise<ActionResult<null>> {
         select: { storageKey: true },
       })
       await tx.hobby.delete({ where: { id: parsed.data } })
-      return [...stepImageKeys, ...ideaImageKeys]
+      // Normalise both shapes for cleanupStorageKeys. step_image rows carry
+      // mediaType (routed to adapter.deleteObject opts); idea_image rows
+      // don't (helper falls through to the no-opts call shape).
+      return [
+        ...stepImageKeys.map(({ storageKey, mediaType }) => ({
+          storageKey,
+          mediaType: (mediaType === 'VIDEO' ? 'video' : 'image') as 'image' | 'video',
+        })),
+        ...ideaImageKeys,
+      ]
     })
 
     // Best-effort post-commit storage cleanup. Failures NEVER fail the

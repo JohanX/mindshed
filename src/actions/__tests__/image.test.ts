@@ -450,6 +450,8 @@ describe('deleteStepImage', () => {
     mockAdapter.mockReturnValue({
       getPublicUrl: vi.fn(),
       getThumbnailUrl: vi.fn(),
+      getVideoUrl: vi.fn(),
+      getVideoPosterUrl: vi.fn().mockReturnValue(null),
       deleteObject: mockDeleteObj,
       generatePresignedUrl: vi.fn(),
       upload: vi.fn(),
@@ -474,6 +476,8 @@ describe('deleteStepImage', () => {
     mockAdapter.mockReturnValue({
       getPublicUrl: vi.fn(),
       getThumbnailUrl: vi.fn(),
+      getVideoUrl: vi.fn(),
+      getVideoPosterUrl: vi.fn().mockReturnValue(null),
       deleteObject: mockDeleteObj,
       generatePresignedUrl: vi.fn(),
       upload: vi.fn(),
@@ -497,6 +501,8 @@ describe('deleteStepImage', () => {
     mockAdapter.mockReturnValue({
       getPublicUrl: vi.fn(),
       getThumbnailUrl: vi.fn(),
+      getVideoUrl: vi.fn(),
+      getVideoPosterUrl: vi.fn().mockReturnValue(null),
       deleteObject: mockDeleteObj,
       generatePresignedUrl: vi.fn(),
       upload: vi.fn(),

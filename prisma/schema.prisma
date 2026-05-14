@@ -252,6 +252,11 @@ enum StepImageType {
   LINK
 }
 
+enum StepMediaType {
+  IMAGE
+  VIDEO
+}
+
 model StepImage {
   id               String        @id @default(uuid())
   stepId           String        @map("step_id")
@@ -260,6 +265,8 @@ model StepImage {
   contentType      String?       @map("content_type")
   sizeBytes        Int?          @map("size_bytes")
   type             StepImageType @default(UPLOAD)
+  mediaType        StepMediaType @default(IMAGE) @map("media_type")
+  durationSeconds  Int?          @map("duration_seconds")
   url              String?
   createdAt        DateTime      @default(now()) @map("created_at")
 

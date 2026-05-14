@@ -173,9 +173,14 @@ describe('deleteStep', () => {
         deleteObject,
       } as unknown as ReturnType<typeof getImageStorageAdapter>)
 
-      const stepImageFindMany = vi
-        .fn()
-        .mockResolvedValue([{ storageKey: 'steps/abc/1.jpg' }, { storageKey: 'steps/abc/2.jpg' }])
+      // Story 35.1: explicit mediaType in mock rows mirrors the
+      // production NOT NULL DEFAULT 'IMAGE' contract — guards against
+      // a future Prisma refactor that surfaces mediaType differently
+      // and lets the VIDEO sibling test below share the same shape.
+      const stepImageFindMany = vi.fn().mockResolvedValue([
+        { storageKey: 'steps/abc/1.jpg', mediaType: 'IMAGE' },
+        { storageKey: 'steps/abc/2.jpg', mediaType: 'IMAGE' },
+      ])
       mockTransaction.mockImplementation(async (fn) => {
         const tx = {
           step: {
@@ -198,11 +203,51 @@ describe('deleteStep', () => {
           type: 'UPLOAD',
           storageKey: { not: null },
         },
-        select: { storageKey: true },
+        select: { storageKey: true, mediaType: true },
       })
       expect(deleteObject).toHaveBeenCalledTimes(2)
-      expect(deleteObject).toHaveBeenCalledWith('steps/abc/1.jpg')
-      expect(deleteObject).toHaveBeenCalledWith('steps/abc/2.jpg')
+      // Story 35.1: helper passes { mediaType } to adapter. Mock rows
+      // are explicitly IMAGE, so the cleanup call carries that opt.
+      expect(deleteObject).toHaveBeenCalledWith('steps/abc/1.jpg', { mediaType: 'image' })
+      expect(deleteObject).toHaveBeenCalledWith('steps/abc/2.jpg', { mediaType: 'image' })
+    })
+
+    it('routes mediaType:"video" to adapter.deleteObject for VIDEO rows (Story 35.1 / FR137)', async () => {
+      // Locks in the action → cleanupStorageKeys → adapter.deleteObject
+      // routing for the VIDEO branch. Without this test, removing the
+      // `mediaType === 'VIDEO' ? 'video' : 'image'` mapping in
+      // step.ts would still keep the IMAGE-branch tests green —
+      // silently regressing the FR137 / Epic 28 load-bearing contract
+      // (Cloudinary destroy() needs resource_type:'video' or the
+      // bytes orphan).
+      const deleteObject = vi.fn().mockResolvedValue(undefined)
+      mockGetAdapter.mockReturnValue({
+        deleteObject,
+      } as unknown as ReturnType<typeof getImageStorageAdapter>)
+
+      const stepImageFindMany = vi.fn().mockResolvedValue([
+        { storageKey: 'steps/abc/clip.mp4', mediaType: 'VIDEO' },
+        { storageKey: 'steps/abc/photo.jpg', mediaType: 'IMAGE' },
+      ])
+      mockTransaction.mockImplementation(async (fn) => {
+        const tx = {
+          step: {
+            findUniqueOrThrow: vi
+              .fn()
+              .mockResolvedValue({ projectId: 'p1', project: { isCompleted: false } }),
+            delete: vi.fn().mockResolvedValue({ id: 's1', projectId: 'p1' }),
+          },
+          reminder: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+          stepImage: { findMany: stepImageFindMany },
+        }
+        return fn(tx as never)
+      })
+
+      const result = await deleteStep('550e8400-e29b-41d4-a716-446655440000')
+      expect(result.success).toBe(true)
+      expect(deleteObject).toHaveBeenCalledTimes(2)
+      expect(deleteObject).toHaveBeenCalledWith('steps/abc/clip.mp4', { mediaType: 'video' })
+      expect(deleteObject).toHaveBeenCalledWith('steps/abc/photo.jpg', { mediaType: 'image' })
     })
 
     it('still returns success when adapter.deleteObject throws', async () => {

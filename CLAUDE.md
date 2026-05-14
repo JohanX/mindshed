@@ -158,3 +158,4 @@ That's the developer's footgun; don't `--no-verify` casually.
 - `src/lib/r2.ts` — S3Client, `getPublicUrl()`, `deleteObject()`
 - Docker `minio-init` service auto-creates bucket with CORS
 - Use `<img>` not `next/image` for MinIO URLs (private IP block in dev)
+- **Video (Epic 35 / FR134, FR137):** `ImageStorageAdapter` exposes `getVideoUrl`, `getVideoPosterUrl` (returns `null` on S3 — UI renders generic play-icon card; Cloudinary derives via `so_auto` URL transform), and `mediaType` opts on `deleteObject` / `upload`. **Load-bearing footgun:** Cloudinary `destroy()` and `upload()` MUST receive `resource_type: 'video'` (via `{ mediaType: 'video' }`) for video assets — otherwise the SDK silently routes through the `image` pipeline and orphans the bytes. See `_bmad-output/planning-artifacts/architecture.md` § "Image Storage Adapter — Video Methods" for the full contract.
