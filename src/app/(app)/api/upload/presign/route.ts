@@ -2,12 +2,17 @@ import { cookies } from 'next/headers'
 import { isAuthEnabled } from '@/lib/auth'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 import { z } from 'zod/v4'
-import { ACCEPTED_IMAGE_TYPES } from '@/lib/constants/image-upload'
+import { ACCEPTED_STEP_MEDIA_TYPES, ACCEPTED_VIDEO_TYPES } from '@/lib/constants/image-upload'
 
+// Story 35.2 / FR134 — video MIMEs accepted on the step prefix only.
+// Idea + inventory remain IMAGE-only in V1.
 const EXT_MAP: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+  'video/webm': 'webm',
 }
 
 const presignRequestSchema = z
@@ -17,7 +22,7 @@ const presignRequestSchema = z
     inventoryItemId: z.uuid().optional(),
     ideaId: z.uuid().optional(),
     filename: z.string().min(1),
-    contentType: z.enum(ACCEPTED_IMAGE_TYPES),
+    contentType: z.enum(ACCEPTED_STEP_MEDIA_TYPES),
   })
   .refine(
     (data) =>
@@ -26,6 +31,19 @@ const presignRequestSchema = z
       (data.prefix === 'ideas' && !!data.ideaId),
     {
       message: 'stepId required for steps prefix, inventoryItemId for inventory, ideaId for ideas',
+    },
+  )
+  .refine(
+    (data) => {
+      // Video MIMEs are step-only — idea / inventory must reject them at
+      // the presign boundary (FR134 V1 scope).
+      const isVideo = (ACCEPTED_VIDEO_TYPES as readonly string[]).includes(data.contentType)
+      if (!isVideo) return true
+      return data.prefix === 'steps'
+    },
+    {
+      message: 'Video uploads are supported only on step images',
+      path: ['contentType'],
     },
   )
 

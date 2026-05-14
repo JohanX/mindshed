@@ -166,6 +166,8 @@ const validUploadInput: AddStepImageInput = {
   originalFilename: 'photo.jpg',
   contentType: 'image/jpeg',
   sizeBytes: 12345,
+  mediaType: 'IMAGE',
+  durationSeconds: null,
 }
 
 describe('addStepImage', () => {
@@ -253,6 +255,10 @@ describe('addStepImage', () => {
         contentType: 'image/jpeg',
         sizeBytes: 12345,
         type: 'UPLOAD',
+        // Story 35.2: mediaType + durationSeconds are required fields on
+        // stepImage.create (default IMAGE / null for image uploads).
+        mediaType: 'IMAGE',
+        durationSeconds: null,
       },
     })
 
@@ -288,7 +294,12 @@ describe('addStepImage', () => {
     const result = await addStepImage(validUploadInput)
     expect(result.success).toBe(false)
     expect(mockDeleteObject).toHaveBeenCalledOnce()
-    expect(mockDeleteObject).toHaveBeenCalledWith(validUploadInput.storageKey)
+    // Story 35.2: orphan cleanup routes mediaType so Cloudinary destroy()
+    // uses resource_type:'video' for VIDEO orphans. validUploadInput is
+    // IMAGE so the opt is { mediaType: 'image' }.
+    expect(mockDeleteObject).toHaveBeenCalledWith(validUploadInput.storageKey, {
+      mediaType: 'image',
+    })
   })
 
   it('swallows cleanup failure and still returns the original DB error', async () => {
@@ -309,7 +320,7 @@ describe('addStepImage', () => {
     expect(mockDeleteObject).toHaveBeenCalledOnce()
   })
 
-  it('does NOT call deleteObject on validation failure (client never PUT)', async () => {
+  it('does NOT call deleteObject on validation failure when storageKey is empty (client never PUT)', async () => {
     const mockDeleteObject = vi.fn().mockResolvedValue(undefined)
     vi.mocked(getImageStorageAdapter).mockReturnValueOnce({
       name: 's3',
@@ -323,6 +334,88 @@ describe('addStepImage', () => {
     const result = await addStepImage({ ...validUploadInput, storageKey: '' })
     expect(result.success).toBe(false)
     expect(mockDeleteObject).not.toHaveBeenCalled()
+  })
+
+  it('cleans up S3 orphan when validation fails with non-empty storageKey (Story 35.2 code-review fix)', async () => {
+    // Client successfully PUT to S3 via presigned URL, then sends a
+    // schema-invalid addStepImage payload (e.g., contentType/mediaType
+    // mismatch, durationSeconds out of range). Before this fix, the
+    // validation-fail return path skipped cleanup entirely and orphaned
+    // the just-uploaded blob.
+    //
+    // mockReset drains any stale `mockReturnValueOnce` values queued by
+    // earlier tests that didn't consume their mock (e.g. the
+    // empty-storageKey validation test above, which queues a mock the
+    // code path now skips). After reset we re-set the impl for this
+    // test only; the next test's vi.clearAllMocks() restores the
+    // module-level default.
+    const mockDeleteObject = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(getImageStorageAdapter).mockReset()
+    vi.mocked(getImageStorageAdapter).mockReturnValueOnce({
+      name: 's3',
+      getPublicUrl: vi.fn((key: string) => `https://r2.example.com/bucket/${key}`),
+      deleteObject: mockDeleteObject,
+      generatePresignedUrl: vi.fn(),
+      upload: vi.fn(),
+    } as never)
+
+    // Refine fails: VIDEO mediaType with image contentType.
+    const result = await addStepImage({
+      ...validUploadInput,
+      mediaType: 'VIDEO',
+      durationSeconds: 30,
+      // contentType still 'image/jpeg' → cross-field refine rejects
+    })
+    expect(result.success).toBe(false)
+    expect(mockDeleteObject).toHaveBeenCalledOnce()
+    expect(mockDeleteObject).toHaveBeenCalledWith(validUploadInput.storageKey, {
+      mediaType: 'video',
+    })
+  })
+
+  it('FR135 cap counts IMAGE + VIDEO rows together (single-bucket semantics)', async () => {
+    // The Story 35.2 / FR135 contract is that video uploads share the
+    // existing per-step asset cap (FR117 = 5). The cap-guard query at
+    // addStepImage line ~140 calls `tx.stepImage.count({ where: { stepId } })`
+    // WITHOUT a mediaType filter. This test locks that contract: if a
+    // future refactor narrowed the count to `mediaType: 'IMAGE'` only,
+    // a step could hold 5 images + N videos and break FR117.
+    let observedWhere: Record<string, unknown> | undefined
+    const mockCount = vi.fn((args: { where: Record<string, unknown> }) => {
+      observedWhere = args.where
+      return Promise.resolve(5)
+    })
+    mockTransaction.mockImplementation(async (fn) => {
+      const tx = {
+        step: {
+          findUnique: vi.fn().mockResolvedValue({
+            projectId: 'p1',
+            project: { id: 'p1', hobbyId: 'h1', isCompleted: false },
+          }),
+        },
+        stepImage: {
+          count: mockCount,
+          create: vi.fn(),
+        },
+        project: { update: vi.fn() },
+      }
+      return fn(tx as never)
+    })
+
+    const result = await addStepImage({
+      ...validUploadInput,
+      mediaType: 'VIDEO',
+      contentType: 'video/mp4',
+      sizeBytes: 5 * 1024 * 1024,
+      durationSeconds: 30,
+      storageKey: 'steps/abc/def01.mp4',
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toContain('asset limit')
+    expect(mockCount).toHaveBeenCalled()
+    // CRITICAL — `where` MUST NOT include mediaType (would break FR135).
+    expect(observedWhere).toEqual({ stepId: VALID_UUID })
   })
 })
 
@@ -460,6 +553,7 @@ describe('deleteStepImage', () => {
       id: VALID_UUID,
       type: 'UPLOAD',
       storageKey: 'steps/abc/def.jpg',
+      mediaType: 'IMAGE',
       step: { projectId: 'p1', project: { hobbyId: 'h1' } },
     } as never)
     mockStepImageDelete.mockResolvedValue({} as never)
@@ -467,8 +561,39 @@ describe('deleteStepImage', () => {
 
     const result = await deleteStepImage(VALID_UUID)
     expect(result.success).toBe(true)
-    expect(mockDeleteObj).toHaveBeenCalledWith('steps/abc/def.jpg')
+    // Story 35.2: route mediaType so Cloudinary destroy() uses
+    // resource_type:'video' for VIDEO rows. This mock row is IMAGE.
+    expect(mockDeleteObj).toHaveBeenCalledWith('steps/abc/def.jpg', { mediaType: 'image' })
     expect(mockStepImageDelete).toHaveBeenCalledWith({ where: { id: VALID_UUID } })
+  })
+
+  it('routes mediaType:"video" to adapter.deleteObject for VIDEO rows (Story 35.1 defer closed)', async () => {
+    // Closes the HIGH-severity defer from Story 35.1 code review.
+    // Without { mediaType: 'video' }, Cloudinary destroy() silently
+    // returns 'not found' on video keys and orphans the bytes.
+    const mockDeleteObj = vi.fn().mockResolvedValue(undefined)
+    mockAdapter.mockReturnValue({
+      getPublicUrl: vi.fn(),
+      getThumbnailUrl: vi.fn(),
+      getVideoUrl: vi.fn(),
+      getVideoPosterUrl: vi.fn().mockReturnValue(null),
+      deleteObject: mockDeleteObj,
+      generatePresignedUrl: vi.fn(),
+      upload: vi.fn(),
+    })
+    mockStepImageFindUnique.mockResolvedValue({
+      id: VALID_UUID,
+      type: 'UPLOAD',
+      storageKey: 'steps/abc/clip.mp4',
+      mediaType: 'VIDEO',
+      step: { projectId: 'p1', project: { hobbyId: 'h1' } },
+    } as never)
+    mockStepImageDelete.mockResolvedValue({} as never)
+    mockProjectUpdate.mockResolvedValue({} as never)
+
+    const result = await deleteStepImage(VALID_UUID)
+    expect(result.success).toBe(true)
+    expect(mockDeleteObj).toHaveBeenCalledWith('steps/abc/clip.mp4', { mediaType: 'video' })
   })
 
   it('deletes LINK image from DB only', async () => {

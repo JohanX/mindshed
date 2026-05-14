@@ -17,8 +17,11 @@ export const IMAGE_LIMITS = {
 
 export type ImageLimitKind = keyof typeof IMAGE_LIMITS
 
+// Story 35.2 / FR135: video shares the per-step bucket with image
+// (FR117 unchanged at 5). User-facing copy says "asset" rather than
+// "image" so a video upload that hits the cap reads naturally.
 export function stepImageLimitError(): string {
-  return `Step image limit reached (${IMAGE_LIMITS.step}).`
+  return `Step asset limit reached (${IMAGE_LIMITS.step}).`
 }
 
 export function inventoryImageLimitError(): string {
