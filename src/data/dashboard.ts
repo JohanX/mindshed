@@ -14,6 +14,7 @@ import { DASHBOARD_LIMITS } from '@/lib/constants/dashboard-limits'
 import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 import { fetchLatestPhotosByProject } from '@/data/project-photos'
+import { resolveStepImagePosterUrl } from '@/data/image'
 import { deriveProjectStatus } from '@/lib/project-status'
 import { computeProjectTotalHours } from '@/lib/project-hours'
 import { findActiveBlockers } from './blocker'
@@ -109,7 +110,16 @@ export async function findDashboardData(idleThresholdDate: Date): Promise<Dashbo
                 // DESC; Postgres reverse-scans a B-tree at zero cost, so ASC
                 // queries continue to use the index.
                 orderBy: { createdAt: 'asc' },
-                select: { storageKey: true, url: true, type: true },
+                // Story 35.4 / FR137 — widen to include mediaType so the
+                // dashboard thumbnail branch can route VIDEO rows
+                // through the same data-layer poster gate as the public
+                // gallery surfaces.
+                select: {
+                  storageKey: true,
+                  url: true,
+                  type: true,
+                  mediaType: true,
+                },
               },
             },
           },
@@ -183,6 +193,14 @@ export async function findDashboardData(idleThresholdDate: Date): Promise<Dashbo
     }
   })
 
+  // Story 35.4 / FR137 — resolve the adapter once per call so each
+  // VIDEO thumbnail can route through `resolveStepImagePosterUrl` (the
+  // shared data-layer gate). This closes the Story 35.3 Cloudinary
+  // contract divergence — the dashboard surface and the public gallery
+  // surfaces both gate on `mediaType === 'VIDEO'` before producing a
+  // poster URL, so the Cloudinary `so_auto` URL is never minted for
+  // non-VIDEO rows.
+  const adapter = getImageStorageAdapter()
   const publicGalleries: PublicGallery[] = rawGalleries.map((gallery) => ({
     id: gallery.id,
     name: gallery.name,
@@ -195,19 +213,43 @@ export async function findDashboardData(idleThresholdDate: Date): Promise<Dashbo
       .flatMap((step) => step.images)
       .slice(0, DASHBOARD_LIMITS.GALLERY_THUMBNAILS)
       .map((img) => {
-        if (img.type === 'UPLOAD' && img.storageKey) {
-          const adapter = getImageStorageAdapter()
+        const isVideo = img.mediaType === 'VIDEO'
+        // VIDEO thumbnails return `url: ''` so the rendering layer
+        // falls through to the poster (Cloudinary) or generic play-icon
+        // card (S3 null poster). IMAGE keeps the existing thumbnail URL.
+        let url = ''
+        if (img.type === 'UPLOAD' && img.storageKey && !isVideo) {
           if (adapter) {
             try {
-              return adapter.getThumbnailUrl(img.storageKey, THUMBNAIL_WIDTH.GALLERY_SECTION)
+              url = adapter.getThumbnailUrl(img.storageKey, THUMBNAIL_WIDTH.GALLERY_SECTION)
             } catch {
               /* fall through */
             }
           }
+        } else if (!isVideo) {
+          url = img.url ?? ''
         }
-        return img.url ?? ''
+        // Poster URL only ever mints for Cloudinary VIDEO uploads; S3
+        // VIDEO returns null (UI renders generic play-icon card).
+        const posterUrl = resolveStepImagePosterUrl(
+          adapter,
+          {
+            mediaType: img.mediaType,
+            storageKey: img.storageKey,
+            type: img.type as 'UPLOAD' | 'LINK',
+          },
+          THUMBNAIL_WIDTH.GALLERY_SECTION,
+        )
+        return {
+          url,
+          mediaType: img.mediaType as 'IMAGE' | 'VIDEO',
+          posterUrl,
+        }
       })
-      .filter(Boolean),
+      // Keep entries that have either a renderable image URL OR are a
+      // VIDEO row (which will render its poster / play-icon card even
+      // when `url` is empty).
+      .filter((thumb) => thumb.url !== '' || thumb.mediaType === 'VIDEO'),
   }))
 
   return { totalHobbies, recentProjects, activeBlockers, idleProjects, publicGalleries }

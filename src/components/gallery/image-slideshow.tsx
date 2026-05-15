@@ -2,10 +2,18 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Play } from 'lucide-react'
 
 interface ImageSlideshowProps {
-  images: { displayUrl: string; originalFilename: string | null }[]
+  images: {
+    displayUrl: string
+    originalFilename: string | null
+    // Story 35.4 / FR137 — optional video metadata. Undefined = implicit
+    // IMAGE (back-compat). VIDEO items render the poster + play overlay
+    // at slideshow-size; tap goes to the lightbox where `<video>` mounts.
+    mediaType?: 'IMAGE' | 'VIDEO'
+    posterUrl?: string | null
+  }[]
   onImageClick?: (index: number) => void
 }
 
@@ -59,9 +67,14 @@ export function ImageSlideshow({ images, onImageClick }: ImageSlideshowProps) {
         onClick={() => onImageClick?.(current)}
         role={onImageClick ? 'button' : undefined}
         tabIndex={onImageClick ? 0 : undefined}
+        // Story 35.4 code-review patch (Blind Hunter #1): aria-label
+        // distinguishes VIDEO from IMAGE so screen-reader users hear
+        // the right affordance — "Play" for video, "View" for image.
         aria-label={
           onImageClick
-            ? `View ${img.originalFilename ?? `image ${current + 1}`} fullscreen`
+            ? img.mediaType === 'VIDEO'
+              ? `Play ${img.originalFilename ?? `video ${current + 1}`} in fullscreen`
+              : `View ${img.originalFilename ?? `image ${current + 1}`} fullscreen`
             : undefined
         }
         onKeyDown={
@@ -75,13 +88,46 @@ export function ImageSlideshow({ images, onImageClick }: ImageSlideshowProps) {
             : undefined
         }
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={img.displayUrl}
-          alt={img.originalFilename ?? `Image ${current + 1}`}
-          className="h-full w-full object-contain"
-          data-testid="slideshow-image"
-        />
+        {/* Story 35.4 / FR137 — VIDEO at slideshow size renders poster
+            + play overlay (Cloudinary) or generic play-icon card (S3
+            null poster). NO `<video>` element at slideshow size; the
+            user taps to open the lightbox where `<video>` mounts. */}
+        {img.mediaType === 'VIDEO' ? (
+          <div className="relative h-full w-full bg-muted">
+            {img.posterUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={img.posterUrl}
+                alt={img.originalFilename ?? `Video ${current + 1}`}
+                className="h-full w-full object-contain"
+                data-testid="slideshow-image"
+              />
+            ) : (
+              <div
+                className="flex h-full w-full items-center justify-center bg-muted"
+                data-testid="slideshow-image"
+              >
+                <Play className="h-16 w-16 text-muted-foreground" />
+              </div>
+            )}
+            <div
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
+              data-testid="video-play-overlay"
+            >
+              <div className="rounded-full bg-black/60 p-4">
+                <Play className="h-10 w-10 fill-white text-white" />
+              </div>
+            </div>
+          </div>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={img.displayUrl}
+            alt={img.originalFilename ?? `Image ${current + 1}`}
+            className="h-full w-full object-contain"
+            data-testid="slideshow-image"
+          />
+        )}
 
         {total > 1 && (
           <>

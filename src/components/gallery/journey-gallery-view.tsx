@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
+import { Play } from 'lucide-react'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
 import { ImageLightbox } from '@/components/image/image-lightbox'
 import type { GalleryImage } from '@/components/image/image-gallery'
@@ -11,7 +12,17 @@ import { cn } from '@/lib/utils'
 interface JourneyStep {
   name: string
   notes: { text: string }[]
-  images: { displayUrl: string; thumbnailUrl?: string; originalFilename: string | null }[]
+  images: {
+    displayUrl: string
+    thumbnailUrl?: string
+    originalFilename: string | null
+    // Story 35.4 / FR137: optional media-type discriminator + video
+    // metadata + poster URL. Undefined = implicit IMAGE (back-compat
+    // for any future caller that doesn't surface these).
+    mediaType?: 'IMAGE' | 'VIDEO'
+    durationSeconds?: number | null
+    posterUrl?: string | null
+  }[]
 }
 
 interface JourneyGalleryViewProps {
@@ -40,6 +51,11 @@ export function JourneyGalleryView({ project, steps }: JourneyGalleryViewProps) 
       displayUrl: img.displayUrl,
       thumbnailUrl: img.thumbnailUrl,
       originalFilename: img.originalFilename,
+      // Story 35.4 / FR137: pass mediaType / durationSeconds / posterUrl
+      // through to the lightbox so the Story 35.3 VIDEO branch fires.
+      mediaType: img.mediaType,
+      durationSeconds: img.durationSeconds,
+      posterUrl: img.posterUrl,
       caption: {
         title: step.name,
         description: step.notes.map((note) => note.text).join(' ') || null,
@@ -93,33 +109,68 @@ export function JourneyGalleryView({ project, steps }: JourneyGalleryViewProps) 
 
           {step.images.length > 0 && (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {step.images.map((img, imgIdx) => (
-                <button
-                  key={imgIdx}
-                  type="button"
-                  className={cn(
-                    'relative aspect-square overflow-hidden rounded-lg',
-                    'cursor-pointer ring-ring transition-shadow',
-                    'hover:ring-2 focus-visible:outline-none focus-visible:ring-2',
-                  )}
-                  onClick={() => openLightbox(stepIdx, imgIdx)}
-                  aria-label={`View ${img.originalFilename ?? `${step.name} image ${imgIdx + 1}`}`}
-                >
-                  {/* Story 32.3: layoutId matches the lightbox's
-                      per-image fallback (`lightbox-{img.id}`) so the
-                      open/close morph plays. The synthetic id pattern
-                      `journey-{stepIdx}-{imgIdx}` is stable per page
-                      render. */}
-                  <motion.img
-                    layoutId={`lightbox-journey-${stepIdx}-${imgIdx}`}
-                    transition={tokens.transitions.layout}
-                    src={img.thumbnailUrl || img.displayUrl}
-                    alt={img.originalFilename ?? `${step.name} image ${imgIdx + 1}`}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                  />
-                </button>
-              ))}
+              {step.images.map((img, imgIdx) => {
+                const isVideo = img.mediaType === 'VIDEO'
+                return (
+                  <button
+                    key={imgIdx}
+                    type="button"
+                    className={cn(
+                      'relative aspect-square overflow-hidden rounded-lg',
+                      'cursor-pointer ring-ring transition-shadow',
+                      'hover:ring-2 focus-visible:outline-none focus-visible:ring-2',
+                    )}
+                    onClick={() => openLightbox(stepIdx, imgIdx)}
+                    aria-label={`View ${img.originalFilename ?? `${step.name} image ${imgIdx + 1}`}`}
+                  >
+                    {/* Story 35.4 / FR137: VIDEO tiles render poster
+                        (Cloudinary so_auto) + play overlay, or generic
+                        play-icon card (S3 null poster). NO `<video>` at
+                        tile size. Open/close morph is gated off for
+                        video per Story 35.3's layoutId discipline —
+                        videos open via Reveal primitive instead. */}
+                    {isVideo ? (
+                      <div className="relative h-full w-full bg-muted">
+                        {img.posterUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={img.posterUrl}
+                            alt={img.originalFilename ?? `${step.name} video ${imgIdx + 1}`}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-muted">
+                            <Play className="h-12 w-12 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div
+                          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                          data-testid="video-play-overlay"
+                        >
+                          <div className="rounded-full bg-black/60 p-3">
+                            <Play className="h-8 w-8 fill-white text-white" />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      // Story 32.3: layoutId matches the lightbox's
+                      // per-image fallback (`lightbox-{img.id}`) so the
+                      // open/close morph plays. The synthetic id pattern
+                      // `journey-{stepIdx}-{imgIdx}` is stable per page
+                      // render.
+                      <motion.img
+                        layoutId={`lightbox-journey-${stepIdx}-${imgIdx}`}
+                        transition={tokens.transitions.layout}
+                        src={img.thumbnailUrl || img.displayUrl}
+                        alt={img.originalFilename ?? `${step.name} image ${imgIdx + 1}`}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    )}
+                  </button>
+                )
+              })}
             </div>
           )}
 

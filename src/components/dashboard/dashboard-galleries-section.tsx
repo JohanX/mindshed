@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
 import { hobbyColorWithAlpha, getReadableHobbyColor } from '@/lib/hobby-color'
 import { renderHobbyIcon } from '@/lib/hobby-icons'
-import { Copy, Check, Globe } from 'lucide-react'
+import { Copy, Check, Globe, Play } from 'lucide-react'
 import type { PublicGallery } from '@/lib/schemas/dashboard'
 
 interface DashboardGalleriesSectionProps {
@@ -83,19 +83,56 @@ export function DashboardGalleriesSection({ galleries }: DashboardGalleriesSecti
                   <span className="text-sm font-medium truncate">{gallery.name}</span>
                 </div>
 
-                {/* Thumbnails */}
+                {/* Thumbnails — Story 35.4 / FR137: VIDEO thumbs render
+                    poster + play overlay (Cloudinary) or generic play-
+                    icon card (S3 null poster). No `<video>` at thumb
+                    size on the dashboard. */}
                 {thumbUrls.length > 0 && (
                   <div className="flex gap-1">
-                    {thumbUrls.map((url, i) => (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        key={i}
-                        src={url}
-                        alt=""
-                        className="h-10 w-10 rounded object-cover"
-                        loading="lazy"
-                      />
-                    ))}
+                    {thumbUrls.map((thumb, i) => {
+                      const isVideo = thumb.mediaType === 'VIDEO'
+                      if (isVideo) {
+                        return (
+                          <div
+                            key={i}
+                            className="relative h-10 w-10 overflow-hidden rounded bg-muted"
+                            data-testid="gallery-video-thumb"
+                          >
+                            {thumb.posterUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={thumb.posterUrl}
+                                alt=""
+                                className="h-full w-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center">
+                                <Play className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div
+                              className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                              data-testid="video-play-overlay"
+                            >
+                              <div className="rounded-full bg-black/60 p-1">
+                                <Play className="h-3 w-3 fill-white text-white" />
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      }
+                      return (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          key={i}
+                          src={thumb.url}
+                          alt=""
+                          className="h-10 w-10 rounded object-cover"
+                          loading="lazy"
+                        />
+                      )
+                    })}
                   </div>
                 )}
 

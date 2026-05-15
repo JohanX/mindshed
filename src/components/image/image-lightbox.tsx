@@ -4,7 +4,7 @@ import { useRef, useState, useCallback, useEffect } from 'react'
 import { Dialog as DialogPrimitive, VisuallyHidden } from 'radix-ui'
 import { motion } from 'motion/react'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight, X, ImageIcon, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, ImageIcon, FileVideo, Loader2 } from 'lucide-react'
 import { ImageDeleteButton } from '@/components/image/image-delete-button'
 import type { GalleryImage } from '@/components/image/image-gallery'
 import { useMotionTokens } from '@/lib/motion/motion-tokens'
@@ -601,10 +601,25 @@ export function ImageLightbox({
                 }
               >
                 {broken ? (
-                  <div className="flex flex-col items-center gap-2 text-white/60">
-                    <ImageIcon className="h-16 w-16" />
-                    <p className="text-sm">Image could not be loaded</p>
-                  </div>
+                  // Story 35.4 / FR137 — broken-state copy branches on
+                  // mediaType so a public-gallery share-link visitor
+                  // whose VIDEO row failed to load (origin 404, codec
+                  // unsupported, network blip) sees the right icon +
+                  // copy instead of misleading image-failure copy.
+                  current.mediaType === 'VIDEO' ? (
+                    <div
+                      className="flex flex-col items-center gap-2 text-white/60"
+                      data-testid="lightbox-broken-video"
+                    >
+                      <FileVideo className="h-16 w-16" />
+                      <p className="text-sm">Video could not be loaded</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-white/60">
+                      <ImageIcon className="h-16 w-16" />
+                      <p className="text-sm">Image could not be loaded</p>
+                    </div>
+                  )
                 ) : (
                   <>
                     {/* Story 34.1 (FR132): motion.div wrapper drives the

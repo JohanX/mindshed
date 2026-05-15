@@ -23,9 +23,20 @@ const fakeAdapter = {
   getThumbnailUrl: vi.fn(
     (key: string, width: number) => `https://cdn.example.com/w_${width}/${key}`,
   ),
+  getVideoUrl: vi.fn((key: string) => `https://cdn.example.com/video/${key}`),
+  getVideoPosterUrl: vi.fn(
+    (key: string, width: number) => `https://cdn.example.com/poster/w_${width}/${key}`,
+  ),
   deleteObject: vi.fn(),
   generatePresignedUrl: vi.fn(),
   upload: vi.fn(),
+}
+
+// Story 35.4 — S3-mode adapter mock: getVideoPosterUrl returns null
+// (matches the production S3 adapter contract).
+const s3StyleAdapter = {
+  ...fakeAdapter,
+  getVideoPosterUrl: vi.fn((_key: string, _width: number) => null),
 }
 
 function makeUploadImage(key: string, createdAt?: Date) {
@@ -35,6 +46,7 @@ function makeUploadImage(key: string, createdAt?: Date) {
     type: 'UPLOAD' as const,
     originalFilename: `${key}.jpg`,
     createdAt,
+    mediaType: 'IMAGE' as const,
   }
 }
 
@@ -45,6 +57,21 @@ function makeLinkImage(url: string, createdAt?: Date) {
     type: 'LINK' as const,
     originalFilename: null,
     createdAt,
+    mediaType: 'IMAGE' as const,
+  }
+}
+
+// Story 35.4 / FR137 — VIDEO upload row factory. Mirrors makeUploadImage
+// but stamps `mediaType: 'VIDEO'` so the metadata builder routes it
+// through `resolveStepImagePosterUrl`.
+function makeVideoUploadImage(key: string, createdAt?: Date) {
+  return {
+    storageKey: key,
+    url: null,
+    type: 'UPLOAD' as const,
+    originalFilename: `${key}.mp4`,
+    createdAt,
+    mediaType: 'VIDEO' as const,
   }
 }
 
@@ -222,7 +249,9 @@ describe('buildJourneyMetadata (Story 30.4 / FR128)', () => {
     } as never)
 
     const meta = await buildJourneyMetadata('x')
-    expect(meta.openGraph?.images).toEqual([])
+    // Story 35.4 patch: empty image list omits `images` from
+    // openGraph entirely (avoids Slack/LinkedIn missing-image card).
+    expect(meta.openGraph?.images).toBeUndefined()
     expect(meta.twitter?.images).toBeUndefined()
   })
 })
@@ -303,7 +332,9 @@ describe('buildResultMetadata (Story 30.4 / FR128)', () => {
     } as never)
 
     const meta = await buildResultMetadata('vase')
-    expect(meta.openGraph?.images).toEqual([])
+    // Story 35.4 patch: empty image list omits `images` from
+    // openGraph entirely (avoids Slack/LinkedIn missing-image card).
+    expect(meta.openGraph?.images).toBeUndefined()
     expect(meta.twitter?.images).toBeUndefined()
   })
 
@@ -355,5 +386,77 @@ describe('buildResultMetadata (Story 30.4 / FR128)', () => {
     // Expect the LATEST photo (t3 / "newest") at the head of the OG list,
     // not the data layer's first element ("oldest").
     expect((meta.openGraph?.images as { url: string }[])[0].url).toContain('photos/newest')
+  })
+})
+
+// Story 35.4 / FR137 — VIDEO og:image fallback (Cloudinary so_auto +
+// S3 null fall-through + entire-deck-VIDEO empty-image elision).
+describe('buildJourneyMetadata — VIDEO fallback (Story 35.4 / FR137)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('Cloudinary: lead VIDEO row mints a poster URL at SOCIAL_CARD width', async () => {
+    mockGetAdapter.mockReturnValue(fakeAdapter as never)
+    const date = new Date('2026-04-01T10:00:00Z')
+    mockFindJourney.mockResolvedValue({
+      name: 'Walkaround',
+      description: null,
+      journeyGalleryEnabled: true,
+      hobby: { name: 'Woodworking', color: 'red', icon: null },
+      steps: [{ name: 'Final', images: [makeVideoUploadImage('clips/walk-1', date)], notes: [] }],
+    } as never)
+
+    const meta = await buildJourneyMetadata('walk')
+    const ogImages = meta.openGraph?.images as { url: string }[]
+    expect(ogImages).toHaveLength(1)
+    expect(ogImages[0].url).toContain('poster/')
+    expect(ogImages[0].url).toContain(String(THUMBNAIL_WIDTH.SOCIAL_CARD))
+  })
+
+  it('S3 (null poster): falls through to next eligible IMAGE step', async () => {
+    mockGetAdapter.mockReturnValue(s3StyleAdapter as never)
+    const olderDate = new Date('2026-04-01T10:00:00Z')
+    const newerDate = new Date('2026-04-02T10:00:00Z')
+    mockFindJourney.mockResolvedValue({
+      name: 'Mixed Deck',
+      description: null,
+      journeyGalleryEnabled: true,
+      hobby: { name: 'Woodworking', color: 'red', icon: null },
+      steps: [
+        { name: 'Photo', images: [makeUploadImage('photos/older', olderDate)], notes: [] },
+        // Newer VIDEO row gets skipped (null poster on S3), fall-through
+        // promotes the older IMAGE to the og:image slot.
+        { name: 'Video', images: [makeVideoUploadImage('clips/newer', newerDate)], notes: [] },
+      ],
+    } as never)
+
+    const meta = await buildJourneyMetadata('mixed')
+    const ogImages = meta.openGraph?.images as { url: string }[]
+    expect(ogImages).toHaveLength(1)
+    expect(ogImages[0].url).toContain('photos/older')
+    expect(ogImages[0].url).not.toContain('clips/')
+  })
+
+  it('S3 entire-deck-VIDEO: omits openGraph.images entirely (no empty-array unfurl)', async () => {
+    mockGetAdapter.mockReturnValue(s3StyleAdapter as never)
+    mockFindJourney.mockResolvedValue({
+      name: 'Video Only',
+      description: null,
+      journeyGalleryEnabled: true,
+      hobby: { name: 'Woodworking', color: 'red', icon: null },
+      steps: [
+        { name: 'A', images: [makeVideoUploadImage('clips/a')], notes: [] },
+        { name: 'B', images: [makeVideoUploadImage('clips/b')], notes: [] },
+      ],
+    } as never)
+
+    const meta = await buildJourneyMetadata('vid-only')
+    // openGraph block still rendered with title/description; images
+    // omitted so Slack/LinkedIn fall back to plain unfurl rather than
+    // a missing-image card.
+    expect(meta.openGraph).toBeDefined()
+    expect(meta.openGraph?.images).toBeUndefined()
+    expect(meta.twitter?.images).toBeUndefined()
   })
 })

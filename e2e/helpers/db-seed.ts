@@ -155,6 +155,69 @@ export async function seedProject(opts: {
   }
 }
 
+export interface SeededStepImage {
+  id: string
+  stepId: string
+  type: 'UPLOAD' | 'LINK'
+  mediaType: 'IMAGE' | 'VIDEO'
+  storageKey: string | null
+  url: string | null
+}
+
+/**
+ * Story 35.4 / FR137 — seed a step_image row directly via SQL.
+ *
+ * Required for the MinIO cascade + round-trip specs: they need to mint
+ * an UPLOAD-type VIDEO row pointing at a specific storage key (which
+ * the spec PUT into MinIO via `putMinioObject`), then exercise the
+ * deletion server-action and assert MinIO HEAD returns 404.
+ *
+ * Defaults match the schema's NOT NULL fields. For LINK-type rows pass
+ * `url` and omit `storageKey`; for UPLOAD-type rows pass `storageKey`
+ * (typically the same key written to MinIO).
+ */
+export async function seedStepImage(opts: {
+  stepId: string
+  type?: 'UPLOAD' | 'LINK'
+  mediaType?: 'IMAGE' | 'VIDEO'
+  storageKey?: string | null
+  url?: string | null
+  originalFilename?: string | null
+  contentType?: string | null
+  sizeBytes?: number | null
+  durationSeconds?: number | null
+}): Promise<SeededStepImage> {
+  const client = await getClient()
+  const id = randomUUID()
+  const type = opts.type ?? 'UPLOAD'
+  const mediaType = opts.mediaType ?? 'IMAGE'
+  const storageKey = opts.storageKey ?? null
+  const url = opts.url ?? null
+  const originalFilename = opts.originalFilename ?? null
+  const contentType = opts.contentType ?? (mediaType === 'VIDEO' ? 'video/mp4' : 'image/jpeg')
+  const sizeBytes = opts.sizeBytes ?? 100
+  const durationSeconds = opts.durationSeconds ?? (mediaType === 'VIDEO' ? 10 : null)
+
+  await client.query(
+    `INSERT INTO step_image (id, step_id, type, storage_key, url, original_filename, content_type, size_bytes, media_type, duration_seconds, created_at)
+     VALUES ($1, $2, $3::"StepImageType", $4, $5, $6, $7, $8, $9::"StepMediaType", $10, now())`,
+    [
+      id,
+      opts.stepId,
+      type,
+      storageKey,
+      url,
+      originalFilename,
+      contentType,
+      sizeBytes,
+      mediaType,
+      durationSeconds,
+    ],
+  )
+
+  return { id, stepId: opts.stepId, type, mediaType, storageKey, url }
+}
+
 export interface SeededInventoryItem {
   id: string
   name: string
