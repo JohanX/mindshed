@@ -47,6 +47,36 @@ function getThumbnailImageUrl(storageKey: string, width: number): string {
   }
 }
 
+/**
+ * Story 35.3 / FR136 — video poster URL for VIDEO step images.
+ * Cloudinary derives via `so_auto` URL transform; S3 returns null.
+ * Returns null for IMAGE rows (caller-side discipline enforces the
+ * `mediaType === 'VIDEO'` gate per adapter.ts JSDoc).
+ */
+function getVideoPosterImageUrl(storageKey: string, width: number): string | null {
+  const adapter = getImageStorageAdapter()
+  if (!adapter) return null
+  try {
+    return adapter.getVideoPosterUrl(storageKey, width)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Story 35.3 / FR136 — video URL for VIDEO step images. Cloudinary
+ * uses `/video/upload/<key>`; S3 mirrors getPublicUrl.
+ */
+function getVideoImageUrl(storageKey: string): string {
+  const adapter = getImageStorageAdapter()
+  if (!adapter) return ''
+  try {
+    return adapter.getVideoUrl(storageKey)
+  } catch {
+    return ''
+  }
+}
+
 export default async function ProjectDetailPage({ params, searchParams }: ProjectDetailPageProps) {
   const { hobbyId, projectId } = await params
   const { step: focusedStepParam } = await searchParams
@@ -96,17 +126,42 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
     notes: step.notes.map((note) => ({ id: note.id, text: note.text, createdAt: note.createdAt })),
     images: step.images.map((img): StepCardImage => {
       const isUpload = img.type === 'UPLOAD' && img.storageKey
+      const isVideo = img.mediaType === 'VIDEO'
       const fallback = img.url ?? ''
+      // Story 35.3 / FR136 — VIDEO uploads serve the playable URL from
+      // adapter.getVideoUrl (Cloudinary /video/upload/<key>; S3 mirrors
+      // getPublicUrl). VIDEO LINK rows use the stored url verbatim.
+      const displayUrl = isUpload
+        ? isVideo
+          ? getVideoImageUrl(img.storageKey!)
+          : getPublicImageUrl(img.storageKey!)
+        : fallback
       return {
         id: img.id,
-        displayUrl: isUpload ? getPublicImageUrl(img.storageKey!) : fallback,
+        displayUrl,
+        // For VIDEO rows, the thumbnail site (collapsed step strip)
+        // shows the poster — same shape as the gallery tile's poster.
         thumbnailUrl: isUpload
-          ? getThumbnailImageUrl(img.storageKey!, THUMBNAIL_WIDTH.GRID)
+          ? isVideo
+            ? (getVideoPosterImageUrl(img.storageKey!, THUMBNAIL_WIDTH.GRID) ?? '')
+            : getThumbnailImageUrl(img.storageKey!, THUMBNAIL_WIDTH.GRID)
           : fallback,
         stripThumbnailUrl: isUpload
-          ? getThumbnailImageUrl(img.storageKey!, THUMBNAIL_WIDTH.STRIP)
+          ? isVideo
+            ? (getVideoPosterImageUrl(img.storageKey!, THUMBNAIL_WIDTH.STRIP) ?? '')
+            : getThumbnailImageUrl(img.storageKey!, THUMBNAIL_WIDTH.STRIP)
           : fallback,
         originalFilename: img.originalFilename,
+        // Story 35.3 — pass mediaType through so the gallery tile +
+        // lightbox can branch on it.
+        mediaType: img.mediaType,
+        durationSeconds: img.durationSeconds,
+        // resolveVideoPosterUrl is gated on isUpload + isVideo so IMAGE
+        // rows always pass `posterUrl: null` (no 404-prone URL leaks).
+        posterUrl:
+          isUpload && isVideo
+            ? getVideoPosterImageUrl(img.storageKey!, THUMBNAIL_WIDTH.GRID)
+            : null,
       }
     }),
     blockers: step.blockers.map((blocker) => ({

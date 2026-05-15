@@ -20,6 +20,43 @@ export interface StepImageWithDisplayUrl {
   createdAt: Date
   displayUrl: string
   thumbnailUrl: string
+  /**
+   * Story 35.3 / FR136: media discriminator + video metadata + poster URL.
+   * `mediaType` defaults to 'IMAGE' for pre-Story-35.1 rows (DB column
+   * has NOT NULL DEFAULT 'IMAGE'). `durationSeconds` is null for IMAGE.
+   * `posterUrl` is null for IMAGE AND for VIDEO when the adapter is S3
+   * (no transformation grammar). Cloudinary VIDEO returns a `so_auto`
+   * poster URL. Never null for IMAGE — the gate is enforced server-side
+   * so components can assume IMAGE never carries a 404-prone poster URL.
+   */
+  mediaType: 'IMAGE' | 'VIDEO'
+  durationSeconds: number | null
+  posterUrl: string | null
+}
+
+/**
+ * Story 35.3 / FR136 — `mediaType`-gated poster URL resolution.
+ *
+ * `getVideoPosterUrl` is documented to be called ONLY for VIDEO assets
+ * (Cloudinary `public_id` syntax can't self-distinguish image vs video;
+ * see `adapter.ts` JSDoc). This data-layer gate is the canonical
+ * enforcement point: IMAGE rows MUST resolve `posterUrl: null`. Without
+ * this gate, an IMAGE row routed through the poster path produces a
+ * URL that 404s at delivery time (Story 35.2 code-review HIGH finding).
+ */
+function resolvePosterUrl(
+  adapter: ReturnType<typeof getImageStorageAdapter>,
+  img: {
+    mediaType: 'IMAGE' | 'VIDEO'
+    storageKey: string | null
+    type: 'UPLOAD' | 'LINK'
+  },
+): string | null {
+  if (!adapter) return null
+  if (img.mediaType !== 'VIDEO') return null
+  if (img.type !== 'UPLOAD') return null
+  if (!img.storageKey) return null
+  return adapter.getVideoPosterUrl(img.storageKey, THUMBNAIL_WIDTH.PHOTO_GRID)
 }
 
 /** Find a single step image by id, including step→project context for cleanup.
@@ -69,6 +106,15 @@ export async function findStepImagesWithDisplayUrl(
 
   return images.map((img) => {
     const isUpload = img.type === 'UPLOAD' && img.storageKey && adapter
+    const isVideo = img.mediaType === 'VIDEO'
+    // Story 35.3 / FR136: VIDEO uploads serve their playable URL from
+    // adapter.getVideoUrl (Cloudinary uses /video/upload/<key>; S3 uses
+    // the same shape as getPublicUrl). IMAGE keeps the existing path.
+    const displayUrl = isUpload
+      ? isVideo
+        ? adapter.getVideoUrl(img.storageKey!)
+        : adapter.getPublicUrl(img.storageKey!)
+      : fallback(img)
     return {
       id: img.id,
       stepId: img.stepId,
@@ -79,10 +125,21 @@ export async function findStepImagesWithDisplayUrl(
       contentType: img.contentType,
       sizeBytes: img.sizeBytes,
       createdAt: img.createdAt,
-      displayUrl: isUpload ? adapter.getPublicUrl(img.storageKey!) : fallback(img),
+      displayUrl,
+      // For VIDEO rows we serve the poster (when available) at thumbnail
+      // sites — gallery tiles use `posterUrl` directly; legacy callers
+      // that read `thumbnailUrl` get the poster too. S3 mode returns
+      // null → fallback to empty (caller renders generic play-icon card).
       thumbnailUrl: isUpload
-        ? adapter.getThumbnailUrl(img.storageKey!, THUMBNAIL_WIDTH.PHOTO_GRID)
+        ? isVideo
+          ? (resolvePosterUrl(adapter, img) ?? '')
+          : adapter.getThumbnailUrl(img.storageKey!, THUMBNAIL_WIDTH.PHOTO_GRID)
         : fallback(img),
+      mediaType: img.mediaType,
+      durationSeconds: img.durationSeconds,
+      // resolvePosterUrl enforces the mediaType === 'VIDEO' gate; IMAGE
+      // rows always get null here (no 404-prone URL ever leaks to UI).
+      posterUrl: resolvePosterUrl(adapter, img),
     }
   })
 }
