@@ -60,6 +60,15 @@ class CloudinaryStorageAdapter implements ImageStorageAdapter {
     if (!cloudName) {
       throw new Error('Missing CLOUDINARY_CLOUD_NAME environment variable.')
     }
+    // **CONTRACT (Story 35.3):** This method assumes the storageKey
+    // belongs to a video asset. Cloudinary's public_id syntax does not
+    // distinguish image vs video — both routes share the same key shape;
+    // resource_type lives in the delivery URL prefix, not the key. So
+    // this impl CANNOT refuse non-video keys. Calling with an IMAGE key
+    // generates a URL that 404s at delivery time. Caller-side discipline
+    // (gate on `mediaType === 'VIDEO'`) is the enforcement; the data
+    // layer (`findStepImagesWithDisplayUrl`) is the canonical gate.
+    //
     // so_auto picks a representative frame (Cloudinary heuristic — usually
     // a high-motion frame near the middle); f_jpg forces JPEG output
     // regardless of source codec; w_<width> sizes the poster for tile use.

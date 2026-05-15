@@ -27,6 +27,20 @@ export interface ImageStorageAdapter {
    * source codec.
    * S3/R2: returns null — S3 has no transformation grammar. Callers MUST
    * handle null by rendering a generic play-icon card instead of a poster.
+   *
+   * **CONTRACT — callers MUST gate on `mediaType === 'VIDEO'` BEFORE
+   * invoking this method** (Story 35.3 contract correction). Cloudinary's
+   * `public_id` (which IS the storageKey) is identical between image and
+   * video assets — the resource_type is only distinguishable at the
+   * delivery URL prefix (`/image/upload/` vs `/video/upload/`), not the
+   * key itself. As a result, this method CANNOT self-validate that the
+   * storageKey belongs to a video asset; calling it on an IMAGE key
+   * produces a URL that 404s at delivery time. The data-layer fn
+   * `findStepImagesWithDisplayUrl` is the canonical enforcement point —
+   * it sets `posterUrl: null` for IMAGE rows so components never call
+   * this method indirectly through a stale storageKey. Direct callers
+   * (none today, none expected) MUST check the row's `mediaType` field
+   * before invoking.
    */
   getVideoPosterUrl(storageKey: string, width: number): string | null
 

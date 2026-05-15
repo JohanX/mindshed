@@ -75,13 +75,27 @@ export function ImageLightbox({
   const total = images.length
   const current = images[currentIndex]
 
+  // Story 35.3 code-review patch — pause any playing video before
+  // navigation. Prevents audio bleed when the user clicks Next/Prev,
+  // uses Arrow keys, or commits a swipe (any path that calls
+  // goNext/goPrev). The swipe-pause hook on `handlePointerDown`
+  // covers touch-gesture initiation only; this covers the other
+  // navigation paths.
+  function pauseActiveVideo() {
+    if (videoRef.current && !videoRef.current.paused) {
+      videoRef.current.pause()
+    }
+  }
+
   const goNext = useCallback(() => {
+    pauseActiveVideo()
     setBroken(false)
     setImageLoading(true)
     setCurrentIndex((prev) => (prev + 1) % total)
   }, [total])
 
   const goPrev = useCallback(() => {
+    pauseActiveVideo()
     setBroken(false)
     setImageLoading(true)
     setCurrentIndex((prev) => (prev - 1 + total) % total)
@@ -126,7 +140,15 @@ export function ImageLightbox({
     if (total < 2) return
     const indicesToPrefetch = [(currentIndex + 1) % total, (currentIndex - 1 + total) % total]
     for (const index of indicesToPrefetch) {
-      const url = images[index]?.displayUrl
+      const neighbor = images[index]
+      if (!neighbor) continue
+      // Story 35.3 / FR136 — VIDEO neighbours prefetch the POSTER JPEG
+      // (cheap, tile-sized) instead of the full video stream (60 MB ×
+      // prev/next is unacceptable on metered connections). S3 mode
+      // returns `posterUrl: null`; skip prefetch entirely for those
+      // (the next navigation will fetch metadata cold, which is fine —
+      // it's only ~50 KB header bytes).
+      const url = neighbor.mediaType === 'VIDEO' ? neighbor.posterUrl : neighbor.displayUrl
       if (!url) continue
       const img = new window.Image()
       ;(
@@ -157,6 +179,35 @@ export function ImageLightbox({
     width: number
     height: number
   } | null>(null)
+
+  // Story 35.3 — videoRef holds the currently-rendered <video> element
+  // (when the current item is VIDEO). Used by handlePointerDown's
+  // swipe-pause hook to pause playback before a swipe-to-navigate
+  // gesture fires. The ref attaches via the inline render branch
+  // below; null whenever the current item is IMAGE.
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+
+  // Story 35.3 code-review patch — pause any playing video on
+  // unmount (close lightbox, Esc, X button, outside-click).
+  // Without this, audio can persist briefly on iOS Safari / Android
+  // Chrome after the DOM node is unmounted. The cleanup runs on
+  // unmount only — currentIndex changes don't fire it (those go
+  // through goNext/goPrev which already pause).
+  useEffect(() => {
+    // Intentionally read videoRef.current at CLEANUP time, not effect-
+    // setup time: we want the latest mounted <video> (or null if the
+    // current item is IMAGE) at the moment the lightbox unmounts. The
+    // exhaustive-deps rule's usual "capture at setup" guidance doesn't
+    // apply — there's nothing at setup to capture (the video element
+    // mounts AFTER this effect runs).
+    return () => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const video = videoRef.current
+      if (video && !video.paused) {
+        video.pause()
+      }
+    }
+  }, [])
 
   // Story 29.6 (revised): axis-locked sliding gesture with flick
   // detection.
@@ -258,6 +309,30 @@ export function ImageLightbox({
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
     if (event.pointerType !== 'touch') return
     if (isCommitting) return // ignore taps mid-commit-animation
+
+    // Story 35.3 — iOS Safari × <video controls> × setPointerCapture
+    // mitigation. Native video controls (play button, scrubber, volume
+    // on iOS Safari) are interactive DOM descendants of the <video>
+    // element. setPointerCapture at this level would redirect their
+    // subsequent pointerup events away from those controls, leaving
+    // them unresponsive. Skip the entire swipe gesture when the
+    // pointer originated inside a <video> element (native controls
+    // handle it; the next pointerdown outside the video re-enables
+    // swipe). Uses event.target (the actual target) NOT
+    // event.currentTarget (the bound element).
+    if (event.target instanceof HTMLElement) {
+      const inVideo = event.target.tagName === 'VIDEO' || event.target.closest('video') !== null
+      if (inVideo) return
+    }
+
+    // Pause active playback if any video is currently playing — swipe-
+    // pause hook so swipe-to-navigate doesn't fight ongoing playback
+    // for the (rare) case where the user swipes from outside the video
+    // element while a video is playing.
+    if (current?.mediaType === 'VIDEO' && videoRef.current && !videoRef.current.paused) {
+      videoRef.current.pause()
+    }
+
     // setPointerCapture: subsequent pointermove / pointerup / pointer-
     // cancel events are routed back to this element even if the finger
     // drags off its bounding rect. Without this, a long swipe near the
@@ -555,55 +630,123 @@ export function ImageLightbox({
                       // (motion.img source thumbnail ↔ motion.div
                       // target wrapper) — the morph is bbox-driven, not
                       // element-typed.
+                      //
+                      // Story 35.3 / FR136: `layout` gated off for
+                      // VIDEO items. A poster→video-frame bbox morph
+                      // reads as "expanding image", not "starting
+                      // playback"; videos open via Reveal primitive
+                      // (FR123) instead.
                       layoutId={
                         currentIndex === initialIndex && morphLayoutId
                           ? morphLayoutId
                           : `lightbox-${current.id}`
                       }
-                      layout={!isDragging && !isCommitting}
+                      layout={current.mediaType === 'IMAGE' && !isDragging && !isCommitting}
                       transition={tokens.transitions.layout}
                       className="inline-flex max-h-full max-w-full sm:max-h-[90vh] sm:max-w-[90vw]"
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        ref={(node) => {
-                          // Cached-image race: if the browser already had
-                          // this URL in cache, `onLoad` may have fired
-                          // before React attached its listener — leaving
-                          // `imageLoading` stuck at true. Check `complete`
-                          // synchronously on attach and clear if the image
-                          // is already decoded.
-                          if (node && node.complete && node.naturalWidth > 0) {
+                      {current.mediaType === 'VIDEO' ? (
+                        // Story 35.3 / FR136 — video render branch.
+                        // `muted` is load-bearing: the lightbox opens
+                        // on a user gesture (the tap from the gallery
+                        // tile) which would otherwise authorise an
+                        // audible autoplay surface; muted ensures no
+                        // sound until the user explicitly unmutes via
+                        // native controls. `preload="metadata"` fetches
+                        // only the ~50 KB header — duration + first
+                        // frame paint — without streaming the full
+                        // file. `playsInline` keeps iOS Safari from
+                        // promoting playback to fullscreen.
+                        <video
+                          // Standard ref forwarding — React assigns
+                          // videoRef.current on mount and clears it on
+                          // unmount automatically, so videoRef.current
+                          // never holds a dangling element after the
+                          // VIDEO branch unmounts.
+                          ref={videoRef}
+                          src={current.displayUrl}
+                          controls
+                          muted
+                          preload="metadata"
+                          playsInline
+                          className="block max-h-full max-w-full object-contain"
+                          onLoadedMetadata={(event) => {
+                            // Story 34.4 carry-forward — capture the
+                            // rendered bbox for size stabilization on
+                            // the next navigation. Identical to <img>'s
+                            // onLoad path.
+                            const rect = event.currentTarget.getBoundingClientRect()
+                            if (rect.width > 0 && rect.height > 0) {
+                              setLastImageBox({
+                                width: rect.width,
+                                height: rect.height,
+                              })
+                            }
                             setImageLoading(false)
-                          }
-                        }}
-                        src={current.displayUrl}
-                        alt={current.originalFilename ?? ''}
-                        className="block max-h-full max-w-full object-contain"
-                        style={inlineImageStyle}
-                        onLoad={(event) => {
-                          // Story 34.4 / FR133 — capture the rendered
-                          // bbox (post-clip to max-h-[90vh] /
-                          // max-w-[90vw], not raw naturalWidth/Height)
-                          // so the next navigation can stabilize the
-                          // image-area div's size while the new image
-                          // loads. See the image-area div's `style`
-                          // prop above for the consumer.
-                          const rect = event.currentTarget.getBoundingClientRect()
-                          if (rect.width > 0 && rect.height > 0) {
-                            setLastImageBox({
-                              width: rect.width,
-                              height: rect.height,
-                            })
-                          }
-                          setImageLoading(false)
-                        }}
-                        onError={() => {
-                          setBroken(true)
-                          setImageLoading(false)
-                        }}
-                        data-testid="lightbox-image"
-                      />
+                          }}
+                          onError={() => {
+                            setBroken(true)
+                            setImageLoading(false)
+                          }}
+                          onPointerDown={() => {
+                            // Story 35.3 — swipe-pause hook for
+                            // pointer events that DO originate inside
+                            // the video element (e.g., the user
+                            // dragging over the scrubber to seek).
+                            // The parent handlePointerDown short-
+                            // circuits on `event.target.closest('video')`
+                            // so swipe-to-navigate does not fire here;
+                            // this listener pauses playback for the
+                            // (rare) seek-from-playing case so the
+                            // user's drag doesn't fight playback.
+                            if (videoRef.current && !videoRef.current.paused) {
+                              videoRef.current.pause()
+                            }
+                          }}
+                          data-testid="lightbox-video"
+                        />
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          ref={(node) => {
+                            // Cached-image race: if the browser already had
+                            // this URL in cache, `onLoad` may have fired
+                            // before React attached its listener — leaving
+                            // `imageLoading` stuck at true. Check `complete`
+                            // synchronously on attach and clear if the image
+                            // is already decoded.
+                            if (node && node.complete && node.naturalWidth > 0) {
+                              setImageLoading(false)
+                            }
+                          }}
+                          src={current.displayUrl}
+                          alt={current.originalFilename ?? ''}
+                          className="block max-h-full max-w-full object-contain"
+                          style={inlineImageStyle}
+                          onLoad={(event) => {
+                            // Story 34.4 / FR133 — capture the rendered
+                            // bbox (post-clip to max-h-[90vh] /
+                            // max-w-[90vw], not raw naturalWidth/Height)
+                            // so the next navigation can stabilize the
+                            // image-area div's size while the new image
+                            // loads. See the image-area div's `style`
+                            // prop above for the consumer.
+                            const rect = event.currentTarget.getBoundingClientRect()
+                            if (rect.width > 0 && rect.height > 0) {
+                              setLastImageBox({
+                                width: rect.width,
+                                height: rect.height,
+                              })
+                            }
+                            setImageLoading(false)
+                          }}
+                          onError={() => {
+                            setBroken(true)
+                            setImageLoading(false)
+                          }}
+                          data-testid="lightbox-image"
+                        />
+                      )}
                     </motion.div>
                     {imageLoading && (
                       <div
