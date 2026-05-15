@@ -11,7 +11,15 @@ export interface PublicGallery {
     color: string
     icon: string | null
   }
-  thumbnails: string[]
+  // Story 35.4 / FR137 — each thumbnail carries optional mediaType +
+  // posterUrl so the dashboard galleries section can render VIDEO leads
+  // as poster + play overlay (Cloudinary) or generic play-icon card (S3
+  // null poster). Undefined mediaType = implicit IMAGE (back-compat).
+  thumbnails: {
+    url: string
+    mediaType?: 'IMAGE' | 'VIDEO'
+    posterUrl?: string | null
+  }[]
 }
 
 export interface DashboardData {

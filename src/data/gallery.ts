@@ -67,6 +67,11 @@ export const findJourneyGalleryBySlug = cache(async (slug: string) => {
             // explicitly via its own ordering (max(createdAt) across all
             // steps), so this query's ASC order does not change the OG
             // image selection.
+            // Story 35.4 / FR137: `mediaType` + `durationSeconds` are
+            // selected so the gallery page renderer + the metadata
+            // helper can branch VIDEO rendering (poster + play overlay
+            // at tile size; <video> in the lightbox; og:image gated on
+            // VIDEO posters per FR128 + FR137).
             orderBy: { createdAt: 'asc' },
             select: {
               storageKey: true,
@@ -74,6 +79,8 @@ export const findJourneyGalleryBySlug = cache(async (slug: string) => {
               type: true,
               originalFilename: true,
               createdAt: true,
+              mediaType: true,
+              durationSeconds: true,
             },
           },
           notes: {
@@ -115,6 +122,10 @@ export const findResultGalleryBySlug = cache(async (slug: string) => {
             // keep the social-preview cover at the most recent photo —
             // independent of the page renderer's ASC order. `createdAt` is
             // exposed for the metadata helper's re-sort.
+            // Story 35.4 / FR137: same mediaType + durationSeconds
+            // widening as the journey query — result-route surfaces
+            // VIDEO step images too, since a finished-piece walk-around
+            // is a natural fit for the "result" page.
             orderBy: { createdAt: 'asc' },
             select: {
               storageKey: true,
@@ -122,6 +133,8 @@ export const findResultGalleryBySlug = cache(async (slug: string) => {
               type: true,
               originalFilename: true,
               createdAt: true,
+              mediaType: true,
+              durationSeconds: true,
             },
           },
         },

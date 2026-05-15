@@ -15,7 +15,14 @@ interface ResultGalleryViewProps {
     /** Story 30.5 / FR129 — pre-formatted total like `12.5h`, or null to hide. */
     totalHoursLabel: string | null
   }
-  images: { displayUrl: string; originalFilename: string | null }[]
+  images: {
+    displayUrl: string
+    originalFilename: string | null
+    // Story 35.4 / FR137 — optional video metadata for lightbox branching.
+    mediaType?: 'IMAGE' | 'VIDEO'
+    durationSeconds?: number | null
+    posterUrl?: string | null
+  }[]
 }
 
 export function ResultGalleryView({ project, images }: ResultGalleryViewProps) {
@@ -24,10 +31,15 @@ export function ResultGalleryView({ project, images }: ResultGalleryViewProps) {
   // Story 29.4 / FR124: gallery surfaces now use the unified
   // ImageLightbox with caption metadata per image. Index is used as the
   // synthetic id (stable for the lifetime of the lightbox session).
+  // Story 35.4 / FR137 — mediaType + posterUrl flow through so the
+  // lightbox renders the Story 35.3 VIDEO branch for video items.
   const lightboxImages: GalleryImage[] = images.map((img, index) => ({
     id: `result-${index}`,
     displayUrl: img.displayUrl,
     originalFilename: img.originalFilename,
+    mediaType: img.mediaType,
+    durationSeconds: img.durationSeconds,
+    posterUrl: img.posterUrl,
     caption: { title: project.name, description: project.description },
   }))
 

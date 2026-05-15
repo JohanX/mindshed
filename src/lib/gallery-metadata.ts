@@ -19,6 +19,7 @@
 import type { Metadata } from 'next'
 import { findJourneyGalleryBySlug, findResultGalleryBySlug } from '@/data/gallery'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
+import { resolveStepImagePosterUrl } from '@/data/image'
 import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
 
 const MAX_EXTRA_OG_IMAGES = 3
@@ -30,9 +31,27 @@ type GalleryImage = {
   type: 'UPLOAD' | 'LINK'
   originalFilename: string | null
   createdAt?: Date
+  // Story 35.4 / FR137 — VIDEO rows resolve to their poster URL
+  // (Cloudinary so_auto) for the unfurl preview, or return null on S3
+  // (no derived poster). Undefined = implicit IMAGE (back-compat).
+  mediaType?: 'IMAGE' | 'VIDEO'
 }
 
 function resolveSocialImageUrl(img: GalleryImage): string | null {
+  // Story 35.4 / FR137 — VIDEO rows mint a poster URL via the data-
+  // layer gate so the unfurl preview shows a still frame (Cloudinary).
+  // S3 mode returns null and `collectImageUrls` falls through to the
+  // next eligible IMAGE row — closing the load-bearing "video lead =>
+  // broken unfurl" failure mode without diverging from the page render.
+  if (img.mediaType === 'VIDEO') {
+    if (img.type !== 'UPLOAD' || !img.storageKey) return null
+    const adapter = getImageStorageAdapter()
+    return resolveStepImagePosterUrl(
+      adapter,
+      { mediaType: 'VIDEO', storageKey: img.storageKey, type: 'UPLOAD' },
+      THUMBNAIL_WIDTH.SOCIAL_CARD,
+    )
+  }
   if (img.type === 'UPLOAD' && img.storageKey) {
     const adapter = getImageStorageAdapter()
     if (!adapter) return null
@@ -101,6 +120,27 @@ function toOgImages(urls: string[]) {
   }))
 }
 
+/**
+ * Story 35.4 code-review patch — when the entire gallery deck is
+ * VIDEO with no poster URL (S3 mode, no Cloudinary), `collectImageUrls`
+ * returns `[]`. Returning `openGraph: { images: [] }` ships an explicit
+ * empty array to Next 16, which Slack / LinkedIn render as a missing-
+ * image card (worse than no card). Omit the `images` field entirely so
+ * unfurlers fall back to the page's plain title + description.
+ */
+function buildOpenGraphMetadata(opts: {
+  title: string
+  description: string
+  imageUrls: string[]
+}): Metadata['openGraph'] {
+  return {
+    title: opts.title,
+    description: opts.description,
+    type: 'website',
+    ...(opts.imageUrls.length > 0 ? { images: toOgImages(opts.imageUrls) } : {}),
+  }
+}
+
 export async function buildJourneyMetadata(slug: string): Promise<Metadata> {
   const project = await findJourneyGalleryBySlug(slug)
   if (!project || !project.journeyGalleryEnabled) return {}
@@ -121,12 +161,7 @@ export async function buildJourneyMetadata(slug: string): Promise<Metadata> {
   return {
     title,
     description,
-    openGraph: {
-      title,
-      description,
-      type: 'website',
-      images: toOgImages(imageUrls),
-    },
+    openGraph: buildOpenGraphMetadata({ title, description, imageUrls }),
     twitter: {
       card: 'summary_large_image',
       title,
@@ -176,12 +211,7 @@ export async function buildResultMetadata(slug: string): Promise<Metadata> {
   return {
     title,
     description,
-    openGraph: {
-      title,
-      description,
-      type: 'website',
-      images: toOgImages(imageUrls),
-    },
+    openGraph: buildOpenGraphMetadata({ title, description, imageUrls }),
     twitter: {
       card: 'summary_large_image',
       title,

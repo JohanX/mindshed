@@ -43,20 +43,25 @@ export interface StepImageWithDisplayUrl {
  * enforcement point: IMAGE rows MUST resolve `posterUrl: null`. Without
  * this gate, an IMAGE row routed through the poster path produces a
  * URL that 404s at delivery time (Story 35.2 code-review HIGH finding).
+ *
+ * **Exported** so `data/gallery.ts` (Story 35.4) and any other data-
+ * layer file resolving poster URLs from step_image rows can reuse the
+ * same gate — one canonical contract, no drift.
  */
-function resolvePosterUrl(
+export function resolveStepImagePosterUrl(
   adapter: ReturnType<typeof getImageStorageAdapter>,
   img: {
     mediaType: 'IMAGE' | 'VIDEO'
     storageKey: string | null
     type: 'UPLOAD' | 'LINK'
   },
+  width: number = THUMBNAIL_WIDTH.PHOTO_GRID,
 ): string | null {
   if (!adapter) return null
   if (img.mediaType !== 'VIDEO') return null
   if (img.type !== 'UPLOAD') return null
   if (!img.storageKey) return null
-  return adapter.getVideoPosterUrl(img.storageKey, THUMBNAIL_WIDTH.PHOTO_GRID)
+  return adapter.getVideoPosterUrl(img.storageKey, width)
 }
 
 /** Find a single step image by id, including step→project context for cleanup.
@@ -132,14 +137,14 @@ export async function findStepImagesWithDisplayUrl(
       // null → fallback to empty (caller renders generic play-icon card).
       thumbnailUrl: isUpload
         ? isVideo
-          ? (resolvePosterUrl(adapter, img) ?? '')
+          ? (resolveStepImagePosterUrl(adapter, img) ?? '')
           : adapter.getThumbnailUrl(img.storageKey!, THUMBNAIL_WIDTH.PHOTO_GRID)
         : fallback(img),
       mediaType: img.mediaType,
       durationSeconds: img.durationSeconds,
       // resolvePosterUrl enforces the mediaType === 'VIDEO' gate; IMAGE
       // rows always get null here (no 404-prone URL ever leaks to UI).
-      posterUrl: resolvePosterUrl(adapter, img),
+      posterUrl: resolveStepImagePosterUrl(adapter, img),
     }
   })
 }

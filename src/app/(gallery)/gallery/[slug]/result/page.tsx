@@ -6,6 +6,8 @@ import { findResultGalleryBySlug } from '@/data/gallery'
 import { ResultGalleryView } from '@/components/gallery/result-gallery-view'
 import { getImageStorageAdapter } from '@/lib/image-storage/adapter'
 import { buildResultMetadata } from '@/lib/gallery-metadata'
+import { resolveStepImagePosterUrl } from '@/data/image'
+import { THUMBNAIL_WIDTH } from '@/lib/constants/thumbnail-widths'
 import { computeProjectTotalHours } from '@/lib/project-hours'
 import { formatHours } from '@/lib/hours-format'
 
@@ -24,6 +26,18 @@ function getPublicImageUrl(storageKey: string): string {
   if (!adapter) return ''
   try {
     return adapter.getPublicUrl(storageKey)
+  } catch {
+    return ''
+  }
+}
+
+// Story 35.4 / FR137 — video URL for VIDEO step images on the public
+// result-gallery surface.
+function getVideoImageUrl(storageKey: string): string {
+  const adapter = getImageStorageAdapter()
+  if (!adapter) return ''
+  try {
+    return adapter.getVideoUrl(storageKey)
   } catch {
     return ''
   }
@@ -50,11 +64,37 @@ export default async function ResultGalleryPage({ params }: ResultGalleryPagePro
     ? completedSteps.find((step) => step.id === project.resultStepId)
     : completedSteps[0] // Already sorted desc by sortOrder, first = last completed
 
-  const images = (resultStep?.images ?? []).map((img) => ({
-    displayUrl:
-      img.type === 'UPLOAD' && img.storageKey ? getPublicImageUrl(img.storageKey) : (img.url ?? ''),
-    originalFilename: img.originalFilename,
-  }))
+  const adapter = getImageStorageAdapter()
+  const images = (resultStep?.images ?? []).map((img) => {
+    const isUpload = img.type === 'UPLOAD' && img.storageKey
+    const isVideo = img.mediaType === 'VIDEO'
+    // Story 35.4 / FR137: VIDEO uploads serve their playable URL from
+    // adapter.getVideoUrl; IMAGE keeps the existing path.
+    const displayUrl = isUpload
+      ? isVideo
+        ? getVideoImageUrl(img.storageKey!)
+        : getPublicImageUrl(img.storageKey!)
+      : (img.url ?? '')
+    // Story 35.4: posterUrl is gated server-side via the shared
+    // resolveStepImagePosterUrl helper (closes the Story 35.3 Cloudinary
+    // contract divergence end-to-end at the public surface).
+    const posterUrl = resolveStepImagePosterUrl(
+      adapter,
+      {
+        mediaType: img.mediaType,
+        storageKey: img.storageKey,
+        type: img.type as 'UPLOAD' | 'LINK',
+      },
+      THUMBNAIL_WIDTH.GRID,
+    )
+    return {
+      displayUrl,
+      originalFilename: img.originalFilename,
+      mediaType: img.mediaType,
+      durationSeconds: img.durationSeconds,
+      posterUrl,
+    }
+  })
 
   return (
     <ResultGalleryView
