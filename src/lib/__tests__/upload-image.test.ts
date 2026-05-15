@@ -142,6 +142,116 @@ describe('uploadImage (unified)', () => {
       expect(global.fetch).not.toHaveBeenCalled()
     },
   )
+
+  // Story 35.2 / FR134 — video MIMEs are step-only.
+  describe('Story 35.2 — video MIMEs (step-only)', () => {
+    it.each(['video/mp4', 'video/quicktime', 'video/webm'])(
+      'step kind accepts %s with duration 30s',
+      async (mime) => {
+        const mockFetch = vi.mocked(global.fetch)
+        mockFetch
+          .mockResolvedValueOnce(
+            new Response(JSON.stringify({ url: 'https://s3/put', key: 'k1' }), { status: 200 }),
+          )
+          .mockResolvedValueOnce(new Response(null, { status: 200 }))
+        const file = makeFile('clip.mp4', mime, 5 * 1024 * 1024)
+        const result = await uploadImage({
+          kind: 'step',
+          parentId: 'p1',
+          file,
+          durationSeconds: 30,
+        })
+        expect(result.success).toBe(true)
+        if (result.success) expect(result.key).toBe('k1')
+      },
+    )
+
+    it.each(['idea', 'inventory'] as const)(
+      '%s kind rejects video/mp4 (kind-mismatch)',
+      async (kind) => {
+        const file = makeFile('clip.mp4', 'video/mp4', 5 * 1024 * 1024)
+        const result = await uploadImage({ kind, parentId: 'p1', file, durationSeconds: 30 })
+        expect(result.success).toBe(false)
+        if (!result.success) expect(result.error).toContain('JPEG')
+      },
+    )
+
+    it('step kind rejects video over 60 MB', async () => {
+      const file = makeFile('big.mp4', 'video/mp4', 61 * 1024 * 1024)
+      const result = await uploadImage({
+        kind: 'step',
+        parentId: 'p1',
+        file,
+        durationSeconds: 30,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toContain('60 MB')
+    })
+
+    it('step kind rejects video missing durationSeconds', async () => {
+      const file = makeFile('clip.mp4', 'video/mp4', 5 * 1024 * 1024)
+      const result = await uploadImage({ kind: 'step', parentId: 'p1', file })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toContain('1 and 60')
+    })
+
+    it('step kind rejects video with duration > 60', async () => {
+      const file = makeFile('clip.mp4', 'video/mp4', 5 * 1024 * 1024)
+      const result = await uploadImage({
+        kind: 'step',
+        parentId: 'p1',
+        file,
+        durationSeconds: 61,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toContain('1 and 60')
+    })
+
+    it('step kind rejects video with duration < 1', async () => {
+      const file = makeFile('clip.mp4', 'video/mp4', 5 * 1024 * 1024)
+      const result = await uploadImage({
+        kind: 'step',
+        parentId: 'p1',
+        file,
+        durationSeconds: 0,
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('step kind propagates mediaType:VIDEO + durationSeconds through to addStepImage', async () => {
+      const mockFetch = vi.mocked(global.fetch)
+      mockFetch
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ url: 'https://s3/put', key: 'k1' }), { status: 200 }),
+        )
+        .mockResolvedValueOnce(new Response(null, { status: 200 }))
+      const file = makeFile('clip.mp4', 'video/mp4', 5 * 1024 * 1024)
+      await uploadImage({
+        kind: 'step',
+        parentId: 'p1',
+        file,
+        durationSeconds: 42,
+      })
+      const dbCall = vi.mocked(addStepImage).mock.calls[0][0]
+      expect(dbCall.mediaType).toBe('VIDEO')
+      expect(dbCall.durationSeconds).toBe(42)
+      expect(dbCall.contentType).toBe('video/mp4')
+    })
+
+    it('step kind defaults to mediaType:IMAGE + durationSeconds:null for image uploads', async () => {
+      const mockFetch = vi.mocked(global.fetch)
+      mockFetch
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ url: 'https://s3/put', key: 'k1' }), { status: 200 }),
+        )
+        .mockResolvedValueOnce(new Response(null, { status: 200 }))
+      const file = makeFile('photo.jpg', 'image/jpeg', 5000)
+      await uploadImage({ kind: 'step', parentId: 'p1', file })
+      const dbCall = vi.mocked(addStepImage).mock.calls[0][0]
+      expect(dbCall.mediaType).toBe('IMAGE')
+      expect(dbCall.durationSeconds).toBeNull()
+    })
+  })
 })
 
 describe('Backward-compat wrappers', () => {

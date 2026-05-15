@@ -1,5 +1,12 @@
 import { z } from 'zod/v4'
-import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES } from '@/lib/constants/image-upload'
+import {
+  ACCEPTED_IMAGE_TYPES,
+  ACCEPTED_STEP_MEDIA_TYPES,
+  ACCEPTED_VIDEO_TYPES,
+  MAX_IMAGE_SIZE_BYTES,
+  MAX_VIDEO_DURATION_SECONDS,
+  MAX_VIDEO_SIZE_BYTES,
+} from '@/lib/constants/image-upload'
 
 export const addImageLinkSchema = z.object({
   stepId: z.uuid(),
@@ -13,14 +20,58 @@ export const addImageLinkSchema = z.object({
 
 export type AddImageLinkInput = z.infer<typeof addImageLinkSchema>
 
-export const addStepImageSchema = z.object({
-  stepId: z.uuid(),
-  storageKey: z
-    .string()
-    .regex(/^steps\/[a-f0-9-]+\/[a-f0-9-]+\.\w+$/, 'Invalid storage key format'),
-  originalFilename: z.string().min(1, 'Original filename is required').max(255),
-  contentType: z.enum(ACCEPTED_IMAGE_TYPES),
-  sizeBytes: z.number().int().positive().max(MAX_IMAGE_SIZE_BYTES, 'File too large'),
-})
+// Story 35.2 / FR134 — step images accept video MIMEs (mp4 / mov / webm)
+// in addition to image MIMEs. The size cap is content-type-dependent: 10 MB
+// for image, 60 MB for video. Duration cap (60s) applies to VIDEO only;
+// IMAGE rows MUST carry `durationSeconds: null`.
+export const addStepImageSchema = z
+  .object({
+    stepId: z.uuid(),
+    storageKey: z
+      .string()
+      .regex(/^steps\/[a-f0-9-]+\/[a-f0-9-]+\.\w+$/, 'Invalid storage key format'),
+    originalFilename: z.string().min(1, 'Original filename is required').max(255),
+    contentType: z.enum(ACCEPTED_STEP_MEDIA_TYPES),
+    sizeBytes: z.number().int().positive(),
+    mediaType: z.enum(['IMAGE', 'VIDEO']).default('IMAGE'),
+    durationSeconds: z
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_VIDEO_DURATION_SECONDS)
+      .nullable()
+      .default(null),
+  })
+  .refine(
+    (data) => {
+      if (data.mediaType === 'VIDEO') {
+        return data.durationSeconds !== null
+      }
+      // IMAGE
+      return data.durationSeconds === null
+    },
+    {
+      message: 'durationSeconds must be a 1-60 integer for VIDEO and null for IMAGE',
+      path: ['durationSeconds'],
+    },
+  )
+  .refine(
+    (data) => {
+      if (data.mediaType === 'VIDEO') {
+        return (
+          (ACCEPTED_VIDEO_TYPES as readonly string[]).includes(data.contentType) &&
+          data.sizeBytes <= MAX_VIDEO_SIZE_BYTES
+        )
+      }
+      return (
+        (ACCEPTED_IMAGE_TYPES as readonly string[]).includes(data.contentType) &&
+        data.sizeBytes <= MAX_IMAGE_SIZE_BYTES
+      )
+    },
+    {
+      message: 'contentType / sizeBytes does not match mediaType',
+      path: ['contentType'],
+    },
+  )
 
 export type AddStepImageInput = z.infer<typeof addStepImageSchema>

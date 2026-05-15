@@ -121,4 +121,137 @@ describe('addStepImageSchema', () => {
     })
     expect(result.success).toBe(false)
   })
+
+  // Story 35.2 / FR134 — video MIMEs + duration bounds + mediaType invariant
+  describe('Story 35.2 — video upload validation', () => {
+    // storageKey regex requires hex-only path segments — the original
+    // `clip.mp4` literal fails because `l`/`i`/`p` aren't in [a-f0-9-].
+    const validVideoInput = {
+      stepId: VALID_UUID,
+      storageKey: 'steps/abc/def01.mp4',
+      originalFilename: 'clip.mp4',
+      contentType: 'video/mp4',
+      sizeBytes: 5 * 1024 * 1024,
+      mediaType: 'VIDEO' as const,
+      durationSeconds: 30,
+    }
+
+    it('accepts valid VIDEO input with duration in range', () => {
+      const result = addStepImageSchema.safeParse(validVideoInput)
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts video/quicktime', () => {
+      const result = addStepImageSchema.safeParse({
+        ...validVideoInput,
+        contentType: 'video/quicktime',
+        originalFilename: 'clip.mov',
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts video/webm', () => {
+      const result = addStepImageSchema.safeParse({
+        ...validVideoInput,
+        contentType: 'video/webm',
+        originalFilename: 'clip.webm',
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts duration = 1', () => {
+      const result = addStepImageSchema.safeParse({ ...validVideoInput, durationSeconds: 1 })
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts duration = 60', () => {
+      const result = addStepImageSchema.safeParse({ ...validVideoInput, durationSeconds: 60 })
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects duration = 0', () => {
+      const result = addStepImageSchema.safeParse({ ...validVideoInput, durationSeconds: 0 })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects duration = 61', () => {
+      const result = addStepImageSchema.safeParse({ ...validVideoInput, durationSeconds: 61 })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects negative duration', () => {
+      const result = addStepImageSchema.safeParse({ ...validVideoInput, durationSeconds: -5 })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects non-integer duration', () => {
+      const result = addStepImageSchema.safeParse({ ...validVideoInput, durationSeconds: 30.5 })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects VIDEO with null duration', () => {
+      const result = addStepImageSchema.safeParse({ ...validVideoInput, durationSeconds: null })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects IMAGE with non-null duration', () => {
+      const result = addStepImageSchema.safeParse({
+        ...validUploadInput,
+        mediaType: 'IMAGE',
+        durationSeconds: 5,
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects VIDEO with image contentType (e.g. mediaType:VIDEO + contentType:image/jpeg)', () => {
+      const result = addStepImageSchema.safeParse({
+        ...validVideoInput,
+        contentType: 'image/jpeg',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects IMAGE with video contentType (e.g. mediaType:IMAGE + contentType:video/mp4)', () => {
+      const result = addStepImageSchema.safeParse({
+        ...validUploadInput,
+        contentType: 'video/mp4',
+        mediaType: 'IMAGE',
+        durationSeconds: null,
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects VIDEO over 60 MB', () => {
+      const result = addStepImageSchema.safeParse({
+        ...validVideoInput,
+        sizeBytes: 61 * 1024 * 1024,
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('accepts VIDEO at 60 MB boundary', () => {
+      const result = addStepImageSchema.safeParse({
+        ...validVideoInput,
+        sizeBytes: 60 * 1024 * 1024,
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects IMAGE over 10 MB', () => {
+      const result = addStepImageSchema.safeParse({
+        ...validUploadInput,
+        sizeBytes: 11 * 1024 * 1024,
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('IMAGE defaults to mediaType=IMAGE + durationSeconds=null when omitted', () => {
+      const result = addStepImageSchema.safeParse(validUploadInput)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.mediaType).toBe('IMAGE')
+        expect(result.data.durationSeconds).toBeNull()
+      }
+    })
+  })
 })

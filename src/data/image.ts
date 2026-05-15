@@ -22,7 +22,13 @@ export interface StepImageWithDisplayUrl {
   thumbnailUrl: string
 }
 
-/** Find a single step image by id, including step→project context for cleanup. */
+/** Find a single step image by id, including step→project context for cleanup.
+ *
+ * Story 35.2 selects `mediaType` so `deleteStepImage` can route
+ * `resource_type: 'video'` to Cloudinary's `destroy()` for VIDEO rows —
+ * closes the Story 35.1 code-review HIGH-severity defer. Without this,
+ * Cloudinary silently no-ops on video keys and orphans the bytes.
+ */
 export async function findStepImageWithContext(id: string) {
   return prisma.stepImage.findUnique({
     where: { id },
@@ -30,6 +36,7 @@ export async function findStepImageWithContext(id: string) {
       id: true,
       type: true,
       storageKey: true,
+      mediaType: true,
       step: {
         select: {
           projectId: true,

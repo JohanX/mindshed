@@ -12,6 +12,13 @@
  * The thin per-entity wrappers (`uploadImageToStorage`,
  * `uploadInventoryImageToStorage`, `uploadIdeaImageToStorage`) remain as
  * re-exports for backwards compatibility with existing callers.
+ *
+ * Story 35.2 / FR134 widens the `kind: 'step'` allow-list to accept
+ * video MIMEs (mp4 / quicktime / webm) in addition to image MIMEs.
+ * The size cap is content-type-dependent: 10 MB image, 60 MB video.
+ * Duration cap (60s) is enforced client-side via `<video>.duration`
+ * before this function is called. `kind: 'idea'` and `kind: 'inventory'`
+ * continue to reject video MIMEs at the boundary.
  */
 
 import { addStepImage, uploadImageCloudinary } from '@/actions/image'
@@ -20,15 +27,22 @@ import {
   uploadInventoryItemImageCloudinary,
 } from '@/actions/inventory-image'
 import { addIdeaImage, uploadIdeaImageCloudinary } from '@/actions/idea-image'
-import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES } from '@/lib/constants/image-upload'
+import {
+  ACCEPTED_IMAGE_TYPES,
+  ACCEPTED_STEP_MEDIA_TYPES,
+  ACCEPTED_VIDEO_TYPES,
+  MAX_IMAGE_SIZE_BYTES,
+  MAX_VIDEO_SIZE_BYTES,
+} from '@/lib/constants/image-upload'
 
 export { ACCEPTED_IMAGE_TYPES as ACCEPTED_TYPES, MAX_IMAGE_SIZE_BYTES }
+export { ACCEPTED_STEP_MEDIA_TYPES, ACCEPTED_VIDEO_TYPES, MAX_VIDEO_SIZE_BYTES }
 
 export type ImageKind = 'step' | 'inventory' | 'idea'
 
 export type UploadResult = { success: true; key: string } | { success: false; error: string }
 
-type ContentType = 'image/jpeg' | 'image/png' | 'image/webp'
+type ContentType = string
 
 interface AddRecordInput {
   parentId: string
@@ -36,6 +50,10 @@ interface AddRecordInput {
   originalFilename: string
   contentType: ContentType
   sizeBytes: number
+  /** Story 35.2 — only step images can be VIDEO. */
+  mediaType?: 'IMAGE' | 'VIDEO'
+  /** Story 35.2 — required (1-60) when mediaType is VIDEO, null otherwise. */
+  durationSeconds?: number | null
 }
 
 type ActionResultLike = { success: true; data?: unknown } | { success: false; error: string }
@@ -49,14 +67,42 @@ interface KindStrategy {
   addDbRecord: (input: AddRecordInput) => Promise<ActionResultLike>
   /** Cloudinary fallback action — accepts a FormData with the parent id field + file. */
   cloudinaryUpload: (formData: FormData) => Promise<ActionResultLike>
+  /** MIME allow-list for this kind. Step accepts image+video; idea+inventory image-only. */
+  acceptedTypes: readonly string[]
 }
 
 const STRATEGIES: Record<ImageKind, KindStrategy> = {
   step: {
     presignFieldName: 'stepId',
-    addDbRecord: ({ parentId, storageKey, originalFilename, contentType, sizeBytes }) =>
-      addStepImage({ stepId: parentId, storageKey, originalFilename, contentType, sizeBytes }),
+    addDbRecord: ({
+      parentId,
+      storageKey,
+      originalFilename,
+      contentType,
+      sizeBytes,
+      mediaType,
+      durationSeconds,
+    }) =>
+      addStepImage({
+        stepId: parentId,
+        storageKey,
+        originalFilename,
+        // The MIME has already been validated against ACCEPTED_STEP_MEDIA_TYPES
+        // upstream in `uploadImage`. The cast narrows the broad `string` type
+        // back to the enum union the Zod schema expects.
+        contentType: contentType as
+          | 'image/jpeg'
+          | 'image/png'
+          | 'image/webp'
+          | 'video/mp4'
+          | 'video/quicktime'
+          | 'video/webm',
+        sizeBytes,
+        mediaType: mediaType ?? 'IMAGE',
+        durationSeconds: durationSeconds ?? null,
+      }),
     cloudinaryUpload: uploadImageCloudinary,
+    acceptedTypes: ACCEPTED_STEP_MEDIA_TYPES,
   },
   inventory: {
     presignFieldName: 'inventoryItemId',
@@ -66,46 +112,80 @@ const STRATEGIES: Record<ImageKind, KindStrategy> = {
         inventoryItemId: parentId,
         storageKey,
         originalFilename,
-        contentType,
+        contentType: contentType as 'image/jpeg' | 'image/png' | 'image/webp',
         sizeBytes,
       }),
     cloudinaryUpload: uploadInventoryItemImageCloudinary,
+    acceptedTypes: ACCEPTED_IMAGE_TYPES,
   },
   idea: {
     presignFieldName: 'ideaId',
     presignPrefix: 'ideas',
     addDbRecord: ({ parentId, storageKey, originalFilename, contentType, sizeBytes }) =>
-      addIdeaImage({ ideaId: parentId, storageKey, originalFilename, contentType, sizeBytes }),
+      addIdeaImage({
+        ideaId: parentId,
+        storageKey,
+        originalFilename,
+        contentType: contentType as 'image/jpeg' | 'image/png' | 'image/webp',
+        sizeBytes,
+      }),
     cloudinaryUpload: uploadIdeaImageCloudinary,
+    acceptedTypes: ACCEPTED_IMAGE_TYPES,
   },
+}
+
+function isVideoMime(mime: string): boolean {
+  return (ACCEPTED_VIDEO_TYPES as readonly string[]).includes(mime)
 }
 
 /**
  * Validate, presign, PUT to S3/R2, record in DB. Falls back to Cloudinary
  * when the presign route returns 404/501 (provider not configured) OR when
  * `NEXT_PUBLIC_IMAGE_PROVIDER === 'cloudinary'` (skips the round-trip).
+ *
+ * Story 35.2: `durationSeconds` is supplied by the client for video
+ * uploads (measured via `<video>.duration` before this function is
+ * called) and threaded through to the DB record.
  */
 export async function uploadImage(params: {
   kind: ImageKind
   parentId: string
   file: File
+  /** Story 35.2 — required when uploading a video file (step kind only). */
+  durationSeconds?: number | null
 }): Promise<UploadResult> {
-  const { kind, parentId, file } = params
+  const { kind, parentId, file, durationSeconds = null } = params
   const strategy = STRATEGIES[kind]
 
-  if (!(ACCEPTED_IMAGE_TYPES as readonly string[]).includes(file.type)) {
-    return { success: false, error: 'Only JPEG, PNG, and WebP images are allowed.' }
+  if (!strategy.acceptedTypes.includes(file.type)) {
+    // Step kind allows image + video; idea/inventory image-only.
+    return {
+      success: false,
+      error:
+        kind === 'step'
+          ? 'Only JPEG, PNG, WebP images and MP4 / MOV / WebM videos are allowed.'
+          : 'Only JPEG, PNG, and WebP images are allowed.',
+    }
   }
 
-  if (file.size > MAX_IMAGE_SIZE_BYTES) {
-    return { success: false, error: 'Image must be under 10 MB.' }
+  const isVideo = isVideoMime(file.type)
+  const maxSize = isVideo ? MAX_VIDEO_SIZE_BYTES : MAX_IMAGE_SIZE_BYTES
+  if (file.size > maxSize) {
+    return {
+      success: false,
+      error: isVideo ? 'Video must be under 60 MB.' : 'Image must be under 10 MB.',
+    }
+  }
+
+  if (isVideo && (durationSeconds == null || durationSeconds < 1 || durationSeconds > 60)) {
+    return { success: false, error: 'Video duration must be between 1 and 60 seconds.' }
   }
 
   const provider = process.env.NEXT_PUBLIC_IMAGE_PROVIDER
 
   // Cloudinary has no presign flow — skip the round-trip that would 404.
   if (provider === 'cloudinary') {
-    return uploadViaCloudinary(strategy, parentId, file)
+    return uploadViaCloudinary(strategy, parentId, file, durationSeconds)
   }
 
   // Try S3/R2 presigned upload first
@@ -138,8 +218,10 @@ export async function uploadImage(params: {
         parentId,
         storageKey: key,
         originalFilename: file.name,
-        contentType: file.type as ContentType,
+        contentType: file.type,
         sizeBytes: file.size,
+        mediaType: isVideo ? 'VIDEO' : 'IMAGE',
+        durationSeconds: isVideo ? durationSeconds : null,
       })
       if (!result.success) {
         return { success: false, error: result.error }
@@ -155,18 +237,22 @@ export async function uploadImage(params: {
     return { success: false, error: 'Upload failed — try again' }
   }
 
-  return uploadViaCloudinary(strategy, parentId, file)
+  return uploadViaCloudinary(strategy, parentId, file, durationSeconds)
 }
 
 async function uploadViaCloudinary(
   strategy: KindStrategy,
   parentId: string,
   file: File,
+  durationSeconds: number | null,
 ): Promise<UploadResult> {
   try {
     const formData = new FormData()
     formData.append(strategy.presignFieldName, parentId)
     formData.append('file', file)
+    if (durationSeconds != null) {
+      formData.append('durationSeconds', String(durationSeconds))
+    }
     const result = await strategy.cloudinaryUpload(formData)
     if (!result.success) {
       return { success: false, error: result.error }
@@ -185,6 +271,13 @@ async function uploadViaCloudinary(
 export function uploadImageToStorage(params: {
   stepId: string
   file: File
+  /** Story 35.2 — required for video files (mediaType inferred from MIME). */
+  durationSeconds?: number | null
 }): Promise<UploadResult> {
-  return uploadImage({ kind: 'step', parentId: params.stepId, file: params.file })
+  return uploadImage({
+    kind: 'step',
+    parentId: params.stepId,
+    file: params.file,
+    durationSeconds: params.durationSeconds,
+  })
 }
