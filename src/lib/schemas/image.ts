@@ -27,9 +27,17 @@ export type AddImageLinkInput = z.infer<typeof addImageLinkSchema>
 export const addStepImageSchema = z
   .object({
     stepId: z.uuid(),
+    // Story 35.5 / FR138 code-review patch (Blind/Edge HIGH-1):
+    // S3-style keys are `steps/<uuid>/<uuid>.<ext>` (lowercase hex + ext);
+    // Cloudinary direct-upload public_ids are `steps/<uuid>/<server-random>`
+    // with mixed-case alphanumeric segments and NO extension. The regex
+    // accepts both shapes — the second segment is `[A-Za-z0-9_-]+` with
+    // an optional trailing `.<ext>`. Without this widening, every prod
+    // direct-upload would be rejected here and orphan-cleaned after a
+    // successful upload (silent data loss).
     storageKey: z
       .string()
-      .regex(/^steps\/[a-f0-9-]+\/[a-f0-9-]+\.\w+$/, 'Invalid storage key format'),
+      .regex(/^steps\/[a-f0-9-]+\/[A-Za-z0-9_-]+(\.\w+)?$/, 'Invalid storage key format'),
     originalFilename: z.string().min(1, 'Original filename is required').max(255),
     contentType: z.enum(ACCEPTED_STEP_MEDIA_TYPES),
     sizeBytes: z.number().int().positive(),
