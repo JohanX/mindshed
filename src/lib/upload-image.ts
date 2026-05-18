@@ -183,8 +183,27 @@ export async function uploadImage(params: {
 
   const provider = process.env.NEXT_PUBLIC_IMAGE_PROVIDER
 
-  // Cloudinary has no presign flow — skip the round-trip that would 404.
+  // Story 35.5 / FR138 — three-path dispatch when provider is Cloudinary:
+  //
+  //   VIDEO + cloudinary → uploadViaCloudinaryDirect (browser → Cloudinary)
+  //     Bypasses Vercel's ~4.5 MB serverless function body limit. Closes
+  //     the 2026-05-15 prod incident where a 7.5 MB iPhone clip → 413
+  //     because the old Server Action path proxies bytes through Vercel.
+  //
+  //   IMAGE + cloudinary → uploadViaCloudinary (Server Action — unchanged)
+  //     Camera JPEGs fit comfortably under Vercel's edge limit, and the
+  //     existing single-round-trip path is faster than the new direct
+  //     path's two round-trips (sign → upload → addStepImage = 3 calls).
+  //
+  //   any provider + S3 → existing presign-then-PUT (Epic 22, unchanged)
+  //     Browser uploads directly to R2/MinIO via presigned URL.
+  //
+  // See `architecture.md` § "Cloudinary Direct-Upload (Browser → Cloudinary,
+  // FR138)" for the full decision record.
   if (provider === 'cloudinary') {
+    if (isVideo) {
+      return uploadViaCloudinaryDirect(strategy, parentId, file, durationSeconds)
+    }
     return uploadViaCloudinary(strategy, parentId, file, durationSeconds)
   }
 
@@ -258,6 +277,134 @@ async function uploadViaCloudinary(
       return { success: false, error: result.error }
     }
     return { success: true, key: 'cloudinary' }
+  } catch {
+    return { success: false, error: 'Upload failed — try again' }
+  }
+}
+
+/**
+ * Story 35.5 / FR138 — browser-direct upload to Cloudinary.
+ *
+ * Flow:
+ *   1. Request a signature from `/api/upload/cloudinary-sign`. Tiny
+ *      payload — never touches Vercel's body limit.
+ *   2. POST the file as multipart/form-data to api.cloudinary.com.
+ *      File bytes never traverse Vercel.
+ *   3. Call `addStepImage` (via `strategy.addDbRecord`) with the
+ *      returned `public_id`. The action's existing post-validation +
+ *      post-DB-transaction cleanup paths in `addStepImage` handle
+ *      orphan cleanup for the validation/cap-full failure modes —
+ *      no client-side `adapter.deleteObject` call needed (and not
+ *      possible from a browser context anyway).
+ *
+ * In V1 this path is wired only for VIDEO + cloudinary (the only
+ * combination that routinely exceeds Vercel's body limit). IMAGE +
+ * cloudinary continues on the Server Action path. See `uploadImage`
+ * dispatch comment.
+ */
+async function uploadViaCloudinaryDirect(
+  strategy: KindStrategy,
+  parentId: string,
+  file: File,
+  durationSeconds: number | null,
+): Promise<UploadResult> {
+  try {
+    // Step 1 — request signature. `folder` is server-sandboxed (regex
+    // gate in the route handler); the client supplies the parent id
+    // and the route refuses anything outside `steps/<uuid>`.
+    const signRes = await fetch('/api/upload/cloudinary-sign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        folder: `steps/${parentId}`,
+        resourceType: 'video',
+      }),
+    })
+    if (!signRes.ok) {
+      return { success: false, error: 'Failed to authorise upload — try again' }
+    }
+    const { timestamp, signature, apiKey, cloudName, folder, resourceType } =
+      (await signRes.json()) as {
+        timestamp: number
+        signature: string
+        apiKey: string
+        cloudName: string
+        folder: string
+        resourceType: 'image' | 'video'
+      }
+
+    // Step 2 — multipart POST to Cloudinary. Field set + order:
+    //   file, timestamp, signature, api_key, folder, resource_type
+    // Cloudinary sorts internally; the signature was computed over
+    // `folder` + `timestamp` only, per the FR138 spec.
+    const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`
+    const uploadForm = new FormData()
+    uploadForm.append('file', file)
+    uploadForm.append('timestamp', String(timestamp))
+    uploadForm.append('signature', signature)
+    uploadForm.append('api_key', apiKey)
+    uploadForm.append('folder', folder)
+    // `resource_type` is part of the URL path; Cloudinary's REST API
+    // does NOT want it in the form body. Omit it to avoid a duplicate-
+    // param 400.
+
+    const uploadRes = await fetch(cloudinaryUrl, {
+      method: 'POST',
+      body: uploadForm,
+    })
+    if (!uploadRes.ok) {
+      return { success: false, error: 'Upload to Cloudinary failed — try again' }
+    }
+    const cloudinaryResponse = (await uploadRes.json()) as {
+      public_id: string
+      secure_url: string
+      duration?: number
+      bytes: number
+      format: string
+      resource_type: 'image' | 'video'
+    }
+
+    // Step 3 — record the upload in our DB. `format` is Cloudinary's
+    // authoritative post-upload extension (matches the contentType
+    // shape Zod expects on the action boundary). For VIDEO uploads
+    // we prefer Cloudinary's reported `duration` but FALL BACK to the
+    // client-measured `durationSeconds` when Cloudinary omits it (rare
+    // — happens on certain transcoding edge cases). Story 35.2's
+    // deferred HIGH "server-side duration probing" is effectively
+    // closed for THIS path: Cloudinary IS the server-side probe.
+    //
+    // Code-review patch (Blind/Edge HIGH-2 + HIGH-3): clamp the
+    // duration to the schema's 1-60 inclusive range. Cloudinary
+    // boundary values (e.g. 0.4 → Math.round → 0; 60.7 → 61) would
+    // otherwise fail validation AFTER a successful upload, orphaning
+    // the bytes. The client probe already rejected anything truly
+    // out-of-range before we ever hit this code path.
+    const isVideoResponse = cloudinaryResponse.resource_type === 'video'
+    const inferredContentType = `${isVideoResponse ? 'video' : 'image'}/${cloudinaryResponse.format === 'mov' ? 'quicktime' : cloudinaryResponse.format}`
+    const clampDuration = (raw: number): number => Math.max(1, Math.min(60, Math.round(raw)))
+    const recordedDuration = isVideoResponse
+      ? cloudinaryResponse.duration != null
+        ? clampDuration(cloudinaryResponse.duration)
+        : durationSeconds != null
+          ? clampDuration(durationSeconds)
+          : null
+      : null
+    const result = await strategy.addDbRecord({
+      parentId,
+      storageKey: cloudinaryResponse.public_id,
+      originalFilename: file.name,
+      contentType: inferredContentType,
+      sizeBytes: cloudinaryResponse.bytes,
+      mediaType: isVideoResponse ? 'VIDEO' : 'IMAGE',
+      durationSeconds: recordedDuration,
+    })
+    // addStepImage handles its own orphan cleanup on validation OR
+    // DB-transaction failure (see `actions/image.ts`). The client
+    // path simply propagates the typed error to the toast layer.
+    if (!result.success) {
+      return { success: false, error: result.error }
+    }
+    return { success: true, key: cloudinaryResponse.public_id }
   } catch {
     return { success: false, error: 'Upload failed — try again' }
   }

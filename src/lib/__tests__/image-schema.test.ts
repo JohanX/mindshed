@@ -82,6 +82,28 @@ describe('addStepImageSchema', () => {
     expect(result.success).toBe(false)
   })
 
+  // Story 35.5 / FR138 — Cloudinary direct-upload public_ids carry mixed-case
+  // alphanumeric segments and no file extension. The schema must accept both
+  // S3-style keys (`steps/<uuid>/<uuid>.<ext>`) AND Cloudinary public_ids
+  // (`steps/<uuid>/<mixed-case-random>`) to avoid validation-rejection
+  // orphans after a successful direct upload. Pre-Story-35.5 regex only
+  // accepted lowercase hex with mandatory extension; widened in Story 35.5.
+  it('accepts Cloudinary direct-upload public_id (no extension, mixed case)', () => {
+    const result = addStepImageSchema.safeParse({
+      ...validUploadInput,
+      storageKey: 'steps/550e8400-e29b-41d4-a716-446655440000/aB3xZ9KpQr',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('still accepts S3-style key with .ext (existing path regression)', () => {
+    const result = addStepImageSchema.safeParse({
+      ...validUploadInput,
+      storageKey: 'steps/550e8400-e29b-41d4-a716-446655440000/abc123ef.jpg',
+    })
+    expect(result.success).toBe(true)
+  })
+
   it('rejects empty originalFilename', () => {
     const result = addStepImageSchema.safeParse({ ...validUploadInput, originalFilename: '' })
     expect(result.success).toBe(false)
