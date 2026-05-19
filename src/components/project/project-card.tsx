@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Play } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { ProjectStatusBadge } from '@/components/project/project-status-badge'
 import { HobbyIdentity } from '@/components/hobby/hobby-identity'
@@ -15,10 +16,19 @@ export interface ProjectCardData {
   completedSteps: number
   derivedStatus: DerivedProjectStatus
   currentStepName: string | null
-  /** Pre-resolved thumbnail URL (server-rendered) so this component can stay
-   * importable from client components without dragging in the image-storage
-   * adapter and its native deps. */
-  latestPhotoUrl?: string | null
+  /** Pre-resolved latest-photo info (server-rendered) so this component can
+   * stay importable from client components without dragging in the image-
+   * storage adapter and its native deps.
+   *
+   * Story 35.6 / FR139 — `{ url, mediaType }` struct so the card can render
+   * the VIDEO branches (poster + Play overlay for Cloudinary, generic play-
+   * icon card for S3 null-poster). Single canonical shape — code-review
+   * patch dropped the legacy `latestPhotoUrl` dual-shape API after verifying
+   * zero in-tree callers used it. */
+  latestPhoto?: {
+    url: string | null
+    mediaType: 'IMAGE' | 'VIDEO'
+  } | null
   /** Story 30.5 / FR129 — sum of step.hoursLogged across the project, or
    * null when the parent hobby has tracking disabled. The server-rendered
    * card hides this field via `formatHours` (also returns null for 0). */
@@ -51,16 +61,77 @@ export function ProjectCard({ project, hobby, showHobbyBadge }: ProjectCardProps
         style={hobby ? { backgroundColor: hobbyColorWithAlpha(hobby.color) } : undefined}
       >
         <CardContent className="flex items-start gap-3">
-          {project.latestPhotoUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={project.latestPhotoUrl}
-              alt={`Latest photo for ${project.name}`}
-              width={64}
-              height={64}
-              className="h-16 w-16 shrink-0 rounded-lg object-cover"
-            />
-          )}
+          {/* Story 35.6 / FR139 — render the latest-photo thumbnail with
+              mediaType awareness. VIDEO branch overlays a Play icon so
+              the visual signal matches every other tile surface; S3
+              null-poster falls through to a generic play-icon card so
+              the user never sees a broken `<img>`. NO `<video>` element
+              renders at thumbnail size on any surface — FR136/FR137/FR139
+              hard rule.
+
+              Accessibility note: the `<Link>` wrapping this card already
+              carries the project name as its accessible name, so the
+              inner thumbnail uses `alt=""` (decorative) to avoid screen-
+              reader double-announce (code-review MED-2). `loading="lazy"`
+              defers off-screen thumbnail fetches on the `/projects` list
+              + hobby detail surfaces where N project cards can stack
+              (code-review MED-3). */}
+          {(() => {
+            const photoUrl = project.latestPhoto?.url ?? null
+            const mediaType = project.latestPhoto?.mediaType ?? 'IMAGE'
+            if (mediaType === 'VIDEO') {
+              if (photoUrl) {
+                return (
+                  <div
+                    className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg"
+                    data-testid="project-card-video-poster"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={photoUrl}
+                      alt=""
+                      width={64}
+                      height={64}
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
+                    <div
+                      className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                      data-testid="video-play-overlay"
+                    >
+                      <div className="rounded-full bg-black/60 p-1.5">
+                        <Play className="h-4 w-4 fill-white text-white" />
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+              // S3 null-poster: generic play-icon card. No broken <img>.
+              return (
+                <div
+                  className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-muted"
+                  data-testid="project-card-video-placeholder"
+                  aria-hidden="true"
+                >
+                  <Play className="h-6 w-6 text-muted-foreground" />
+                </div>
+              )
+            }
+            if (photoUrl) {
+              return (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photoUrl}
+                  alt=""
+                  width={64}
+                  height={64}
+                  loading="lazy"
+                  className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                />
+              )
+            }
+            return null
+          })()}
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex items-center justify-between gap-2">
               <span className="text-lg font-medium truncate">{project.name}</span>

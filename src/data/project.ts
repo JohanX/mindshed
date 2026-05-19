@@ -112,7 +112,16 @@ export async function findAllActiveProjects(): Promise<ProjectWithHobby[]> {
       completedSteps: project.steps.filter((step) => step.state === 'COMPLETED').length,
       derivedStatus: deriveProjectStatus(project.steps),
       currentStepName: currentStep?.name ?? null,
-      latestPhotoUrl: resolveProjectThumbnailUrl(latestPhotoByProject.get(project.id) ?? null),
+      // Story 35.6 / FR139 — emit the widened struct so `ProjectCard`
+      // can branch on `mediaType`. URL resolved server-side; mediaType
+      // sourced from `LatestProjectPhoto` upstream. Falls back to IMAGE
+      // when no latest photo exists (the card renders nothing in that
+      // case so the mediaType is unused, but the type system needs a
+      // value).
+      latestPhoto: {
+        url: resolveProjectThumbnailUrl(latestPhotoByProject.get(project.id) ?? null),
+        mediaType: latestPhotoByProject.get(project.id)?.mediaType ?? 'IMAGE',
+      },
       totalHoursLogged: computeProjectTotalHours(project.steps, project.hobby.hoursTrackingEnabled),
       hobby: {
         name: project.hobby.name,
@@ -156,7 +165,16 @@ export async function findProjectsByHobby(hobbyId: string): Promise<ProjectWithP
       completedSteps: project.steps.filter((step) => step.state === 'COMPLETED').length,
       derivedStatus: deriveProjectStatus(project.steps),
       currentStepName: currentStep?.name ?? null,
-      latestPhotoUrl: resolveProjectThumbnailUrl(latestPhotoByProject.get(project.id) ?? null),
+      // Story 35.6 / FR139 — emit the widened struct so `ProjectCard`
+      // can branch on `mediaType`. URL resolved server-side; mediaType
+      // sourced from `LatestProjectPhoto` upstream. Falls back to IMAGE
+      // when no latest photo exists (the card renders nothing in that
+      // case so the mediaType is unused, but the type system needs a
+      // value).
+      latestPhoto: {
+        url: resolveProjectThumbnailUrl(latestPhotoByProject.get(project.id) ?? null),
+        mediaType: latestPhotoByProject.get(project.id)?.mediaType ?? 'IMAGE',
+      },
       totalHoursLogged: computeProjectTotalHours(project.steps, project.hobby.hoursTrackingEnabled),
       isArchived: project.isArchived,
       isCompleted: project.isCompleted,

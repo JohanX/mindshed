@@ -45,9 +45,15 @@ export interface RecentProject {
     id: string
     name: string
   } | null
+  // Story 35.6 / FR139 — widened to carry mediaType so `ProjectCard`
+  // can branch its render on VIDEO vs IMAGE. Matches `LatestProjectPhoto`
+  // upstream so the data flow is one shape end-to-end.
   latestPhoto: {
     storageKey: string | null
     originalFilename: string | null
+    mediaType: 'IMAGE' | 'VIDEO'
+    type: 'UPLOAD' | 'LINK'
+    url: string | null
   } | null
   totalSteps: number
   completedSteps: number
