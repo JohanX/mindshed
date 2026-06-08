@@ -982,13 +982,24 @@ function buildConsumptionTx(opts: {
     project: { hobbyId: string }
   } | null
 }): ConsumptionTxMock {
+  // Simulate Prisma's increment/decrement semantics so the action's return
+  // value (post-update inventory.quantity) is realistic in tests.
+  const startingQuantity = opts.row?.inventoryItem?.quantity ?? null
   return {
     bomItem: {
       findUnique: vi.fn(async () => (opts.row !== undefined ? opts.row : null)),
       update: vi.fn(async () => ({ id: BOM_ITEM_ID })),
     },
     inventoryItem: {
-      update: vi.fn(async () => ({ id: INVENTORY_ID })),
+      update: vi.fn(
+        async (args: { data: { quantity?: { decrement?: number; increment?: number } } }) => {
+          const op = args?.data?.quantity
+          if (startingQuantity === null || !op) return { quantity: startingQuantity }
+          if (typeof op.decrement === 'number') return { quantity: startingQuantity - op.decrement }
+          if (typeof op.increment === 'number') return { quantity: startingQuantity + op.increment }
+          return { quantity: startingQuantity }
+        },
+      ),
     },
     project: {
       update: vi.fn(async () => ({ id: PROJECT_ID })),
@@ -1039,6 +1050,11 @@ describe('markBomItemConsumed', () => {
 
     const result = await markBomItemConsumed({ id: BOM_ITEM_ID })
     expect(result.success).toBe(true)
+    // Authoritative post-decrement quantity returned to the client so it can
+    // mirror without recomputing locally (race-fix for stale closures).
+    if (result.success) {
+      expect(result.data.inventoryQuantity).toBe(400)
+    }
 
     const invCall = tx.inventoryItem.update.mock.calls[0][0] as {
       where: { id: string }
@@ -1149,6 +1165,9 @@ describe('undoBomItemConsumption', () => {
 
     const result = await undoBomItemConsumption({ id: BOM_ITEM_ID })
     expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.inventoryQuantity).toBe(500)
+    }
 
     const invCall = tx.inventoryItem.update.mock.calls[0][0] as {
       data: { quantity: { increment: number } }

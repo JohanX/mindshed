@@ -456,7 +456,7 @@ export async function createBomShortageBlocker(
 
 export async function markBomItemConsumed(
   input: MarkBomItemConsumedInput,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<ActionResult<{ id: string; inventoryQuantity: number }>> {
   const parsed = markBomItemConsumedSchema.safeParse(input)
   if (!parsed.success) {
     return { success: false, error: 'Invalid BOM item ID.' }
@@ -494,9 +494,14 @@ export async function markBomItemConsumed(
         throw insufficientError
       }
 
-      await tx.inventoryItem.update({
+      // Return the post-update inventory quantity so the client can mirror the
+      // server's authoritative value without recomputing locally — eliminates
+      // a race where a concurrent requiredQuantity update made the client's
+      // pre-decrement closure stale (Available column displayed wrong value).
+      const updatedInventory = await tx.inventoryItem.update({
         where: { id: inventoryItem.id },
         data: { quantity: { decrement: row.requiredQuantity } },
+        select: { quantity: true },
       })
 
       await tx.bomItem.update({
@@ -514,12 +519,19 @@ export async function markBomItemConsumed(
         projectId: row.projectId,
         hobbyId: row.project.hobbyId,
         inventoryName: inventoryItem.name,
+        inventoryQuantity: updatedInventory.quantity,
       }
     })
 
     revalidatePath(`/hobbies/${result.hobbyId}/projects/${result.projectId}`)
     revalidatePath('/inventory')
-    return { success: true, data: { id: result.id } }
+    // Non-null by construction: the pre-decrement guard above throws
+    // INSUFFICIENT_INVENTORY when quantity is null, so we never reach the
+    // update with a nullable source.
+    return {
+      success: true,
+      data: { id: result.id, inventoryQuantity: result.inventoryQuantity as number },
+    }
   } catch (error) {
     if (isP2025(error)) {
       return { success: false, error: 'BOM item not found.' }
@@ -546,7 +558,7 @@ export async function markBomItemConsumed(
 
 export async function undoBomItemConsumption(
   input: UndoBomItemConsumptionInput,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<ActionResult<{ id: string; inventoryQuantity: number | null }>> {
   const parsed = undoBomItemConsumptionSchema.safeParse(input)
   if (!parsed.success) {
     return { success: false, error: 'Invalid BOM item ID.' }
@@ -569,10 +581,13 @@ export async function undoBomItemConsumption(
       if (!row.inventoryItem) throw new Error('NO_INVENTORY_LINK')
 
       // Credit inventory back — even if soft-deleted (AC #7): accounting integrity
-      // wins over hiding the row from lists.
-      await tx.inventoryItem.update({
+      // wins over hiding the row from lists. Return post-update quantity so the
+      // client mirrors the server's authoritative value (symmetric with
+      // markBomItemConsumed).
+      const updatedInventory = await tx.inventoryItem.update({
         where: { id: row.inventoryItem.id },
         data: { quantity: { increment: row.requiredQuantity } },
+        select: { quantity: true },
       })
 
       await tx.bomItem.update({
@@ -590,12 +605,16 @@ export async function undoBomItemConsumption(
         projectId: row.projectId,
         hobbyId: row.project.hobbyId,
         inventoryName: row.inventoryItem.name,
+        inventoryQuantity: updatedInventory.quantity,
       }
     })
 
     revalidatePath(`/hobbies/${result.hobbyId}/projects/${result.projectId}`)
     revalidatePath('/inventory')
-    return { success: true, data: { id: result.id } }
+    return {
+      success: true,
+      data: { id: result.id, inventoryQuantity: result.inventoryQuantity },
+    }
   } catch (error) {
     if (isP2025(error)) {
       return { success: false, error: 'BOM item not found.' }

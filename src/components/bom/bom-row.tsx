@@ -231,14 +231,16 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
         showErrorToast(result.error)
         return
       }
-      // Mirror the server-side decrement locally so the Available cell
-      // refreshes immediately without a page reload.
-      const currentQuantity = row.inventoryItem?.quantity ?? null
-      const nextQuantity = currentQuantity !== null ? currentQuantity - row.requiredQuantity : null
+      // Use the server's authoritative post-decrement quantity rather than
+      // computing it locally from `row.requiredQuantity`. The closure's
+      // `row.requiredQuantity` can be stale if the user changes the amount
+      // and clicks Mark Consumed before `persistRequired` has roundtripped —
+      // the server is the only source that knows what `requiredQuantity` it
+      // actually decremented by.
       onUpdate(row.id, {
         consumptionState: 'CONSUMED',
         consumedAt: new Date(),
-        inventoryQuantity: nextQuantity,
+        inventoryQuantity: result.data.inventoryQuantity,
       })
       showSuccessToast(`Marked ${displayName} as consumed`)
     })
@@ -251,13 +253,11 @@ export function BomRow({ row, variant, onUpdate, onDelete, onRequestCreateBlocke
         showErrorToast(result.error)
         return
       }
-      // Mirror the server-side increment locally — the inventory qty is
-      // credited back by exactly `requiredQuantity`.
-      const currentQuantity = row.inventoryItem?.quantity ?? null
-      const nextQuantity = currentQuantity !== null ? currentQuantity + row.requiredQuantity : null
+      // Symmetric with handleMarkConsumed — trust the server's post-increment
+      // value instead of recomputing locally.
       onUpdate(row.id, {
         consumptionState: 'NOT_CONSUMED',
-        inventoryQuantity: nextQuantity,
+        inventoryQuantity: result.data.inventoryQuantity,
       })
       showSuccessToast(`Reverted consumption of ${displayName}`)
     })
